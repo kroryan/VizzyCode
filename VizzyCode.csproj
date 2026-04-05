@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <AssemblyName>VizzyCode</AssemblyName>
+    <RootNamespace>VizzyCode</RootNamespace>
+    <Version>1.0.0</Version>
+    <Authors>VizzyCode Contributors</Authors>
+    <Description>Open, convert and AI-edit Vizzy programs as C# code</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+  </ItemGroup>
+</Project>
