@@ -6,16 +6,17 @@ using System.Windows.Forms;
 namespace VizzyCode
 {
     /// <summary>
-    /// A chat panel that sends Vizzy-context-aware prompts to Claude.
-    /// Works with both claude.ai subscription (via CLI) and Anthropic API key.
+    /// Chat panel that sends Vizzy-context-aware prompts to Claude.
+    /// Supports streaming text, tool-use activity display, and both
+    /// claude.ai subscription (CLI) and Anthropic API key modes.
     /// </summary>
     public class ChatPanel : Panel
     {
-        // ── Callbacks ──────────────────────────────────────────────────────────
+        // ── Public callbacks (set by MainForm) ────────────────────────────────
         public Action<string> OnInsertCode;   // called when user clicks "Insert Code"
         public Func<string>   GetCurrentCode; // returns current editor content
 
-        // ── Controls ───────────────────────────────────────────────────────────
+        // ── Controls ──────────────────────────────────────────────────────────
         private RichTextBox _history;
         private TextBox     _input;
         private Button      _btnSend;
@@ -24,10 +25,11 @@ namespace VizzyCode
         private Label       _statusLabel;
         private Button      _btnSettings;
 
-        // ── State ──────────────────────────────────────────────────────────────
+        // ── State ─────────────────────────────────────────────────────────────
         private readonly ClaudeClient _claude = new ClaudeClient();
         private CancellationTokenSource? _cts;
         private bool _isDark = true;
+        private bool _inTool = false;  // are we currently inside a tool call?
 
         public ClaudeClient Client => _claude;
 
@@ -37,7 +39,7 @@ namespace VizzyCode
             WireEvents();
         }
 
-        // ── UI construction ────────────────────────────────────────────────────
+        // ── UI construction ───────────────────────────────────────────────────
 
         private void BuildUI()
         {
@@ -46,97 +48,99 @@ namespace VizzyCode
             // Title bar
             var title = new Label
             {
-                Text = "Claude AI  ·  Vizzy Assistant",
-                Dock = DockStyle.Top, Height = 28,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Text      = "Claude AI  ·  Vizzy Assistant",
+                Dock      = DockStyle.Top, Height = 28,
+                Font      = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(8, 0, 0, 0)
+                Padding   = new Padding(8, 0, 0, 0)
             };
 
             // Settings button
             _btnSettings = new Button
             {
-                Text = "⚙", Width = 28, Height = 28,
+                Text      = "⚙", Width = 28, Height = 28,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10f),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                TabStop = false
+                Font      = new Font("Segoe UI", 10f),
+                Anchor    = AnchorStyles.Top | AnchorStyles.Right,
+                TabStop   = false
             };
             _btnSettings.FlatAppearance.BorderSize = 0;
 
-            // History
+            // Chat history
             _history = new RichTextBox
             {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                WordWrap = true,
-                ScrollBars = RichTextBoxScrollBars.Vertical,
+                Dock        = DockStyle.Fill,
+                ReadOnly    = true,
+                WordWrap    = true,
+                ScrollBars  = RichTextBoxScrollBars.Vertical,
                 BorderStyle = BorderStyle.None,
-                Font = new Font("Consolas", 9.5f),
-                DetectUrls = false
+                Font        = new Font("Consolas", 9.5f),
+                DetectUrls  = false
             };
 
-            // Status
+            // Status bar
             _statusLabel = new Label
             {
-                Dock = DockStyle.Top, Height = 18,
-                Font = new Font("Segoe UI", 7.5f),
+                Dock      = DockStyle.Top, Height = 18,
+                Font      = new Font("Segoe UI", 7.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(4, 0, 0, 0),
-                Text = "Ready  ·  Using claude CLI (subscription)"
+                Padding   = new Padding(4, 0, 0, 0),
+                Text      = "Ready  ·  Using claude CLI (subscription)"
             };
 
             // Include code checkbox
             _chkInclude = new CheckBox
             {
-                Text = "Include current code as context",
+                Text     = "Include current code as context",
                 AutoSize = true,
-                Checked = true,
-                Font = new Font("Segoe UI", 8.5f)
+                Checked  = true,
+                Font     = new Font("Segoe UI", 8.5f)
             };
 
-            // Input
+            // Input textbox
             _input = new TextBox
             {
-                Dock = DockStyle.Fill,
-                Multiline = true,
-                ScrollBars = ScrollBars.Vertical,
-                Font = new Font("Consolas", 9.5f),
-                BorderStyle = BorderStyle.None,
-                Height = 70,
+                Dock          = DockStyle.Fill,
+                Multiline     = true,
+                ScrollBars    = ScrollBars.Vertical,
+                Font          = new Font("Consolas", 9.5f),
+                BorderStyle   = BorderStyle.None,
+                Height        = 70,
                 AcceptsReturn = false,
-                AcceptsTab = false
+                AcceptsTab    = false
             };
 
-            // Buttons
+            // Send / Stop buttons
             _btnSend = new Button
             {
-                Text = "Send  ↵", Width = 80, Height = 28,
+                Text      = "Send  ↵", Width = 80, Height = 28,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+                Font      = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Anchor    = AnchorStyles.Bottom | AnchorStyles.Right
             };
             _btnStop = new Button
             {
-                Text = "■ Stop", Width = 60, Height = 28,
+                Text      = "■ Stop", Width = 60, Height = 28,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-                Visible = false
+                Font      = new Font("Segoe UI", 9f),
+                Anchor    = AnchorStyles.Bottom | AnchorStyles.Right,
+                Visible   = false
             };
 
             // Input area panel
             var inputPanel = new Panel { Dock = DockStyle.Bottom, Height = 105 };
             var btnRow = new FlowLayoutPanel
             {
-                Dock = DockStyle.Bottom, Height = 32, FlowDirection = FlowDirection.RightToLeft,
-                Padding = new Padding(2)
+                Dock          = DockStyle.Bottom, Height = 32,
+                FlowDirection = FlowDirection.RightToLeft,
+                Padding       = new Padding(2)
             };
             btnRow.Controls.AddRange(new Control[] { _btnSend, _btnStop });
 
             var chkRow = new FlowLayoutPanel
             {
-                Dock = DockStyle.Bottom, Height = 22, Padding = new Padding(4, 2, 2, 0)
+                Dock    = DockStyle.Bottom, Height = 22,
+                Padding = new Padding(4, 2, 2, 0)
             };
             chkRow.Controls.Add(_chkInclude);
 
@@ -149,7 +153,8 @@ namespace VizzyCode
             titlePanel.Controls.Add(title);
             titlePanel.Controls.Add(_btnSettings);
             _btnSettings.Location = new Point(titlePanel.Width - 30, 0);
-            titlePanel.SizeChanged += (_, _) => _btnSettings.Location = new Point(titlePanel.Width - 30, 0);
+            titlePanel.SizeChanged += (_, _) =>
+                _btnSettings.Location = new Point(titlePanel.Width - 30, 0);
 
             Controls.Add(_history);
             Controls.Add(_statusLabel);
@@ -161,20 +166,23 @@ namespace VizzyCode
 
         private void WireEvents()
         {
-            _btnSend.Click += (_, _) => SendMessage();
-            _btnStop.Click += (_, _) => _cts?.Cancel();
+            _btnSend.Click     += (_, _) => SendMessage();
+            _btnStop.Click     += (_, _) => _cts?.Cancel();
             _btnSettings.Click += (_, _) => ShowSettings();
+
             _input.KeyDown += (_, e) =>
             {
-                if (e.KeyCode == Keys.Return && !e.Shift) { e.SuppressKeyPress = true; SendMessage(); }
+                if (e.KeyCode == Keys.Return && !e.Shift)
+                { e.SuppressKeyPress = true; SendMessage(); }
             };
 
-            _claude.OnChunk += chunk => AppendStream(chunk);
-            _claude.OnDone  += full  => FinishMessage(full);
-            _claude.OnError += err   => ShowError(err);
+            _claude.OnChunk        += chunk => AppendStreamChunk(chunk);
+            _claude.OnDone         += full  => FinishMessage(full);
+            _claude.OnError        += err   => ShowError(err);
+            _claude.OnToolActivity += msg   => AppendToolActivity(msg);
         }
 
-        // ── Sending ────────────────────────────────────────────────────────────
+        // ── Sending ───────────────────────────────────────────────────────────
 
         private async void SendMessage()
         {
@@ -184,25 +192,27 @@ namespace VizzyCode
             _input.Clear();
             AppendUserMessage(msg);
 
-            // Build system prompt
+            // Build system prompt (replace default to focus purely on Vizzy)
             string sys = VizzySystemPrompt.Text;
             if (_chkInclude.Checked && GetCurrentCode != null)
             {
                 string code = GetCurrentCode.Invoke();
                 if (!string.IsNullOrWhiteSpace(code))
-                    sys += $"\n\n## Current Code Being Edited\n```csharp\n{code}\n```\nThe user may reference or ask to modify the above code.";
+                    sys += $"\n\n## Current Code Being Edited\n```csharp\n{code}\n```" +
+                           "\nThe user may reference or ask to modify the above code.";
             }
 
             _btnSend.Visible = false;
             _btnStop.Visible = true;
             _statusLabel.Text = "Claude is thinking...";
+            _inTool = false;
             AppendAssistantStart();
 
             _cts = new CancellationTokenSource();
             await _claude.SendAsync(msg, sys, _cts.Token);
         }
 
-        // ── History display ────────────────────────────────────────────────────
+        // ── History display ───────────────────────────────────────────────────
 
         private void AppendUserMessage(string msg)
         {
@@ -211,14 +221,12 @@ namespace VizzyCode
                 _history.SelectionStart = _history.TextLength;
                 _history.SelectionColor = _isDark ? Color.FromArgb(100, 160, 255) : Color.DarkBlue;
                 _history.SelectionFont  = new Font("Segoe UI", 9.5f, FontStyle.Bold);
-                _history.AppendText($"\n▶ You\n");
+                _history.AppendText("\n▶ You\n");
                 _history.SelectionColor = _isDark ? Color.FromArgb(220, 220, 220) : Color.Black;
                 _history.SelectionFont  = new Font("Consolas", 9.5f);
                 _history.AppendText(msg + "\n\n");
             });
         }
-
-        private int _assistantStartPos;
 
         private void AppendAssistantStart()
         {
@@ -230,11 +238,10 @@ namespace VizzyCode
                 _history.AppendText("◆ Claude\n");
                 _history.SelectionColor = _isDark ? Color.FromArgb(220, 220, 220) : Color.Black;
                 _history.SelectionFont  = new Font("Consolas", 9.5f);
-                _assistantStartPos = _history.TextLength;
             });
         }
 
-        private void AppendStream(string chunk)
+        private void AppendStreamChunk(string chunk)
         {
             SafeInvoke(() =>
             {
@@ -246,21 +253,64 @@ namespace VizzyCode
             });
         }
 
+        private void AppendToolActivity(string msg)
+        {
+            SafeInvoke(() =>
+            {
+                bool isStart = msg.StartsWith("🔧");
+                bool isDone  = msg.StartsWith("✓");
+
+                _history.SelectionStart = _history.TextLength;
+                _history.SelectionFont  = new Font("Segoe UI", 8f, FontStyle.Italic);
+
+                if (isStart)
+                {
+                    _history.SelectionColor = _isDark
+                        ? Color.FromArgb(180, 140, 255)
+                        : Color.DarkViolet;
+                    _history.AppendText("\n" + msg + " ");
+                    _inTool = true;
+                }
+                else if (isDone && _inTool)
+                {
+                    _history.SelectionColor = _isDark
+                        ? Color.FromArgb(100, 200, 100)
+                        : Color.DarkGreen;
+                    _history.AppendText(msg + "\n");
+                    _inTool = false;
+                }
+                else
+                {
+                    _history.SelectionColor = _isDark
+                        ? Color.FromArgb(150, 150, 200)
+                        : Color.SlateBlue;
+                    _history.AppendText(msg + "\n");
+                }
+
+                _history.SelectionFont  = new Font("Consolas", 9.5f);
+                _history.SelectionColor = _isDark ? Color.FromArgb(220, 220, 220) : Color.Black;
+                _history.ScrollToCaret();
+            });
+        }
+
         private void FinishMessage(string full)
         {
             SafeInvoke(() =>
             {
-                // Check if response contains a code block
+                // Append Insert Code button if response has a code block
                 if (full.Contains("```"))
                     AddInsertCodeButton(full);
 
                 _history.AppendText("\n\n");
                 _history.ScrollToCaret();
-                _btnSend.Visible = true;
-                _btnStop.Visible = false;
+                _btnSend.Visible  = true;
+                _btnStop.Visible  = false;
                 _statusLabel.Text = $"Done  ·  {GetModeLabel()}";
+                _inTool = false;
             });
         }
+
+        // ── Insert Code button ────────────────────────────────────────────────
 
         private void AddInsertCodeButton(string full)
         {
@@ -276,19 +326,16 @@ namespace VizzyCode
             _history.AppendText("\n");
             var btn = new Button
             {
-                Text = "⬆ Insert Code into Editor",
-                Font = new Font("Segoe UI", 8.5f),
+                Text      = "⬆ Insert Code into Editor",
+                Font      = new Font("Segoe UI", 8.5f),
                 FlatStyle = FlatStyle.Flat,
-                Height = 24, Width = 190,
+                Height    = 24, Width = 190,
                 BackColor = _isDark ? Color.FromArgb(0, 122, 204) : Color.SteelBlue,
                 ForeColor = Color.White,
-                Cursor = Cursors.Hand
+                Cursor    = Cursors.Hand
             };
             btn.FlatAppearance.BorderSize = 0;
             btn.Click += (_, _) => { OnInsertCode?.Invoke(code); btn.Text = "✓ Inserted"; };
-
-            // Embed button in history using a trick: place it over the textbox
-            // Since RichTextBox doesn't support inline controls, we show it as a floating overlay
             ShowFloatingButton(btn);
         }
 
@@ -299,15 +346,10 @@ namespace VizzyCode
             _floatingBtn = btn;
             btn.Parent = this;
             btn.BringToFront();
-
-            // Position at bottom of history area
             btn.Location = new Point(
-                _history.Right - btn.Width - 8,
-                _history.Bottom - btn.Height - 8
-            );
+                _history.Right  - btn.Width  - 8,
+                _history.Bottom - btn.Height - 8);
             btn.Visible = true;
-
-            // Auto-hide when user scrolls or types
             _input.Click += (_, _) => { btn.Visible = false; };
         }
 
@@ -315,69 +357,71 @@ namespace VizzyCode
         {
             SafeInvoke(() =>
             {
+                _history.SelectionStart = _history.TextLength;
                 _history.SelectionColor = _isDark ? Color.FromArgb(255, 100, 100) : Color.DarkRed;
+                _history.SelectionFont  = new Font("Consolas", 9.5f);
                 _history.AppendText($"\n⚠ {err}\n\n");
                 _history.ScrollToCaret();
-                _btnSend.Visible = true;
-                _btnStop.Visible = false;
-                _statusLabel.Text = "Error — check settings or try again";
+                _btnSend.Visible  = true;
+                _btnStop.Visible  = false;
+                _statusLabel.Text = "Error — check Settings (⚙) or verify claude is installed";
+                _inTool = false;
             });
         }
 
-        // ── Settings dialog ────────────────────────────────────────────────────
+        // ── Settings dialog ───────────────────────────────────────────────────
 
         private void ShowSettings()
         {
             using var dlg = new SettingsDialog(_claude.Settings);
             if (dlg.ShowDialog() == DialogResult.OK)
             {
-                _claude.Settings = dlg.Result;
-                _statusLabel.Text = $"Settings updated  ·  {GetModeLabel()}";
+                _claude.Settings  = dlg.Result;
+                _statusLabel.Text = $"Settings saved  ·  {GetModeLabel()}";
             }
         }
 
         private string GetModeLabel()
         {
-            if (_claude.Settings.Mode == ClaudeMode.ApiKey && !string.IsNullOrWhiteSpace(_claude.Settings.ApiKey))
+            if (_claude.Settings.Mode == ClaudeMode.ApiKey &&
+                !string.IsNullOrWhiteSpace(_claude.Settings.ApiKey))
                 return $"API key  ·  {_claude.Settings.Model}";
-            return $"claude CLI (subscription)  ·  {_claude.Settings.Model}";
+            return $"claude CLI  ·  {_claude.Settings.Model}";
         }
 
-        // ── Theme ──────────────────────────────────────────────────────────────
+        // ── Theme ─────────────────────────────────────────────────────────────
 
         public void ApplyTheme(bool dark)
         {
             _isDark = dark;
-            var bg    = dark ? Color.FromArgb(30, 30, 30)   : Color.White;
-            var bg2   = dark ? Color.FromArgb(37, 37, 38)   : Color.FromArgb(245, 245, 245);
-            var fg    = dark ? Color.FromArgb(220, 220, 220) : Color.Black;
-            var titleBg = dark ? Color.FromArgb(45, 45, 48) : Color.FromArgb(0, 122, 204);
-            var titleFg = Color.White;
-            var btnBg = dark ? Color.FromArgb(0, 122, 204)  : Color.FromArgb(0, 122, 204);
+            var bg     = dark ? Color.FromArgb(30, 30, 30)    : Color.White;
+            var bg2    = dark ? Color.FromArgb(37, 37, 38)    : Color.FromArgb(245, 245, 245);
+            var fg     = dark ? Color.FromArgb(220, 220, 220) : Color.Black;
+            var titleBg = dark ? Color.FromArgb(45, 45, 48)  : Color.FromArgb(0, 122, 204);
+            var btnBg  = Color.FromArgb(0, 122, 204);
 
             BackColor = bg2;
-            _history.BackColor = bg;
-            _history.ForeColor = fg;
-            _input.BackColor   = bg2;
-            _input.ForeColor   = fg;
+            _history.BackColor     = bg;
+            _history.ForeColor     = fg;
+            _input.BackColor       = bg2;
+            _input.ForeColor       = fg;
             _statusLabel.BackColor = bg2;
             _statusLabel.ForeColor = dark ? Color.FromArgb(150, 150, 150) : Color.Gray;
             _chkInclude.BackColor  = bg2;
             _chkInclude.ForeColor  = fg;
-            _btnSend.BackColor = btnBg;
-            _btnSend.ForeColor = Color.White;
+            _btnSend.BackColor     = btnBg;
+            _btnSend.ForeColor     = Color.White;
             _btnSend.FlatAppearance.BorderColor = btnBg;
-            _btnStop.BackColor = dark ? Color.FromArgb(200, 70, 70) : Color.Firebrick;
-            _btnStop.ForeColor = Color.White;
+            _btnStop.BackColor     = dark ? Color.FromArgb(200, 70, 70) : Color.Firebrick;
+            _btnStop.ForeColor     = Color.White;
             _btnSettings.BackColor = titleBg;
-            _btnSettings.ForeColor = titleFg;
+            _btnSettings.ForeColor = Color.White;
 
             foreach (Control c in Controls)
-                if (c is Panel p && p != null)
-                    p.BackColor = bg2;
+                if (c is Panel p) p.BackColor = bg2;
         }
 
-        // ── Helpers ────────────────────────────────────────────────────────────
+        // ── Helpers ───────────────────────────────────────────────────────────
 
         private void SafeInvoke(Action a)
         {

@@ -112,7 +112,7 @@ namespace VizzyCode
             splitLeft = new SplitContainer
             {
                 Dock = DockStyle.Fill, Orientation = Orientation.Horizontal,
-                Panel1MinSize = 50, Panel2MinSize = 30, BorderStyle = BorderStyle.None
+                BorderStyle = BorderStyle.None
             };
             splitLeft.Panel1.Controls.Add(treeView);
             splitLeft.Panel2.Controls.Add(warningsBox);
@@ -121,7 +121,7 @@ namespace VizzyCode
             splitRight = new SplitContainer
             {
                 Dock = DockStyle.Fill, Orientation = Orientation.Vertical,
-                Panel1MinSize = 200, Panel2MinSize = 200, BorderStyle = BorderStyle.None
+                BorderStyle = BorderStyle.None
             };
             splitRight.Panel1.Controls.Add(codeEditor);
             splitRight.Panel2.Controls.Add(chatPanel);
@@ -130,7 +130,7 @@ namespace VizzyCode
             splitMain = new SplitContainer
             {
                 Dock = DockStyle.Fill, Orientation = Orientation.Vertical,
-                Panel1MinSize = 140, Panel2MinSize = 400, BorderStyle = BorderStyle.None
+                BorderStyle = BorderStyle.None
             };
             splitMain.Panel1.Controls.Add(splitLeft);
             splitMain.Panel2.Controls.Add(splitRight);

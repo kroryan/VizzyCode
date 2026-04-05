@@ -19,10 +19,11 @@ namespace VizzyCode
         {
             InitializeComponent();
 
-            Load += (_, _) =>
+            Shown += (_, _) =>
             {
-                splitMain.SplitterDistance  = 230;
-                splitRight.SplitterDistance = (int)(splitRight.Width * 0.60);
+                try { splitMain.SplitterDistance  = 230; } catch { }
+                try { splitRight.SplitterDistance = (int)(splitRight.Width * 0.60); } catch { }
+                try { splitLeft.SplitterDistance  = (int)(splitLeft.Height * 0.70); } catch { }
             };
 
             chatPanel.GetCurrentCode  = () => codeEditor.Text;
