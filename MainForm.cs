@@ -50,9 +50,9 @@ namespace VizzyCode
                 "//\r\n" +
                 "//  Toolbar: Ex: Craft / Ex: Vizzy  – load built-in examples\r\n" +
                 "//\r\n" +
-                "//  Chat panel (right): ask Claude to write or modify Vizzy code\r\n" +
-                "//  Claude uses your claude.ai subscription by default.\r\n" +
-                "//  Use ⚙ in the chat panel to switch to API key mode.\r\n" +
+                "//  Chat panel (right): ask AI to write or modify Vizzy code\r\n" +
+                "//  Supports Claude, Gemini, OpenAI and Local LLMs.\r\n" +
+                "//  Use ⚙ in the chat panel to configure API keys.\r\n" +
                 "//\r\n";
             Highlight();
         }
@@ -241,7 +241,7 @@ namespace VizzyCode
                 codeEditor.AppendText("\r\n" + code);
             }
             Highlight();
-            statusLabel.Text = "Code inserted from Claude.";
+            statusLabel.Text = "Code inserted from AI Assistant.";
         }
 
         // ── Save / Copy ────────────────────────────────────────────────────────
