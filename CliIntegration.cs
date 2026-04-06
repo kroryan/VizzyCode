@@ -129,11 +129,13 @@ namespace VizzyCode
                 return;
             }
 
-            string innerCommand = $"{QuoteForCmd(executablePath)}";
+            // CMD /c needs: /d /c "<quoted-path> args" — outer quotes stripped by CMD,
+            // leaving the already-quoted executable path intact.
+            string innerCommand = QuoteForCmd(executablePath);
             if (!string.IsNullOrWhiteSpace(trimmedArguments))
                 innerCommand += " " + trimmedArguments;
 
-            psi.Arguments = "/d /c " + QuoteForCmd(innerCommand);
+            psi.Arguments = "/d /c \"" + innerCommand + "\"";
         }
 
         public static bool TryLaunchInteractive(AiSettings settings, string workingDirectory, string systemPrompt, string userPrompt, out string error)

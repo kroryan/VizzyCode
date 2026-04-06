@@ -497,7 +497,8 @@ namespace VizzyCode
                 case "ActivationGroup":    return $"Vz.ActivationGroup({E1(el)})";
                 case "CraftInput":         return ConvertCraftInputExpr(el);
                 case "CallCustomExpression": return ConvertCallCustomExpr(el);
-                case "ListExpression":     return ConvertListExpr(el);
+                case "ListExpression":
+                case "ListOp":             return ConvertListExpr(el);
                 case "StringOp":           return ConvertStringOp(el);
                 case "FUNKExpression":
                 case "FUNK":               return ConvertFunk(el);

@@ -137,7 +137,7 @@ namespace VizzyCode
 
             var psi = CliIntegration.CreateProcessStartInfo(exe, WorkingDirectory);
             var args = new StringBuilder();
-            args.Append("-p --output-format stream-json --include-partial-messages");
+            args.Append("-p --verbose --output-format stream-json --include-partial-messages");
             if (!string.IsNullOrWhiteSpace(Settings.ClaudeModel))
                 args.Append(" --model ").Append(CliIntegration.QuoteForCmd(Settings.ClaudeModel));
             args.Append(" --append-system-prompt ")
