@@ -35,8 +35,19 @@ namespace VizzyCode
         public static string BuildWorkspacePrompt(string? workspacePath = null)
         {
             if (!string.IsNullOrWhiteSpace(workspacePath))
-                return $"Read {workspacePath}/TASK.md and {workspacePath}/SYSTEM_PROMPT.md, inspect {workspacePath}/CurrentProgram.cs, edit {workspacePath}/CurrentProgram.cs when needed, then respond with a concise summary.";
+                return $"You are working in {workspacePath}. Read TASK.md and SYSTEM_PROMPT.md, inspect CurrentProgram.cs, edit CurrentProgram.cs when needed, then respond with a concise summary.";
             return "Read TASK.md and SYSTEM_PROMPT.md, inspect CurrentProgram.cs, edit CurrentProgram.cs when needed, then respond with a concise summary.";
+        }
+
+        public static string GetCliWorkingDirectory(string workingDirectory, string workspaceDirectory)
+        {
+            if (!string.IsNullOrWhiteSpace(workspaceDirectory) && Directory.Exists(workspaceDirectory))
+                return workspaceDirectory;
+
+            if (!string.IsNullOrWhiteSpace(workingDirectory) && Directory.Exists(workingDirectory))
+                return workingDirectory;
+
+            return Environment.CurrentDirectory;
         }
 
         public static string? FindExecutable(CliKind kind)

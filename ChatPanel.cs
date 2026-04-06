@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -32,9 +33,14 @@ namespace VizzyCode
         private CancellationTokenSource? _cts;
         private FileSystemWatcher? _workspaceWatcher;
         private System.Windows.Forms.Timer? _workspaceSyncTimer;
+        private System.Windows.Forms.Timer? _uiFlushTimer;
         private bool _workspaceDirty;
         private bool _suppressWorkspaceWatcher;
         private bool _isDark = true;
+        private readonly ConcurrentQueue<UiUpdate> _pendingUiUpdates = new();
+
+        private enum UiUpdateKind { Chunk, Tool, Error, Finish }
+        private readonly record struct UiUpdate(UiUpdateKind Kind, string Text);
 
         [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public AiSettings Settings { get => _settings; set { _settings = value; RefreshClient(); } }
@@ -46,6 +52,7 @@ namespace VizzyCode
             RefreshClient();
             WireEvents();
             InitializeWorkspaceSync();
+            InitializeUiFlush();
         }
 
         private void RefreshClient()
@@ -145,9 +152,17 @@ namespace VizzyCode
             _statusLabel.Text = $"{_settings.Provider} running in {_workspace.RootDirectory}...";
             AppendAssistantStart();
             _cts = new CancellationTokenSource();
-            _activeClient.WorkingDirectory = GetEffectiveWorkingDirectory();
-            _activeClient.WorkspaceDirectory = _workspace.RootDirectory;
-            try { await _activeClient.SendAsync(msg, sys, _cts.Token); }
+            string effectiveWorkingDirectory = GetEffectiveWorkingDirectory();
+            string workspaceDirectory = _workspace.RootDirectory;
+            try
+            {
+                await Task.Run(async () =>
+                {
+                    _activeClient.WorkingDirectory = effectiveWorkingDirectory;
+                    _activeClient.WorkspaceDirectory = workspaceDirectory;
+                    await _activeClient.SendAsync(msg, sys, _cts.Token);
+                });
+            }
             catch (Exception ex) { ShowError(ex.Message); }
             finally {
                 SyncWorkspaceBackToEditor();
@@ -210,6 +225,68 @@ namespace VizzyCode
                 SyncWorkspaceBackToEditor();
             };
             _workspaceSyncTimer.Start();
+        }
+
+        private void InitializeUiFlush()
+        {
+            _uiFlushTimer = new System.Windows.Forms.Timer { Interval = 75 };
+            _uiFlushTimer.Tick += (_, _) => FlushPendingUiUpdates();
+            _uiFlushTimer.Start();
+        }
+
+        private void FlushPendingUiUpdates()
+        {
+            if (_history == null || _history.IsDisposed || _pendingUiUpdates.IsEmpty)
+                return;
+
+            SafeInvoke(() =>
+            {
+                bool touched = false;
+                while (_pendingUiUpdates.TryDequeue(out var update))
+                {
+                    touched = true;
+                    switch (update.Kind)
+                    {
+                        case UiUpdateKind.Chunk:
+                            _history.SelectionStart = _history.TextLength;
+                            _history.SelectionColor = _isDark ? Color.FromArgb(220, 220, 220) : Color.Black;
+                            _history.SelectionFont = new Font("Consolas", 10f);
+                            _history.AppendText(update.Text);
+                            break;
+                        case UiUpdateKind.Tool:
+                            _history.SelectionStart = _history.TextLength;
+                            _history.SelectionFont = new Font("Segoe UI", 9f, FontStyle.Italic);
+                            _history.SelectionColor = Color.Gray;
+                            _history.AppendText("\n" + update.Text + "\n");
+                            break;
+                        case UiUpdateKind.Error:
+                            _history.SelectionStart = _history.TextLength;
+                            _history.SelectionColor = Color.Tomato;
+                            _history.SelectionFont = new Font("Consolas", 10f);
+                            _history.AppendText($"\nERROR: {update.Text}\n\n");
+                            break;
+                        case UiUpdateKind.Finish:
+                            _history.SelectionStart = _history.TextLength;
+                            _history.SelectionColor = _isDark ? Color.FromArgb(220, 220, 220) : Color.Black;
+                            _history.SelectionFont = new Font("Consolas", 10f);
+                            _history.AppendText("\n\n");
+                            _btnSend.Visible = true;
+                            _btnStop.Visible = false;
+                            UpdateStatusLabel();
+                            break;
+                    }
+                }
+
+                const int maxHistoryChars = 200_000;
+                if (_history.TextLength > maxHistoryChars)
+                {
+                    _history.Select(0, _history.TextLength - maxHistoryChars);
+                    _history.SelectedText = string.Empty;
+                }
+
+                if (touched)
+                    _history.ScrollToCaret();
+            });
         }
 
         private void EnsureWorkspaceWatcher()
@@ -315,9 +392,27 @@ namespace VizzyCode
             });
         }
 
-        private void AppendStreamChunk(string chunk) { SafeInvoke(() => { _history.AppendText(chunk); _history.ScrollToCaret(); }); }
-        private void AppendToolActivity(string msg) { SafeInvoke(() => { _history.SelectionStart = _history.TextLength; _history.SelectionFont = new Font("Segoe UI", 9f, FontStyle.Italic); _history.SelectionColor = Color.Gray; _history.AppendText("\n" + msg + "\n"); _history.SelectionFont = new Font("Consolas", 10f); _history.ScrollToCaret(); }); }
-        private void FinishMessage(string full) { SafeInvoke(() => { if (full.Contains("```")) AddInsertCodeButton(full); _history.AppendText("\n\n"); _history.ScrollToCaret(); _btnSend.Visible = true; _btnStop.Visible = false; UpdateStatusLabel(); }); }
+        private void AppendStreamChunk(string chunk)
+        {
+            if (!string.IsNullOrEmpty(chunk))
+                _pendingUiUpdates.Enqueue(new UiUpdate(UiUpdateKind.Chunk, chunk));
+        }
+
+        private void AppendToolActivity(string msg)
+        {
+            if (!string.IsNullOrWhiteSpace(msg))
+                _pendingUiUpdates.Enqueue(new UiUpdate(UiUpdateKind.Tool, msg));
+        }
+
+        private void FinishMessage(string full)
+        {
+            SafeInvoke(() =>
+            {
+                if (full.Contains("```"))
+                    AddInsertCodeButton(full);
+            });
+            _pendingUiUpdates.Enqueue(new UiUpdate(UiUpdateKind.Finish, string.Empty));
+        }
 
         private void AddInsertCodeButton(string full) {
             int start = full.IndexOf("```csharp"); if (start < 0) start = full.IndexOf("```");
@@ -334,7 +429,11 @@ namespace VizzyCode
 
         private Button _floatingBtn;
         private void ShowFloatingButton(Button btn) { _floatingBtn?.Dispose(); _floatingBtn = btn; btn.Parent = this; btn.BringToFront(); btn.Location = new Point(_history.Right - btn.Width - 15, _history.Bottom - btn.Height - 15); btn.Visible = true; _input.Click += (_, _) => { btn.Visible = false; }; }
-        private void ShowError(string err) { SafeInvoke(() => { _history.SelectionStart = _history.TextLength; _history.SelectionColor = Color.Tomato; _history.AppendText($"\n⚠ ERROR: {err}\n\n"); _history.ScrollToCaret(); }); }
+        private void ShowError(string err)
+        {
+            if (!string.IsNullOrWhiteSpace(err))
+                _pendingUiUpdates.Enqueue(new UiUpdate(UiUpdateKind.Error, err));
+        }
         private void ShowSettings() {
             using var dlg = new SettingsDialog(_settings);
             if (dlg.ShowDialog() == DialogResult.OK) {

@@ -56,6 +56,7 @@ namespace VizzyCode
 
         public void SwitchAgent(string agentName)
         {
+            OnToolActivity?.Invoke("Gemini CLI does not expose Claude/OpenCode-style named agents through this wrapper.");
         }
 
         public void InvokeSkill(string skillName, string[] arguments)
@@ -72,27 +73,33 @@ namespace VizzyCode
                 return;
             }
 
-            string prompt = CliIntegration.BuildWorkspacePrompt(WorkspaceDirectory);
+            string cliWorkingDirectory = CliIntegration.GetCliWorkingDirectory(WorkingDirectory, WorkspaceDirectory);
+            string prompt = CliIntegration.BuildWorkspacePrompt(cliWorkingDirectory);
 
-            var psi = CliIntegration.CreateProcessStartInfo(exe, WorkingDirectory);
+            var psi = CliIntegration.CreateProcessStartInfo(exe, cliWorkingDirectory);
             var args = new StringBuilder();
             if (!string.IsNullOrWhiteSpace(Settings.GeminiModel))
                 args.Append("--model ").Append(CliIntegration.QuoteForCmd(Settings.GeminiModel)).Append(' ');
-            args.Append("-p ").Append(CliIntegration.QuoteForCmd(prompt));
+            args.Append("--approval-mode yolo --output-format json -p ").Append(CliIntegration.QuoteForCmd(prompt));
             CliIntegration.SetCommandArguments(psi, exe, args.ToString());
 
-            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(Settings.CliTimeoutSeconds), ct);
+            var fullText = new StringBuilder();
+            var result = await CliProcessRunner.RunAsync(
+                psi,
+                TimeSpan.FromSeconds(Settings.CliTimeoutSeconds),
+                line =>
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                        ParseGeminiEvent(line, fullText);
+                },
+                line =>
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                        OnToolActivity?.Invoke(line.Trim());
+                },
+                ct);
             DebugLog.Write($"GEMINI stdout={result.StdOut}");
             DebugLog.Write($"GEMINI stderr={result.StdErr}");
-            if (!string.IsNullOrWhiteSpace(result.StdErr))
-                OnToolActivity?.Invoke(result.StdErr.Trim());
-
-            var fullText = new StringBuilder();
-            foreach (string line in result.StdOut.Replace("\r\n", "\n").Split('\n'))
-            {
-                if (!string.IsNullOrWhiteSpace(line))
-                    ParseGeminiEvent(line, fullText);
-            }
 
             if (result.TimedOut)
             {
@@ -111,8 +118,31 @@ namespace VizzyCode
             try
             {
                 using var doc = JsonDocument.Parse(line);
+                JsonElement root = doc.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Object)
+                {
+                    if (root.TryGetProperty("response", out var response) &&
+                        response.ValueKind == JsonValueKind.String)
+                    {
+                        string? text = response.GetString();
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            fullText.Append(text);
+                            OnChunk?.Invoke(text);
+                        }
+                        return;
+                    }
+
+                    if (root.TryGetProperty("error", out var error))
+                    {
+                        OnError?.Invoke(error.ToString());
+                        return;
+                    }
+                }
+
                 bool appended = false;
-                foreach (string chunk in ExtractTextFragments(doc.RootElement))
+                foreach (string chunk in ExtractTextFragments(root))
                 {
                     if (string.IsNullOrWhiteSpace(chunk))
                         continue;
@@ -123,7 +153,7 @@ namespace VizzyCode
                 }
 
                 if (!appended &&
-                    doc.RootElement.TryGetProperty("type", out var typeProp) &&
+                    root.TryGetProperty("type", out var typeProp) &&
                     typeProp.ValueKind == JsonValueKind.String &&
                     typeProp.GetString()!.Contains("tool", StringComparison.OrdinalIgnoreCase))
                 {

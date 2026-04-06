@@ -1203,27 +1203,7 @@ namespace VizzyCode
             var varRef = new XElement("Variable", new XAttribute("variableName", varName));
             setVar.Add(varRef);
 
-            if (varValue.StartsWith("Vz."))
-            {
-                var expr = ConvertApiCallToXml(varValue);
-                if (expr != null)
-                {
-                    setVar.Add(expr);
-                }
-            }
-            else
-            {
-                var constant = new XElement("Constant");
-                if (double.TryParse(varValue, out double num))
-                {
-                    constant.Add(new XAttribute("number", num));
-                }
-                else
-                {
-                    constant.Add(new XAttribute("text", varValue.Trim('"')));
-                }
-                setVar.Add(constant);
-            }
+            setVar.Add(ConvertValueToXml(varValue));
 
             return setVar;
         }
@@ -1349,16 +1329,17 @@ namespace VizzyCode
 
         private XElement MakeConstantArg(string val)
         {
-            val = val.Trim();
-            if (double.TryParse(val, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out double num))
-                return new XElement("Constant", new XAttribute("number", num));
-            if (val.StartsWith("\"") && val.EndsWith("\""))
-                return new XElement("Constant", new XAttribute("text", val.Trim('"')));
-            if (val == "true" || val == "false")
-                return new XElement("Constant", new XAttribute("bool", val));
-            // Variable reference
-            return new XElement("Variable", new XAttribute("variableName", val));
+            return ConvertValueToXml(val);
+        }
+
+        private XElement ConvertValueToXml(string value)
+        {
+            string trimmed = value.Trim();
+            var expr = ConvertApiCallToXml(trimmed);
+            if (expr != null)
+                return expr;
+
+            return new XElement("Variable", new XAttribute("variableName", trimmed));
         }
 
         private XElement MakeListOp(string op, List<string> parts)
@@ -1372,12 +1353,39 @@ namespace VizzyCode
         {
             var result = new List<string>();
             int depth = 0;
+            bool inString = false;
+            bool escaped = false;
             var cur = new StringBuilder();
             foreach (char c in argsStr)
             {
-                if (c == '(' || c == '[') depth++;
-                else if (c == ')' || c == ']') depth--;
-                else if (c == ',' && depth == 0)
+                if (escaped)
+                {
+                    cur.Append(c);
+                    escaped = false;
+                    continue;
+                }
+
+                if (c == '\\' && inString)
+                {
+                    cur.Append(c);
+                    escaped = true;
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inString = !inString;
+                    cur.Append(c);
+                    continue;
+                }
+
+                if (!inString)
+                {
+                    if (c == '(' || c == '[' || c == '{') depth++;
+                    else if (c == ')' || c == ']' || c == '}') depth--;
+                }
+
+                if (c == ',' && depth == 0 && !inString)
                 {
                     result.Add(cur.ToString().Trim());
                     cur.Clear();
@@ -1471,8 +1479,7 @@ namespace VizzyCode
                 }
             }
 
-            // Fallback: constant 0
-            return new XElement("Constant", new XAttribute("number", "0"));
+            return null;
         }
 
         private string ExtractParenthesisContent(string line)
@@ -1481,7 +1488,7 @@ namespace VizzyCode
             int end = line.LastIndexOf(')');
             if (start > 0 && end > start)
             {
-                return line.Substring(start, end - start).Trim('"');
+                return line.Substring(start, end - start);
             }
             return "";
         }

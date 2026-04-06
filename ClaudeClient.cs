@@ -133,30 +133,38 @@ namespace VizzyCode
                 return;
             }
 
-            string prompt = CliIntegration.BuildWorkspacePrompt(WorkspaceDirectory);
+            string cliWorkingDirectory = CliIntegration.GetCliWorkingDirectory(WorkingDirectory, WorkspaceDirectory);
+            string prompt = CliIntegration.BuildWorkspacePrompt(cliWorkingDirectory);
 
-            var psi = CliIntegration.CreateProcessStartInfo(exe, WorkingDirectory);
+            var psi = CliIntegration.CreateProcessStartInfo(exe, cliWorkingDirectory);
             var args = new StringBuilder();
-            args.Append("-p --verbose --output-format stream-json --include-partial-messages");
+            args.Append("-p --verbose --output-format stream-json --include-partial-messages --dangerously-skip-permissions");
             if (!string.IsNullOrWhiteSpace(Settings.ClaudeModel))
                 args.Append(" --model ").Append(CliIntegration.QuoteForCmd(Settings.ClaudeModel));
+            if (!string.IsNullOrWhiteSpace(_currentAgent))
+                args.Append(" --agent ").Append(CliIntegration.QuoteForCmd(_currentAgent));
             args.Append(" --append-system-prompt ")
-                .Append(CliIntegration.QuoteForCmd("When running inside VizzyCode headless mode, prefer concise answers. If a task requires interactive approval, tell the user to use Open CLI."));
+                .Append(CliIntegration.QuoteForCmd("You are running inside VizzyCode in headless mode. Prefer concise answers. Edit files directly without asking for confirmation."));
             args.Append(' ').Append(CliIntegration.QuoteForCmd(prompt));
             CliIntegration.SetCommandArguments(psi, exe, args.ToString());
 
-            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(Settings.CliTimeoutSeconds), ct);
+            var fullText = new StringBuilder();
+            var result = await CliProcessRunner.RunAsync(
+                psi,
+                TimeSpan.FromSeconds(Settings.CliTimeoutSeconds),
+                line =>
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                        ParseCliEvent(line, fullText);
+                },
+                line =>
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                        OnToolActivity?.Invoke(line.Trim());
+                },
+                ct);
             DebugLog.Write($"CLAUDE stdout={result.StdOut}");
             DebugLog.Write($"CLAUDE stderr={result.StdErr}");
-            if (!string.IsNullOrWhiteSpace(result.StdErr))
-                OnToolActivity?.Invoke(result.StdErr.Trim());
-
-            var fullText = new StringBuilder();
-            foreach (string line in result.StdOut.Replace("\r\n", "\n").Split('\n'))
-            {
-                if (!string.IsNullOrWhiteSpace(line))
-                    ParseCliEvent(line, fullText);
-            }
 
             if (result.TimedOut)
             {

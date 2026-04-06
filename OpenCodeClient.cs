@@ -132,28 +132,36 @@ namespace VizzyCode
                 return;
             }
 
-            string prompt = CliIntegration.BuildWorkspacePrompt(WorkspaceDirectory);
+            string cliWorkingDirectory = CliIntegration.GetCliWorkingDirectory(WorkingDirectory, WorkspaceDirectory);
+            string prompt = CliIntegration.BuildWorkspacePrompt(cliWorkingDirectory);
 
-            var psi = CliIntegration.CreateProcessStartInfo(exe, WorkingDirectory);
+            var psi = CliIntegration.CreateProcessStartInfo(exe, cliWorkingDirectory);
             var args = new StringBuilder();
-            args.Append("run");
+            args.Append("run --format json");
             if (!string.IsNullOrWhiteSpace(Settings.OpenCodeModel))
                 args.Append(" --model ").Append(CliIntegration.QuoteForCmd(Settings.OpenCodeModel));
+            if (!string.IsNullOrWhiteSpace(_currentAgent))
+                args.Append(" --agent ").Append(CliIntegration.QuoteForCmd(_currentAgent));
             args.Append(' ').Append(CliIntegration.QuoteForCmd(prompt));
             CliIntegration.SetCommandArguments(psi, exe, args.ToString());
 
-            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(Settings.CliTimeoutSeconds), ct);
+            var fullText = new StringBuilder();
+            var result = await CliProcessRunner.RunAsync(
+                psi,
+                TimeSpan.FromSeconds(Settings.CliTimeoutSeconds),
+                line =>
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                        ParseOpenCodeEvent(line, fullText);
+                },
+                line =>
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                        OnToolActivity?.Invoke(line.Trim());
+                },
+                ct);
             DebugLog.Write($"OPENCODE stdout={result.StdOut}");
             DebugLog.Write($"OPENCODE stderr={result.StdErr}");
-            if (!string.IsNullOrWhiteSpace(result.StdErr))
-                OnToolActivity?.Invoke(result.StdErr.Trim());
-
-            var fullText = new StringBuilder();
-            foreach (string line in result.StdOut.Replace("\r\n", "\n").Split('\n'))
-            {
-                if (!string.IsNullOrWhiteSpace(line))
-                    ParseOpenCodeEvent(line, fullText);
-            }
 
             if (result.TimedOut)
             {

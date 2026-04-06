@@ -56,6 +56,7 @@ namespace VizzyCode
 
         public void SwitchAgent(string agentName)
         {
+            OnToolActivity?.Invoke("Codex CLI does not expose Claude/OpenCode-style named agents through this wrapper.");
         }
 
         public void InvokeSkill(string skillName, string[] arguments)
@@ -72,29 +73,35 @@ namespace VizzyCode
                 return;
             }
 
-            string prompt = CliIntegration.BuildWorkspacePrompt(WorkspaceDirectory);
+            string cliWorkingDirectory = CliIntegration.GetCliWorkingDirectory(WorkingDirectory, WorkspaceDirectory);
+            string prompt = CliIntegration.BuildWorkspacePrompt(cliWorkingDirectory);
 
-            var psi = CliIntegration.CreateProcessStartInfo(exe, WorkingDirectory);
+            var psi = CliIntegration.CreateProcessStartInfo(exe, cliWorkingDirectory);
 
             var args = new StringBuilder();
-            args.Append("--approval-mode full-auto");
+            args.Append("exec --json --full-auto --skip-git-repo-check");
             if (!string.IsNullOrWhiteSpace(Settings.OpenAiModel))
                 args.Append(" -m ").Append(CliIntegration.QuoteForCmd(Settings.OpenAiModel));
             args.Append(' ').Append(CliIntegration.QuoteForCmd(prompt));
             CliIntegration.SetCommandArguments(psi, exe, args.ToString());
 
-            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(Settings.CliTimeoutSeconds), ct);
+            var fullText = new StringBuilder();
+            var result = await CliProcessRunner.RunAsync(
+                psi,
+                TimeSpan.FromSeconds(Settings.CliTimeoutSeconds),
+                line =>
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                        ParseCodexEvent(line, fullText);
+                },
+                line =>
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                        OnToolActivity?.Invoke(line.Trim());
+                },
+                ct);
             DebugLog.Write($"CODEX stdout={result.StdOut}");
             DebugLog.Write($"CODEX stderr={result.StdErr}");
-            if (!string.IsNullOrWhiteSpace(result.StdErr))
-                OnToolActivity?.Invoke(result.StdErr.Trim());
-
-            var fullText = new StringBuilder();
-            foreach (string line in result.StdOut.Replace("\r\n", "\n").Split('\n'))
-            {
-                if (!string.IsNullOrWhiteSpace(line))
-                    ParseCodexEvent(line, fullText);
-            }
 
             if (result.TimedOut)
             {
@@ -127,10 +134,17 @@ namespace VizzyCode
                 }
 
                 if (type.Contains("exec_command", StringComparison.OrdinalIgnoreCase) ||
+                    type.Contains("mcp", StringComparison.OrdinalIgnoreCase) ||
                     type.Contains("patch", StringComparison.OrdinalIgnoreCase) ||
                     type.Contains("sandbox", StringComparison.OrdinalIgnoreCase))
                 {
                     OnToolActivity?.Invoke(line);
+                    return;
+                }
+
+                if (root.TryGetProperty("text", out var fallbackText) && fallbackText.ValueKind == JsonValueKind.String)
+                {
+                    AppendText(fallbackText.GetString(), fullText);
                     return;
                 }
 
