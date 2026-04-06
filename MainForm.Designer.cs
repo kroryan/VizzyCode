@@ -23,7 +23,7 @@ namespace VizzyCode
         private ChatPanel   chatPanel;
 
         // Menu items
-        private ToolStripMenuItem menuFile, menuOpenCraft, menuOpenVizzy, menuSaveItem,
+        private ToolStripMenuItem menuFile, menuOpenCraft, menuOpenVizzy, menuSaveCs, menuSaveXml,
             menuCopyItem, menuExamples, menuExCraft, menuExVizzy, menuExit,
             menuView, menuTheme, menuHelp, menuAbout;
 
@@ -41,7 +41,8 @@ namespace VizzyCode
             menuFile      = new ToolStripMenuItem("&File");
             menuOpenCraft = new ToolStripMenuItem("Open &Craft XML...") { ShortcutKeys = Keys.Control | Keys.O };
             menuOpenVizzy = new ToolStripMenuItem("Open &Vizzy XML...");
-            menuSaveItem  = new ToolStripMenuItem("&Save as .cs...") { ShortcutKeys = Keys.Control | Keys.S };
+            menuSaveCs    = new ToolStripMenuItem("&Save as .cs...");
+            menuSaveXml   = new ToolStripMenuItem("Save as Vizzy &XML...") { ShortcutKeys = Keys.Control | Keys.S };
             menuCopyItem  = new ToolStripMenuItem("&Copy Code");
             menuExamples  = new ToolStripMenuItem("&Examples");
             menuExCraft   = new ToolStripMenuItem("USP-01 Craft (example)");
@@ -51,11 +52,11 @@ namespace VizzyCode
             menuTheme     = new ToolStripMenuItem("Light Theme");
             menuHelp      = new ToolStripMenuItem("&Help");
             menuAbout     = new ToolStripMenuItem("&About...");
-
+ 
             menuFile.DropDownItems.AddRange(new ToolStripItem[]
             {
                 menuOpenCraft, menuOpenVizzy, new ToolStripSeparator(),
-                menuSaveItem, menuCopyItem, new ToolStripSeparator(),
+                menuSaveCs, menuSaveXml, menuCopyItem, new ToolStripSeparator(),
                 menuExamples, new ToolStripSeparator(), menuExit
             });
             menuExamples.DropDownItems.AddRange(new ToolStripItem[] { menuExCraft, menuExVizzy });
@@ -67,7 +68,7 @@ namespace VizzyCode
             toolStrip = new ToolStrip();
             btnOpenCraft = new ToolStripButton { Text = "Open Craft", ToolTipText = "Open Craft XML" };
             btnOpenVizzy = new ToolStripButton { Text = "Open Vizzy", ToolTipText = "Open Vizzy XML" };
-            btnSave      = new ToolStripButton { Text = "Save .cs",   ToolTipText = "Save C# code" };
+            btnSave      = new ToolStripButton { Text = "Save XML",   ToolTipText = "Save Vizzy XML" };
             btnCopy      = new ToolStripButton { Text = "Copy",       ToolTipText = "Copy to clipboard" };
             btnExCraft   = new ToolStripButton { Text = "Ex: Craft",  ToolTipText = "Load example craft" };
             btnExVizzy   = new ToolStripButton { Text = "Ex: Vizzy",  ToolTipText = "Load example vizzy" };
@@ -152,7 +153,8 @@ namespace VizzyCode
             // ── Wire events ───────────────────────────────────────────────────
             menuOpenCraft.Click += menuOpenCraft_Click;
             menuOpenVizzy.Click += menuOpenVizzy_Click;
-            menuSaveItem.Click  += menuSave_Click;
+            menuSaveCs.Click   += menuSaveCs_Click;
+            menuSaveXml.Click  += menuSaveXml_Click;
             menuCopyItem.Click  += menuCopy_Click;
             menuExCraft.Click   += menuExampleCraft_Click;
             menuExVizzy.Click   += menuExampleVizzy_Click;

@@ -27,7 +27,10 @@ namespace VizzyCode
             };
 
             chatPanel.GetCurrentCode  = () => codeEditor.Text;
+            chatPanel.GetWorkingDirectory = GetAgentWorkingDirectory;
+            chatPanel.GetDocumentKey = GetAgentDocumentKey;
             chatPanel.OnInsertCode    = InsertCodeFromChat;
+            chatPanel.OnReplaceCode   = ReplaceCodeFromChat;
 
             if (fileToOpen != null && File.Exists(fileToOpen))
                 LoadFile(fileToOpen);
@@ -244,6 +247,39 @@ namespace VizzyCode
             statusLabel.Text = "Code inserted from AI Assistant.";
         }
 
+        private void ReplaceCodeFromChat(string code)
+        {
+            codeEditor.Text = (code ?? string.Empty).Replace("\r\n", "\n").Replace("\n", "\r\n");
+            Highlight();
+            statusLabel.Text = "Code updated from AI workspace.";
+        }
+
+        private string GetAgentWorkingDirectory()
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(_currentFile))
+                {
+                    string? dir = Path.GetDirectoryName(_currentFile);
+                    if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
+                        return dir;
+                }
+            }
+            catch
+            {
+            }
+
+            return AppBaseDir();
+        }
+
+        private string GetAgentDocumentKey()
+        {
+            if (!string.IsNullOrWhiteSpace(_currentFile))
+                return _currentFile;
+
+            return "unsaved-editor-buffer";
+        }
+
         // ── Save / Copy ────────────────────────────────────────────────────────
 
         private void SaveCode()
@@ -265,6 +301,51 @@ namespace VizzyCode
             statusLabel.Text = $"Saved: {Path.GetFileName(dlg.FileName)}";
         }
 
+        private void SaveToVizzyXml()
+        {
+            if (string.IsNullOrWhiteSpace(codeEditor.Text)) return;
+            
+            string programName = _currentFile != null
+                ? Path.GetFileNameWithoutExtension(_currentFile)
+                : "GeneratedProgram";
+
+            try
+            {
+                var conv = new VizzyXmlConverter();
+                var xmlDoc = conv.ConvertCodeToXml(codeEditor.Text, programName);
+
+                string defaultName = programName + ".xml";
+                string initDir = Path.Combine(AppBaseDir(), "Programs");
+                if (!Directory.Exists(initDir)) initDir = AppBaseDir();
+
+                using var dlg = new SaveFileDialog
+                {
+                    Title = "Save as Vizzy XML", Filter = "Vizzy XML Files (*.xml)|*.xml|All Files (*.*)|*.*",
+                    DefaultExt = "xml", FileName = defaultName, InitialDirectory = initDir
+                };
+
+                if (dlg.ShowDialog() != DialogResult.OK) return;
+                
+                xmlDoc.Save(dlg.FileName);
+                statusLabel.Text = $"Saved Vizzy XML: {Path.GetFileName(dlg.FileName)}";
+                MessageBox.Show(
+                    $"Vizzy XML program saved successfully!\n\nFile: {dlg.FileName}\n\n" +
+                    "You can now import this file into SimpleRockets 2 and run it with Vizzy.",
+                    "Vizzy XML Saved",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Error saving Vizzy XML:\n{ex.Message}",
+                    "Save Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                statusLabel.Text = $"Error saving XML: {ex.Message}";
+            }
+        }
+
         // ── Menu / toolbar handlers ────────────────────────────────────────────
 
         private void menuOpenCraft_Click(object s, EventArgs e)
@@ -279,7 +360,8 @@ namespace VizzyCode
                 Filter = "XML Files (*.xml)|*.xml|All Files (*.*)|*.*", InitialDirectory = GetInitDir() };
             if (d.ShowDialog() == DialogResult.OK) LoadFile(d.FileName);
         }
-        private void menuSave_Click(object s, EventArgs e) => SaveCode();
+        private void menuSaveCs_Click(object s, EventArgs e) => SaveCode();
+        private void menuSaveXml_Click(object s, EventArgs e) => SaveToVizzyXml();
         private void menuCopy_Click(object s, EventArgs e)
         {
             if (!string.IsNullOrWhiteSpace(codeEditor.Text))
@@ -318,14 +400,14 @@ namespace VizzyCode
         // Toolbar shortcut
         private void btnOpenCraft_Click(object s, EventArgs e) => menuOpenCraft_Click(s, e);
         private void btnOpenVizzy_Click(object s, EventArgs e) => menuOpenVizzy_Click(s, e);
-        private void btnSave_Click(object s, EventArgs e) => SaveCode();
+        private void btnSave_Click(object s, EventArgs e) => SaveToVizzyXml();
         private void btnCopy_Click(object s, EventArgs e) => menuCopy_Click(s, e);
         private void btnExCraft_Click(object s, EventArgs e) => menuExampleCraft_Click(s, e);
         private void btnExVizzy_Click(object s, EventArgs e) => menuExampleVizzy_Click(s, e);
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            if (keyData == (Keys.Control | Keys.S)) { SaveCode(); return true; }
+            if (keyData == (Keys.Control | Keys.S)) { SaveToVizzyXml(); return true; }
             if (keyData == (Keys.Control | Keys.O)) { menuOpenCraft_Click(this, EventArgs.Empty); return true; }
             if (keyData == (Keys.F5)) { Highlight(); return true; }
             return base.ProcessCmdKey(ref msg, keyData);

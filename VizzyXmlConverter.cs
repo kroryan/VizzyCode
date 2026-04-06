@@ -979,5 +979,246 @@ namespace VizzyCode
             }
             return r;
         }
+
+        // ── Convert Code to XML ────────────────────────────────────────────────
+
+        public XDocument ConvertCodeToXml(string code, string programName = "GeneratedProgram")
+        {
+            var lines = code.Split('\n').Select(l => l.TrimEnd()).ToList();
+            var program = new XElement("Program", new XAttribute("name", programName));
+
+            var variables = new XElement("Variables");
+            var instructions = new XElement("Instructions");
+
+            string currentVariable = null;
+            var currentInstructionElements = new List<XElement>();
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                string line = lines[i];
+
+                if (line.StartsWith("//")) continue;
+
+                if (line.StartsWith("using (new "))
+                {
+                    if (currentInstructionElements.Count > 0)
+                    {
+                        instructions.Add(currentInstructionElements);
+                        currentInstructionElements.Clear();
+                    }
+
+                    var blockMatch = System.Text.RegularExpressions.Regex.Match(line, @"using\s+\(new\s+(\w+)\((.*)\)\)");
+                    if (blockMatch.Success)
+                    {
+                        string blockType = blockMatch.Groups[1].Value;
+                        string blockArgs = blockMatch.Groups[2].Value;
+
+                        var block = ConvertBlockToXml(blockType, blockArgs, lines, ref i);
+                        if (block != null)
+                        {
+                            instructions.Add(block);
+                        }
+                    }
+                }
+                else if (line.Contains("=") && !line.Contains("==") && !line.Contains("!="))
+                {
+                    var assignMatch = System.Text.RegularExpressions.Regex.Match(line, @"(\w+)\s*=\s*(.+);");
+                    if (assignMatch.Success)
+                    {
+                        string varName = assignMatch.Groups[1].Value;
+                        string varValue = assignMatch.Groups[2].Value;
+                        
+                        if (varValue.StartsWith("Vz."))
+                        {
+                            var setVar = ConvertSetVariableToXml(varName, varValue);
+                            if (setVar != null)
+                            {
+                                currentInstructionElements.Add(setVar);
+                            }
+                        }
+                        else
+                        {
+                            var varEl = new XElement("Variable", new XAttribute("name", varName));
+                            var constant = new XElement("Constant");
+                            if (double.TryParse(varValue, out double num))
+                            {
+                                constant.Add(new XAttribute("number", num));
+                            }
+                            else
+                            {
+                                constant.Add(new XAttribute("text", varValue.Trim('"')));
+                            }
+                            varEl.Add(constant);
+                            variables.Add(varEl);
+                        }
+                    }
+                }
+                else if (line.StartsWith("Vz."))
+                {
+                    var instruction = ConvertInstructionToXml(line);
+                    if (instruction != null)
+                    {
+                        currentInstructionElements.Add(instruction);
+                    }
+                }
+            }
+
+            if (currentInstructionElements.Count > 0)
+            {
+                instructions.Add(currentInstructionElements);
+            }
+
+            if (variables.HasElements) program.Add(variables);
+            if (instructions.HasElements) program.Add(instructions);
+
+            return new XDocument(new XElement("Assembly", new XAttribute("name", "VizzyAssembly"), program));
+        }
+
+        private XElement? ConvertBlockToXml(string blockType, string blockArgs, List<string> lines, ref int index)
+        {
+            var bodyLines = new List<string>();
+            int depth = 0;
+            bool inBlock = false;
+
+            for (int i = index + 1; i < lines.Count; i++)
+            {
+                string line = lines[i].Trim();
+                if (line == "{")
+                {
+                    inBlock = true;
+                    depth++;
+                    continue;
+                }
+                if (line == "}")
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        index = i;
+                        break;
+                    }
+                    continue;
+                }
+                if (inBlock && !string.IsNullOrWhiteSpace(line))
+                {
+                    bodyLines.Add(line);
+                }
+            }
+
+            var body = new XElement("Instructions");
+            foreach (var bodyLine in bodyLines)
+            {
+                var instruction = ConvertInstructionToXml(bodyLine);
+                if (instruction != null)
+                {
+                    body.Add(instruction);
+                }
+            }
+
+            return blockType.ToLower() switch
+            {
+                "onstart" => new XElement("Event", new XAttribute("event", "FlightStart"), body),
+                "onend" => new XElement("Event", new XAttribute("event", "FlightEnd"), body),
+                "if" => new XElement("If", new XElement("Constant", new XAttribute("number", blockArgs)), body),
+                "elseif" => new XElement("ElseIf", new XElement("Constant", new XAttribute("number", blockArgs)), body),
+                "else" => new XElement("Else", body),
+                "while" => new XElement("While", new XElement("Constant", new XAttribute("number", blockArgs)), body),
+                "repeat" => new XElement("Repeat", new XElement("Constant", new XAttribute("number", blockArgs)), body),
+                "for" => new XElement("ForLoop", new XAttribute("variable", "i"), 
+                    new XElement("Constant", new XAttribute("number", "0")),
+                    new XElement("Constant", new XAttribute("number", blockArgs)),
+                    body),
+                _ => null
+            };
+        }
+
+        private XElement? ConvertSetVariableToXml(string varName, string varValue)
+        {
+            var setVar = new XElement("SetVariable");
+            
+            var varRef = new XElement("Variable", new XAttribute("variableName", varName));
+            setVar.Add(varRef);
+
+            if (varValue.StartsWith("Vz."))
+            {
+                var expr = ConvertApiCallToXml(varValue);
+                if (expr != null)
+                {
+                    setVar.Add(expr);
+                }
+            }
+            else
+            {
+                var constant = new XElement("Constant");
+                if (double.TryParse(varValue, out double num))
+                {
+                    constant.Add(new XAttribute("number", num));
+                }
+                else
+                {
+                    constant.Add(new XAttribute("text", varValue.Trim('"')));
+                }
+                setVar.Add(constant);
+            }
+
+            return setVar;
+        }
+
+        private XElement? ConvertInstructionToXml(string line)
+        {
+            if (line.StartsWith("Vz.Log("))
+            {
+                var content = ExtractParenthesisContent(line);
+                return new XElement("Log", new XElement("Constant", new XAttribute("text", content)));
+            }
+            if (line.StartsWith("Vz.WaitSeconds("))
+            {
+                var content = ExtractParenthesisContent(line);
+                return new XElement("WaitSeconds", new XElement("Constant", new XAttribute("number", content)));
+            }
+            if (line.StartsWith("Vz.SetThrottle("))
+            {
+                var content = ExtractParenthesisContent(line);
+                return new XElement("SetThrottle", new XElement("Constant", new XAttribute("number", content)));
+            }
+            if (line.StartsWith("Vz.ActivateStage()"))
+            {
+                return new XElement("ActivateStage");
+            }
+            if (line.StartsWith("Vz.Break()"))
+            {
+                return new XElement("Break");
+            }
+            if (line.StartsWith("Vz.Beep()"))
+            {
+                return new XElement("Beep");
+            }
+
+            return null;
+        }
+
+        private XElement? ConvertApiCallToXml(string call)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(call, @"Vz\.(\w+)\((.*)\)");
+            if (match.Success)
+            {
+                string method = match.Groups[1].Value;
+                string args = match.Groups[2].Value;
+                
+                return new XElement("Constant", new XAttribute("number", "0"));
+            }
+            return null;
+        }
+
+        private string ExtractParenthesisContent(string line)
+        {
+            int start = line.IndexOf('(') + 1;
+            int end = line.LastIndexOf(')');
+            if (start > 0 && end > start)
+            {
+                return line.Substring(start, end - start).Trim('"');
+            }
+            return "";
+        }
     }
 }

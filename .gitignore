@@ -1,6 +1,9 @@
 bin/
 obj/
 publish/
+publish_debug/
+publish_debug2/
+publish_debug3/
 *.user
 .vs/
 *.suo

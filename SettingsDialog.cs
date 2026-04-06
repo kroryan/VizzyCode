@@ -81,7 +81,7 @@ namespace VizzyCode
             y += 60; Label(p, "API Key (if using API Mode):", 16, y);
             _txtClaudeKey = Textbox(p, 16, y + 22, 430, true);
             y += 60; Label(p, "Model:", 16, y);
-            _cmbClaudeModel = Combo(p, 16, y + 22, 300, new[] { "claude-3-7-sonnet-latest", "claude-3-5-sonnet-20241022" }, true);
+            _cmbClaudeModel = Combo(p, 16, y + 22, 300, new[] { "sonnet", "opus", "claude-sonnet-4-5", "claude-sonnet-4-6" }, true);
             return p;
         }
 
@@ -92,7 +92,7 @@ namespace VizzyCode
             y += 60; Label(p, "API Key (if using API Mode):", 16, y);
             _txtGeminiKey = Textbox(p, 16, y + 22, 430, true);
             y += 60; Label(p, "Model:", 16, y);
-            _cmbGeminiModel = Combo(p, 16, y + 22, 300, new[] { "gemini-2.0-flash-exp", "gemini-1.5-pro" }, true);
+            _cmbGeminiModel = Combo(p, 16, y + 22, 300, new[] { "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash" }, true);
             return p;
         }
 
@@ -103,18 +103,20 @@ namespace VizzyCode
             y += 60; Label(p, "API Key (if using API Mode):", 16, y);
             _txtOpenAiKey = Textbox(p, 16, y + 22, 430, true);
             y += 60; Label(p, "Model:", 16, y);
-            _cmbOpenAiModel = Combo(p, 16, y + 22, 300, new[] { "gpt-4o", "gpt-4-turbo" }, true);
+            _cmbOpenAiModel = Combo(p, 16, y + 22, 300, new[] { "gpt-5-codex", "gpt-5", "gpt-4.1" }, true);
             return p;
         }
 
         private TabPage CreateOpenCodeTab() {
             var p = new TabPage("OpenCode"); int y = 20;
             Label(p, "Access Mode:", 16, y);
-            _cmbOpenCodeMode = Combo(p, 16, y + 22, 430, new[] { "OpenCode CLI (Login via terminal first)", "API Mode (Ollama, etc.)" }, false);
+            _cmbOpenCodeMode = Combo(p, 16, y + 22, 430, new[] { "OpenCode CLI (Login via terminal first)", "OpenAI-compatible API" }, false);
             y += 60; Label(p, "Base URL (for API Mode):", 16, y);
             _txtOpenCodeUrl = Textbox(p, 16, y + 22, 430, false);
-            y += 60; Label(p, "Model Name:", 16, y);
+            y += 60; Label(p, "Model Name (CLI uses provider/model):", 16, y);
             _txtOpenCodeModel = Textbox(p, 16, y + 22, 430, false);
+            y += 60; Label(p, "API Key (optional for API mode):", 16, y);
+            _txtOpenCodeKey = Textbox(p, 16, y + 22, 430, true);
             return p;
         }
 
@@ -133,7 +135,7 @@ namespace VizzyCode
             _cmbClaudeMode.SelectedIndex = (int)s.ClaudeMode; _txtClaudeKey.Text = s.ClaudeApiKey; _cmbClaudeModel.Text = s.ClaudeModel;
             _cmbGeminiMode.SelectedIndex = (int)s.GeminiMode; _txtGeminiKey.Text = s.GeminiApiKey; _cmbGeminiModel.Text = s.GeminiModel;
             _cmbOpenAiMode.SelectedIndex = (int)s.OpenAiMode; _txtOpenAiKey.Text = s.OpenAiApiKey; _cmbOpenAiModel.Text = s.OpenAiModel;
-            _cmbOpenCodeMode.SelectedIndex = (int)s.OpenCodeMode; _txtOpenCodeUrl.Text = s.OpenCodeBaseUrl; _txtOpenCodeModel.Text = s.OpenCodeModel;
+            _cmbOpenCodeMode.SelectedIndex = (int)s.OpenCodeMode; _txtOpenCodeUrl.Text = s.OpenCodeBaseUrl; _txtOpenCodeModel.Text = s.OpenCodeModel; _txtOpenCodeKey.Text = s.OpenCodeApiKey;
             _numTemp.Value = (decimal)s.Temperature; _numMaxTokens.Value = s.MaxTokens;
             _tabs.SelectedIndex = (int)s.Provider;
         }
@@ -142,7 +144,7 @@ namespace VizzyCode
             Result.ClaudeMode = (AccessMode)_cmbClaudeMode.SelectedIndex; Result.ClaudeApiKey = _txtClaudeKey.Text.Trim(); Result.ClaudeModel = _cmbClaudeModel.Text;
             Result.GeminiMode = (AccessMode)_cmbGeminiMode.SelectedIndex; Result.GeminiApiKey = _txtGeminiKey.Text.Trim(); Result.GeminiModel = _cmbGeminiModel.Text;
             Result.OpenAiMode = (AccessMode)_cmbOpenAiMode.SelectedIndex; Result.OpenAiApiKey = _txtOpenAiKey.Text.Trim(); Result.OpenAiModel = _cmbOpenAiModel.Text;
-            Result.OpenCodeMode = (AccessMode)_cmbOpenCodeMode.SelectedIndex; Result.OpenCodeBaseUrl = _txtOpenCodeUrl.Text.Trim(); Result.OpenCodeModel = _txtOpenCodeModel.Text.Trim();
+            Result.OpenCodeMode = (AccessMode)_cmbOpenCodeMode.SelectedIndex; Result.OpenCodeBaseUrl = _txtOpenCodeUrl.Text.Trim(); Result.OpenCodeModel = _txtOpenCodeModel.Text.Trim(); Result.OpenCodeApiKey = _txtOpenCodeKey.Text.Trim();
             Result.Temperature = (double)_numTemp.Value; Result.MaxTokens = (int)_numMaxTokens.Value;
             Result.Provider = (AiProvider)_tabs.SelectedIndex;
         }

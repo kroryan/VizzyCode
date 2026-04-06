@@ -1,113 +1,92 @@
 # VizzyCode
 
-**Open, convert, and AI-edit Vizzy programs as C# code.**
+VizzyCode is a Windows Forms editor for opening Vizzy XML, converting it to C#-style VizzyBuilder code, editing it, and exporting back to Vizzy XML.
 
-VizzyCode is a companion tool for [VizzyBuilder](https://github.com/RayanRal/VizzyBuilder) that lets you:
+## AI Integration
 
-- Open **any** Vizzy XML file (craft files or standalone programs)
-- Automatically convert all Vizzy blocks to **editable C# VizzyBuilder API code**
-- Chat with **Claude AI** to write, fix, and understand Vizzy programs
-- Save the result as a `.cs` script ready to run in VizzyBuilder
+The app now supports two distinct ways to use Claude Code, Gemini CLI, Codex CLI, and OpenCode:
 
-![VizzyCode Screenshot](screenshot.png)
+1. In-app headless chat
+   Uses the agent CLI in non-interactive mode from the current working directory.
 
----
+2. Open CLI
+   Launches the real native agent CLI in a terminal window from the current working directory.
+   This is the mode to use for approvals, consent prompts, slash commands, session resume, agent management, and the full native feature set of each agent.
 
-## Features
+This split is intentional. The official CLIs do not all expose the same non-interactive approval protocol, so VizzyCode now stops pretending they do.
 
-| Feature | Description |
-|---------|-------------|
-| 📂 Open Craft XML | Extracts all FlightPrograms from a craft file |
-| 📂 Open Vizzy XML | Opens standalone Vizzy program XML files |
-| 🔄 Full Conversion | Handles all 60+ block types (events, loops, math, vectors, lists, MFD widgets, custom instructions, etc.) |
-| 🤖 Claude Chat | Ask Claude to write or modify Vizzy C# code — works with your **claude.ai subscription** or an API key |
-| 💾 Save as .cs | One click to save the code for VizzyBuilder |
-| 🌗 Dark/Light theme | |
+## Current Provider Behavior
 
----
+### Claude
 
-## Requirements
+- CLI mode uses `claude -p --verbose --output-format stream-json --include-partial-messages`
+- Interactive mode is opened through the `Open CLI` button
+- Default model is `sonnet`
+- Agent switching supported in headless mode for `build`, `plan`, and `general`
 
-- Windows 10/11 x64
-- **.NET 9 Desktop Runtime** (download from [dotnet.microsoft.com](https://dotnet.microsoft.com/download/dotnet/9.0))  
-  *Or use the self-contained build — no runtime needed.*
+Official references:
+- https://docs.anthropic.com/en/docs/claude-code/overview
+- https://docs.anthropic.com/en/docs/claude-code/sdk
 
-### For Claude AI chat (optional but recommended)
-Either:
-- **Claude Code** installed and logged in (`claude login`) → uses your **claude.ai subscription** for free
-- Or an **Anthropic API key** (configure in chat panel ⚙ Settings)
+### Gemini
 
----
+- CLI mode uses the real `gemini` binary in headless mode
+- Interactive mode is opened through the `Open CLI` button
+- Default model is `gemini-2.5-pro`
+- API mode remains available with a Google AI Studio key
+
+Official references:
+- https://github.com/google-gemini/gemini-cli
+- https://geminicli.com/docs
+
+### OpenAI / Codex
+
+- CLI mode uses the real `codex` binary through `codex exec --json`
+- Interactive mode is opened through the `Open CLI` button
+- Default model is `gpt-5-codex`
+- API mode remains available with an OpenAI API key
+
+Official references:
+- https://github.com/openai/codex
+- https://developers.openai.com/codex
+
+### OpenCode
+
+- CLI mode uses `opencode run --format json`
+- Interactive mode is opened through the `Open CLI` button
+- If you configure Base URL, VizzyCode can also use an OpenAI-compatible API endpoint
+- For CLI mode, model names should follow the provider/model format expected by OpenCode
+
+Official references:
+- https://github.com/sst/opencode
+- https://opencode.ai/docs
+
+## Settings
+
+AI settings are stored in:
+
+`%AppData%\VizzyCode\ai-settings.json`
+
+The app now persists provider, mode, model, and API settings between runs.
+
+## Working Directory
+
+Agent CLIs now run from the directory of the currently opened file when possible. If no file is open, they run from the app directory.
+
+That fixes a major integration bug in the previous implementation, where CLIs were launched without reliable project context.
 
 ## Build
 
-```bash
-git clone https://github.com/kroryan/VizzyCode.git
-cd VizzyCode
-dotnet build
-dotnet run
+```powershell
+dotnet build VizzyCode.csproj -c Release
 ```
 
-### Self-contained (no runtime needed)
-```bash
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
-```
-The output `publish/VizzyCode.exe` runs on any Windows 10/11 x64 machine with no dependencies.
+## Publish EXE
 
----
-
-## Usage
-
-1. **Open a file**: `File > Open Craft XML` or `File > Open Vizzy XML`
-2. **Browse the structure** in the left tree panel (variables, events, custom instructions)
-3. **Edit the C# code** in the center editor
-4. **Ask Claude** in the right chat panel — e.g.:
-   - *"Add a PID controller for pitch"*
-   - *"Explain what this custom instruction does"*
-   - *"Convert this to use a while loop instead"*
-5. **Save**: `Ctrl+S` → saves as `.cs` to the VizzyBuilder Scripts folder
-
----
-
-## How it works
-
-Vizzy programs are stored as XML inside craft files or as standalone `.xml` files.  
-VizzyCode parses that XML and maps every block type to the equivalent **VizzyBuilder C# API** call:
-
-```xml
-<!-- Vizzy XML -->
-<While>
-  <Comparison op="l">
-    <CraftProperty property="Altitude.ASL" />
-    <Constant text="70000" />
-  </Comparison>
-  <Instructions>
-    <SetThrottle><Constant text="1" /></SetThrottle>
-  </Instructions>
-</While>
+```powershell
+dotnet publish VizzyCode.csproj -c Release -r win-x64 -p:PublishSingleFile=true --self-contained false
 ```
 
-```csharp
-// Generated C# (VizzyBuilder API)
-using (new While((Vz.Craft.AltitudeASL() < 70000)))
-{
-    Vz.SetThrottle(1);
-}
-```
+Published output:
 
-The generated code can be run directly in VizzyBuilder to regenerate the Vizzy XML.
-
----
-
-## Credits
-
-- **VizzyBuilder** by Rayan Ral — the C# API this tool generates code for  
-  [github.com/RayanRal/VizzyBuilder](https://github.com/RayanRal/VizzyBuilder)
-- **Juno: New Origins** — the game that uses Vizzy  
-- **Claude** by Anthropic — AI assistant integration
-
----
-
-## License
-
-MIT
+`bin\Release\net9.0-windows\win-x64\publish\VizzyCode.exe`
