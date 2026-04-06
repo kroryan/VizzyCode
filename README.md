@@ -9,7 +9,7 @@ VizzyCode is a companion tool for [VizzyBuilder](https://github.com/RayanRal/Viz
 - Chat with **Claude AI** to write, fix, and understand Vizzy programs
 - Save the result as a `.cs` script ready to run in VizzyBuilder
 
-![VizzyCode Screenshot](screenshot.png)
+<img width="1397" height="833" alt="image" src="https://github.com/user-attachments/assets/b5557aa8-66c0-4c7a-b04e-79450e9b0f61" />
 
 ---
 
