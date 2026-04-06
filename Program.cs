@@ -11,6 +11,20 @@ namespace VizzyCode
         [STAThread]
         static void Main(string[] args)
         {
+            if (args.Length > 0 && args[0].Equals("--verify-vizzy", StringComparison.OrdinalIgnoreCase))
+            {
+                string rootDir = AppContext.BaseDirectory;
+                if (File.Exists(Path.Combine(rootDir, "VizzyCode.dll")))
+                    rootDir = Directory.GetParent(rootDir)?.Parent?.Parent?.Parent?.FullName ?? rootDir;
+                string report = VizzyCoverageVerifier.Run(rootDir);
+                string reportPath = Path.Combine(rootDir, "vizzy_coverage_report.txt");
+                File.WriteAllText(reportPath, report);
+                Console.WriteLine(report);
+                Console.WriteLine();
+                Console.WriteLine($"Report written to: {reportPath}");
+                return;
+            }
+
             ApplicationConfiguration.Initialize();
             string? fileToOpen = args.Length > 0 ? args[0] : null;
             var form = new MainForm(fileToOpen);

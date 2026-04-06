@@ -13,4 +13,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="VizzyBuilder\**\*.cs" />
+    <EmbeddedResource Remove="VizzyBuilder\**\*" />
+    <None Remove="VizzyBuilder\**\*" />
+  </ItemGroup>
 </Project>

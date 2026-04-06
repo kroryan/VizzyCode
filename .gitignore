@@ -8,3 +8,6 @@ publish_debug3/
 .vs/
 *.suo
 .DS_Store
+VizzyBuilder/
+*.xml
+!*.csproj
