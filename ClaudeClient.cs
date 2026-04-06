@@ -17,6 +17,7 @@ namespace VizzyCode
 
         public AiSettings Settings { get; set; } = new();
         public string WorkingDirectory { get; set; } = Environment.CurrentDirectory;
+        public string WorkspaceDirectory { get; set; } = Environment.CurrentDirectory;
         public string? LastSessionId { get; private set; }
 
         public event Action<string>? OnChunk;
@@ -132,21 +133,19 @@ namespace VizzyCode
                 return;
             }
 
-            string prompt = CliIntegration.BuildWorkspacePrompt();
+            string prompt = CliIntegration.BuildWorkspacePrompt(WorkspaceDirectory);
 
             var psi = CliIntegration.CreateProcessStartInfo(exe, WorkingDirectory);
             var args = new StringBuilder();
-            args.Append("-p --verbose --output-format stream-json --include-partial-messages");
+            args.Append("-p --output-format stream-json --include-partial-messages");
             if (!string.IsNullOrWhiteSpace(Settings.ClaudeModel))
                 args.Append(" --model ").Append(CliIntegration.QuoteForCmd(Settings.ClaudeModel));
-            if (_currentAgent != "build")
-                args.Append(" --agent ").Append(CliIntegration.QuoteForCmd(_currentAgent));
             args.Append(" --append-system-prompt ")
                 .Append(CliIntegration.QuoteForCmd("When running inside VizzyCode headless mode, prefer concise answers. If a task requires interactive approval, tell the user to use Open CLI."));
             args.Append(' ').Append(CliIntegration.QuoteForCmd(prompt));
             CliIntegration.SetCommandArguments(psi, exe, args.ToString());
 
-            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(45), ct);
+            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(Settings.CliTimeoutSeconds), ct);
             DebugLog.Write($"CLAUDE stdout={result.StdOut}");
             DebugLog.Write($"CLAUDE stderr={result.StdErr}");
             if (!string.IsNullOrWhiteSpace(result.StdErr))

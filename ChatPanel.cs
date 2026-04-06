@@ -145,7 +145,8 @@ namespace VizzyCode
             _statusLabel.Text = $"{_settings.Provider} running in {_workspace.RootDirectory}...";
             AppendAssistantStart();
             _cts = new CancellationTokenSource();
-            _activeClient.WorkingDirectory = _workspace.RootDirectory;
+            _activeClient.WorkingDirectory = GetEffectiveWorkingDirectory();
+            _activeClient.WorkspaceDirectory = _workspace.RootDirectory;
             try { await _activeClient.SendAsync(msg, sys, _cts.Token); }
             catch (Exception ex) { ShowError(ex.Message); }
             finally {

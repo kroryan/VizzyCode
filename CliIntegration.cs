@@ -32,8 +32,10 @@ namespace VizzyCode
             return sb.ToString().Trim();
         }
 
-        public static string BuildWorkspacePrompt()
+        public static string BuildWorkspacePrompt(string? workspacePath = null)
         {
+            if (!string.IsNullOrWhiteSpace(workspacePath))
+                return $"Read {workspacePath}/TASK.md and {workspacePath}/SYSTEM_PROMPT.md, inspect {workspacePath}/CurrentProgram.cs, edit {workspacePath}/CurrentProgram.cs when needed, then respond with a concise summary.";
             return "Read TASK.md and SYSTEM_PROMPT.md, inspect CurrentProgram.cs, edit CurrentProgram.cs when needed, then respond with a concise summary.";
         }
 
@@ -191,7 +193,7 @@ namespace VizzyCode
                     }
                     if (!string.IsNullOrWhiteSpace(combinedPrompt))
                     {
-                        parts.Add("--prompt-interactive");
+                        parts.Add("-p");
                         parts.Add(QuoteForCmd(combinedPrompt));
                     }
                     break;

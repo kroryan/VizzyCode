@@ -16,6 +16,7 @@ namespace VizzyCode
         public AiSettings Settings { get; set; } = new();
         public bool IsOpenCode { get; set; }
         public string WorkingDirectory { get; set; } = Environment.CurrentDirectory;
+        public string WorkspaceDirectory { get; set; } = Environment.CurrentDirectory;
 
         public event Action<string>? OnChunk;
         public event Action<string>? OnDone;
@@ -71,19 +72,18 @@ namespace VizzyCode
                 return;
             }
 
-            string prompt = CliIntegration.BuildWorkspacePrompt();
+            string prompt = CliIntegration.BuildWorkspacePrompt(WorkspaceDirectory);
 
             var psi = CliIntegration.CreateProcessStartInfo(exe, WorkingDirectory);
 
             var args = new StringBuilder();
-            args.Append("exec --json --skip-git-repo-check --full-auto");
-            args.Append(" -C ").Append(CliIntegration.QuoteForCmd(WorkingDirectory));
+            args.Append("--approval-mode full-auto");
             if (!string.IsNullOrWhiteSpace(Settings.OpenAiModel))
                 args.Append(" -m ").Append(CliIntegration.QuoteForCmd(Settings.OpenAiModel));
             args.Append(' ').Append(CliIntegration.QuoteForCmd(prompt));
             CliIntegration.SetCommandArguments(psi, exe, args.ToString());
 
-            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(45), ct);
+            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(Settings.CliTimeoutSeconds), ct);
             DebugLog.Write($"CODEX stdout={result.StdOut}");
             DebugLog.Write($"CODEX stderr={result.StdErr}");
             if (!string.IsNullOrWhiteSpace(result.StdErr))

@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <Nullable>disable</Nullable>
+    <Nullable>enable</Nullable>
     <AssemblyName>VizzyCode</AssemblyName>
     <RootNamespace>VizzyCode</RootNamespace>
     <Version>1.0.0</Version>

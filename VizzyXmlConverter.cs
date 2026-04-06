@@ -1020,7 +1020,7 @@ namespace VizzyCode
                         }
                     }
                 }
-                else if (line.Contains("=") && !line.Contains("==") && !line.Contains("!="))
+                else if (System.Text.RegularExpressions.Regex.IsMatch(line, @"(?<![=!<>])=(?!=)"))
                 {
                     var assignMatch = System.Text.RegularExpressions.Regex.Match(line, @"(\w+)\s*=\s*(.+);");
                     if (assignMatch.Success)
@@ -1106,30 +1106,93 @@ namespace VizzyCode
             }
 
             var body = new XElement("Instructions");
-            foreach (var bodyLine in bodyLines)
+            int bi = 0;
+            while (bi < bodyLines.Count)
             {
-                var instruction = ConvertInstructionToXml(bodyLine);
-                if (instruction != null)
+                string bodyLine = bodyLines[bi];
+                var nestedMatch = System.Text.RegularExpressions.Regex.Match(bodyLine, @"using\s+\(new\s+(\w+)\((.*)\)\)");
+                if (nestedMatch.Success)
                 {
-                    body.Add(instruction);
+                    string nestedType = nestedMatch.Groups[1].Value;
+                    string nestedArgs = nestedMatch.Groups[2].Value;
+                    // Collect nested block body lines (look ahead for { ... })
+                    var nestedBodyLines = new List<string>();
+                    int nd = 0; bool inNested = false;
+                    int nEnd = bi;
+                    for (int ni = bi + 1; ni < bodyLines.Count; ni++)
+                    {
+                        string nl = bodyLines[ni].Trim();
+                        if (nl == "{") { inNested = true; nd++; continue; }
+                        if (nl == "}") { nd--; if (nd == 0) { nEnd = ni; break; } continue; }
+                        if (inNested) nestedBodyLines.Add(nl);
+                    }
+                    // Build nested block using same parsing
+                    var allNestedLines = new List<string>(bodyLines);
+                    // Re-use ConvertInstructionToXml for simple nested lines
+                    var nestedBody = new XElement("Instructions");
+                    foreach (var nl2 in nestedBodyLines)
+                    {
+                        var ni2 = ConvertInstructionToXml(nl2);
+                        if (ni2 != null) nestedBody.Add(ni2);
+                    }
+                    var nestedBlock = BuildBlockElement(nestedType, nestedArgs, nestedBody);
+                    if (nestedBlock != null) body.Add(nestedBlock);
+                    bi = nEnd + 1;
+                    continue;
                 }
+                var instruction = ConvertInstructionToXml(bodyLine);
+                if (instruction != null) body.Add(instruction);
+                bi++;
             }
 
+            return BuildBlockElement(blockType, blockArgs, body);
+        }
+
+        private XElement? BuildBlockElement(string blockType, string blockArgs, XElement body)
+        {
+            // Parse "OnReceiveMessage("msg")" style args
+            string condArg = string.IsNullOrWhiteSpace(blockArgs) ? "0" : blockArgs.Trim('"', ' ');
             return blockType.ToLower() switch
             {
                 "onstart" => new XElement("Event", new XAttribute("event", "FlightStart"), body),
                 "onend" => new XElement("Event", new XAttribute("event", "FlightEnd"), body),
-                "if" => new XElement("If", new XElement("Constant", new XAttribute("number", blockArgs)), body),
-                "elseif" => new XElement("ElseIf", new XElement("Constant", new XAttribute("number", blockArgs)), body),
+                "onreceivemessage" => new XElement("Event", new XAttribute("event", "ReceiveMessage"),
+                    new XElement("Constant", new XAttribute("text", condArg)), body),
+                "ondocked" => new XElement("Event", new XAttribute("event", "Docked"), body),
+                "onchangesoi" => new XElement("Event", new XAttribute("event", "ChangeSoi"), body),
+                "onpartcollision" => new XElement("Event", new XAttribute("event", "Collide"),
+                    new XAttribute("part", condArg), body),
+                "onpartexplode" => new XElement("Event", new XAttribute("event", "Explode"),
+                    new XAttribute("part", condArg), body),
+                "if" => new XElement("If", new XElement("Constant", new XAttribute("number", condArg)), body),
+                "elseif" => new XElement("ElseIf", new XElement("Constant", new XAttribute("number", condArg)), body),
                 "else" => new XElement("Else", body),
-                "while" => new XElement("While", new XElement("Constant", new XAttribute("number", blockArgs)), body),
-                "repeat" => new XElement("Repeat", new XElement("Constant", new XAttribute("number", blockArgs)), body),
-                "for" => new XElement("ForLoop", new XAttribute("variable", "i"), 
-                    new XElement("Constant", new XAttribute("number", "0")),
-                    new XElement("Constant", new XAttribute("number", blockArgs)),
-                    body),
+                "while" => new XElement("While", new XElement("Constant", new XAttribute("number", condArg)), body),
+                "waituntil" => new XElement("WaitUntil", new XElement("Constant", new XAttribute("number", condArg)), body),
+                "repeat" => new XElement("Repeat", new XElement("Constant", new XAttribute("number", condArg)), body),
+                "for" => ParseForBlock(blockArgs, body),
                 _ => null
             };
+        }
+
+        private XElement ParseForBlock(string blockArgs, XElement body)
+        {
+            // blockArgs may be "\"i\".From(0).To(10).By(1)" or just the variable name
+            string variable = "i";
+            string from = "0", to = "10", step = "1";
+            var varMatch = System.Text.RegularExpressions.Regex.Match(blockArgs, "\"(\\w+)\"");
+            if (varMatch.Success) variable = varMatch.Groups[1].Value;
+            var fromMatch = System.Text.RegularExpressions.Regex.Match(blockArgs, @"\.From\(([^)]+)\)");
+            if (fromMatch.Success) from = fromMatch.Groups[1].Value;
+            var toMatch = System.Text.RegularExpressions.Regex.Match(blockArgs, @"\.To\(([^)]+)\)");
+            if (toMatch.Success) to = toMatch.Groups[1].Value;
+            var byMatch = System.Text.RegularExpressions.Regex.Match(blockArgs, @"\.By\(([^)]+)\)");
+            if (byMatch.Success) step = byMatch.Groups[1].Value;
+            return new XElement("ForLoop", new XAttribute("variable", variable),
+                new XElement("Constant", new XAttribute("number", from)),
+                new XElement("Constant", new XAttribute("number", to)),
+                new XElement("Constant", new XAttribute("number", step)),
+                body);
         }
 
         private XElement? ConvertSetVariableToXml(string varName, string varValue)
@@ -1166,48 +1229,249 @@ namespace VizzyCode
 
         private XElement? ConvertInstructionToXml(string line)
         {
-            if (line.StartsWith("Vz.Log("))
+            // Strip trailing semicolon for matching
+            string l = line.TrimEnd(';', ' ');
+
+            // Zero-argument instructions
+            if (l == "Vz.ActivateStage()") return new XElement("ActivateStage");
+            if (l == "Vz.Break()") return new XElement("Break");
+            if (l == "Vz.Beep()") return new XElement("Beep");
+            if (l == "Vz.DestroyAllWidgets()") return new XElement("DestroyAllWidgets");
+
+            // One-argument instructions
+            string c1 = ExtractParenthesisContent(l);
+            if (l.StartsWith("Vz.Log(") || l.StartsWith("Vz.Display(") || l.StartsWith("Vz.DisplayMessage("))
+                return new XElement("Log", MakeConstantArg(c1));
+            if (l.StartsWith("Vz.FlightLog("))
+                return new XElement("FlightLog", MakeConstantArg(c1));
+            if (l.StartsWith("Vz.WaitSeconds("))
+                return new XElement("WaitSeconds", MakeConstantArg(c1));
+            if (l.StartsWith("Vz.SetThrottle("))
+                return new XElement("SetThrottle", MakeConstantArg(c1));
+            if (l.StartsWith("Vz.SetTimeMode("))
+                return new XElement("SetTimeMode", MakeConstantArg(c1));
+            if (l.StartsWith("Vz.SwitchCraft("))
+                return new XElement("SwitchCraft", MakeConstantArg(c1));
+            if (l.StartsWith("Vz.TargetNode("))
+                return new XElement("SetTarget", MakeConstantArg(c1));
+            if (l.StartsWith("Vz.DestroyWidget("))
+                return new XElement("DestroyWidget", MakeConstantArg(c1));
+            if (l.StartsWith("Vz.SendWidgetToFront("))
+                return new XElement("SendWidgetToFront", MakeConstantArg(c1));
+            if (l.StartsWith("Vz.SendWidgetToBack("))
+                return new XElement("SendWidgetToBack", MakeConstantArg(c1));
+            if (l.StartsWith("Vz.InitTexture("))
+                return new XElement("InitTexture", MakeConstantArg(c1));
+
+            // SetCamera(prop, val)
+            if (l.StartsWith("Vz.SetCamera("))
             {
-                var content = ExtractParenthesisContent(line);
-                return new XElement("Log", new XElement("Constant", new XAttribute("text", content)));
+                var parts = SplitArgs(c1);
+                string prop = parts.Count > 0 ? parts[0].Trim('"', ' ') : "zoom";
+                string val  = parts.Count > 1 ? parts[1] : "0";
+                return new XElement("SetCamera", new XAttribute("property", prop), MakeConstantArg(val));
             }
-            if (line.StartsWith("Vz.WaitSeconds("))
+
+            // SetActivationGroup(group, val)
+            if (l.StartsWith("Vz.SetActivationGroup("))
             {
-                var content = ExtractParenthesisContent(line);
-                return new XElement("WaitSeconds", new XElement("Constant", new XAttribute("number", content)));
+                var parts = SplitArgs(c1);
+                var el = new XElement("SetActivationGroup");
+                el.Add(MakeConstantArg(parts.Count > 0 ? parts[0] : "1"));
+                el.Add(MakeConstantArg(parts.Count > 1 ? parts[1] : "true"));
+                return el;
             }
-            if (line.StartsWith("Vz.SetThrottle("))
+
+            // SetInput(CraftInput.X, val)
+            if (l.StartsWith("Vz.SetInput("))
             {
-                var content = ExtractParenthesisContent(line);
-                return new XElement("SetThrottle", new XElement("Constant", new XAttribute("number", content)));
+                var parts = SplitArgs(c1);
+                string input = parts.Count > 0 ? parts[0].Replace("CraftInput.", "") : "Throttle";
+                var el = new XElement("SetInput", new XAttribute("input", input));
+                el.Add(MakeConstantArg(parts.Count > 1 ? parts[1] : "0"));
+                return el;
             }
-            if (line.StartsWith("Vz.ActivateStage()"))
+
+            // SetTargetHeading(TargetHeadingProperty.X, val)
+            if (l.StartsWith("Vz.SetTargetHeading("))
             {
-                return new XElement("ActivateStage");
+                var parts = SplitArgs(c1);
+                string prop = parts.Count > 0 ? parts[0].Replace("TargetHeadingProperty.", "") : "Heading";
+                var el = new XElement("SetTargetHeading", new XAttribute("property", prop));
+                el.Add(MakeConstantArg(parts.Count > 1 ? parts[1] : "0"));
+                return el;
             }
-            if (line.StartsWith("Vz.Break()"))
+
+            // Broadcast(BroadCastType.X, msg, data)
+            if (l.StartsWith("Vz.Broadcast("))
             {
-                return new XElement("Break");
+                var parts = SplitArgs(c1);
+                string type  = parts.Count > 0 ? parts[0].Replace("BroadCastType.", "") : "Craft";
+                bool global  = type == "AllCraft";
+                bool local   = type == "Local";
+                var el = new XElement("BroadcastMessage");
+                if (global) el.Add(new XAttribute("global", "true"));
+                if (local)  el.Add(new XAttribute("local", "true"));
+                el.Add(MakeConstantArg(parts.Count > 1 ? parts[1] : "\"msg\""));
+                el.Add(MakeConstantArg(parts.Count > 2 ? parts[2] : "0"));
+                return el;
             }
-            if (line.StartsWith("Vz.Beep()"))
+
+            // SetPartProperty(PartPropertySetType.X, part, val)
+            if (l.StartsWith("Vz.SetPartProperty("))
             {
-                return new XElement("Beep");
+                var parts = SplitArgs(c1);
+                string prop = parts.Count > 0 ? parts[0].Replace("PartPropertySetType.", "") : "Activated";
+                var el = new XElement("SetPartProperty", new XAttribute("property", prop));
+                el.Add(MakeConstantArg(parts.Count > 1 ? parts[1] : "0"));
+                el.Add(MakeConstantArg(parts.Count > 2 ? parts[2] : "true"));
+                return el;
             }
+
+            // List operations
+            if (l.StartsWith("Vz.ListAdd("))    return MakeListOp("Add",    SplitArgs(c1));
+            if (l.StartsWith("Vz.ListInsert(")) return MakeListOp("Insert", SplitArgs(c1));
+            if (l.StartsWith("Vz.ListRemove(")) return MakeListOp("Remove", SplitArgs(c1));
+            if (l.StartsWith("Vz.ListSet("))    return MakeListOp("Set",    SplitArgs(c1));
+            if (l.StartsWith("Vz.ListClear("))  return MakeListOp("Clear",  SplitArgs(c1));
+            if (l.StartsWith("Vz.ListSort("))   return MakeListOp("Sort",   SplitArgs(c1));
+            if (l.StartsWith("Vz.ListReverse("))return MakeListOp("Reverse",SplitArgs(c1));
+
+            // UserInput: var = Vz.UserInput(prompt) — handled via assignment, but also as statement
+            // Generic Vz. call fallback — treat as comment
+            if (l.StartsWith("Vz."))
+                return new XElement("Comment",
+                    new XElement("Constant", new XAttribute("text", $"[TODO] {l}")));
 
             return null;
         }
 
+        private XElement MakeConstantArg(string val)
+        {
+            val = val.Trim();
+            if (double.TryParse(val, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out double num))
+                return new XElement("Constant", new XAttribute("number", num));
+            if (val.StartsWith("\"") && val.EndsWith("\""))
+                return new XElement("Constant", new XAttribute("text", val.Trim('"')));
+            if (val == "true" || val == "false")
+                return new XElement("Constant", new XAttribute("bool", val));
+            // Variable reference
+            return new XElement("Variable", new XAttribute("variableName", val));
+        }
+
+        private XElement MakeListOp(string op, List<string> parts)
+        {
+            var el = new XElement("ListOp", new XAttribute("op", op));
+            foreach (var p in parts) el.Add(MakeConstantArg(p));
+            return el;
+        }
+
+        private List<string> SplitArgs(string argsStr)
+        {
+            var result = new List<string>();
+            int depth = 0;
+            var cur = new StringBuilder();
+            foreach (char c in argsStr)
+            {
+                if (c == '(' || c == '[') depth++;
+                else if (c == ')' || c == ']') depth--;
+                else if (c == ',' && depth == 0)
+                {
+                    result.Add(cur.ToString().Trim());
+                    cur.Clear();
+                    continue;
+                }
+                cur.Append(c);
+            }
+            if (cur.Length > 0) result.Add(cur.ToString().Trim());
+            return result;
+        }
+
         private XElement? ConvertApiCallToXml(string call)
         {
-            var match = System.Text.RegularExpressions.Regex.Match(call, @"Vz\.(\w+)\((.*)\)");
-            if (match.Success)
+            call = call.Trim().TrimEnd(';');
+
+            // Numeric literal
+            if (double.TryParse(call, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out double numVal))
+                return new XElement("Constant", new XAttribute("number", numVal));
+
+            // String literal
+            if (call.StartsWith("\"") && call.EndsWith("\""))
+                return new XElement("Constant", new XAttribute("text", call.Trim('"')));
+
+            // Boolean
+            if (call == "true") return new XElement("Constant", new XAttribute("bool", "true"));
+            if (call == "false") return new XElement("Constant", new XAttribute("bool", "false"));
+
+            // Variable reference (plain identifier)
+            if (System.Text.RegularExpressions.Regex.IsMatch(call, @"^[A-Za-z_]\w*$"))
+                return new XElement("Variable", new XAttribute("variableName", call));
+
+            // BinaryOp: (a op b)
+            var binMatch = System.Text.RegularExpressions.Regex.Match(call, @"^\((.+)\s([+\-*/%^])\s(.+)\)$");
+            if (binMatch.Success)
             {
-                string method = match.Groups[1].Value;
-                string args = match.Groups[2].Value;
-                
-                return new XElement("Constant", new XAttribute("number", "0"));
+                var el = new XElement("BinaryOp", new XAttribute("op", binMatch.Groups[2].Value));
+                el.Add(ConvertApiCallToXml(binMatch.Groups[1].Value));
+                el.Add(ConvertApiCallToXml(binMatch.Groups[3].Value));
+                return el;
             }
-            return null;
+
+            // Vz.Vec(x, y, z)
+            if (call.StartsWith("Vz.Vec("))
+            {
+                var parts = SplitArgs(ExtractParenthesisContent(call));
+                var el = new XElement("Vector");
+                foreach (var p in parts) { var c = ConvertApiCallToXml(p); if (c != null) el.Add(c); }
+                return el;
+            }
+
+            // Vz.Craft.AltitudeASL() → CraftProperty property="Altitude.ASL"
+            if (call.StartsWith("Vz.Craft."))
+            {
+                string prop = call.Substring(9).TrimEnd(')').TrimEnd('(');
+                // Map known method names back to CraftProperty values
+                string xmlProp = prop switch
+                {
+                    "AltitudeAGL()" => "Altitude.AGL",
+                    "AltitudeASL()" => "Altitude.ASL",
+                    "AltitudeASF()" => "Altitude.ASF",
+                    "Grounded()" => "Misc.Grounded",
+                    "Splashed()" => "Misc.Splashed",
+                    "NumStages()" => "Misc.NumStages",
+                    "SolarRadiation()" => "Misc.SolarRadiation",
+                    "Nav.Heading()" => "Nav.CraftHeading",
+                    "Nav.Pitch()" => "Nav.Pitch",
+                    "Nav.Position()" => "Nav.Position",
+                    "Velocity.Surface()" => "Vel.SurfaceVelocity",
+                    "Velocity.Orbital()" => "Vel.OrbitVelocity",
+                    "Performance.Mass()" => "Performance.Mass",
+                    "Orbit.Apoapsis()" => "Orbit.Apoapsis",
+                    "Orbit.Periapsis()" => "Orbit.Periapsis",
+                    "Fuel.Battery()" => "Fuel.Battery",
+                    _ => prop.TrimEnd('(', ')')
+                };
+                return new XElement("CraftProperty", new XAttribute("property", xmlProp));
+            }
+
+            // Vz.Sqrt(x) → MathFunction
+            var mathFns = new[] { "Abs","Sqrt","Floor","Ceiling","Round","Sin","Cos","Tan",
+                "Asin","Acos","Atan","Ln","Log10","Deg2Rad","Rad2Deg" };
+            foreach (var fn in mathFns)
+            {
+                if (call.StartsWith($"Vz.{fn}("))
+                {
+                    var el = new XElement("MathFunction", new XAttribute("function", fn.ToLower()));
+                    var c = ConvertApiCallToXml(ExtractParenthesisContent(call));
+                    if (c != null) el.Add(c);
+                    return el;
+                }
+            }
+
+            // Fallback: constant 0
+            return new XElement("Constant", new XAttribute("number", "0"));
         }
 
         private string ExtractParenthesisContent(string line)

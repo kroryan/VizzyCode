@@ -17,6 +17,7 @@ namespace VizzyCode
 
         public AiSettings Settings { get; set; } = new();
         public string WorkingDirectory { get; set; } = Environment.CurrentDirectory;
+        public string WorkspaceDirectory { get; set; } = Environment.CurrentDirectory;
 
         public event Action<string>? OnChunk;
         public event Action<string>? OnDone;
@@ -131,19 +132,17 @@ namespace VizzyCode
                 return;
             }
 
-            string prompt = CliIntegration.BuildWorkspacePrompt();
+            string prompt = CliIntegration.BuildWorkspacePrompt(WorkspaceDirectory);
 
             var psi = CliIntegration.CreateProcessStartInfo(exe, WorkingDirectory);
             var args = new StringBuilder();
-            args.Append("run --format json");
+            args.Append("run");
             if (!string.IsNullOrWhiteSpace(Settings.OpenCodeModel))
                 args.Append(" --model ").Append(CliIntegration.QuoteForCmd(Settings.OpenCodeModel));
-            if (_currentAgent != "build")
-                args.Append(" --agent ").Append(CliIntegration.QuoteForCmd(_currentAgent));
             args.Append(' ').Append(CliIntegration.QuoteForCmd(prompt));
             CliIntegration.SetCommandArguments(psi, exe, args.ToString());
 
-            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(45), ct);
+            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(Settings.CliTimeoutSeconds), ct);
             DebugLog.Write($"OPENCODE stdout={result.StdOut}");
             DebugLog.Write($"OPENCODE stderr={result.StdErr}");
             if (!string.IsNullOrWhiteSpace(result.StdErr))

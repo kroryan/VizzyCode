@@ -41,6 +41,9 @@ namespace VizzyCode
         public string     OpenCodeModel { get; set; } = "";
         public string     OpenCodeApiKey { get; set; } = "";
 
+        // Advanced CLI
+        public int CliTimeoutSeconds { get; set; } = 300;
+
         public static string SettingsDirectory =>
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VizzyCode");
 
@@ -87,6 +90,7 @@ namespace VizzyCode
     public interface IAiClient
     {
         string WorkingDirectory { get; set; }
+        string WorkspaceDirectory { get; set; }
         event Action<string>? OnChunk;
         event Action<string>? OnDone;
         event Action<string>? OnError;

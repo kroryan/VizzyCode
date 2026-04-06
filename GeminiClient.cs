@@ -16,6 +16,7 @@ namespace VizzyCode
 
         public AiSettings Settings { get; set; } = new();
         public string WorkingDirectory { get; set; } = Environment.CurrentDirectory;
+        public string WorkspaceDirectory { get; set; } = Environment.CurrentDirectory;
 
         public event Action<string>? OnChunk;
         public event Action<string>? OnDone;
@@ -71,18 +72,16 @@ namespace VizzyCode
                 return;
             }
 
-            string prompt = CliIntegration.BuildWorkspacePrompt();
+            string prompt = CliIntegration.BuildWorkspacePrompt(WorkspaceDirectory);
 
             var psi = CliIntegration.CreateProcessStartInfo(exe, WorkingDirectory);
             var args = new StringBuilder();
-            args.Append("--prompt ").Append(CliIntegration.QuoteForCmd(prompt));
-            args.Append(" --output-format stream-json");
-            args.Append(" --approval-mode auto_edit");
             if (!string.IsNullOrWhiteSpace(Settings.GeminiModel))
-                args.Append(" --model ").Append(CliIntegration.QuoteForCmd(Settings.GeminiModel));
+                args.Append("--model ").Append(CliIntegration.QuoteForCmd(Settings.GeminiModel)).Append(' ');
+            args.Append("-p ").Append(CliIntegration.QuoteForCmd(prompt));
             CliIntegration.SetCommandArguments(psi, exe, args.ToString());
 
-            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(45), ct);
+            var result = await CliProcessRunner.RunAsync(psi, TimeSpan.FromSeconds(Settings.CliTimeoutSeconds), ct);
             DebugLog.Write($"GEMINI stdout={result.StdOut}");
             DebugLog.Write($"GEMINI stderr={result.StdErr}");
             if (!string.IsNullOrWhiteSpace(result.StdErr))
