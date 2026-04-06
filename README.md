@@ -6,6 +6,8 @@ VizzyCode is a Windows Forms editor for opening Vizzy XML, converting it to C#-s
 
 The app now supports two distinct ways to use Claude Code, Gemini CLI, Codex CLI, and OpenCode:
 
+<img width="1397" height="833" alt="image" src="https://github.com/user-attachments/assets/b5557aa8-66c0-4c7a-b04e-79450e9b0f61" />
+
 1. In-app headless chat
    Uses the agent CLI in non-interactive mode from the current working directory.
 
