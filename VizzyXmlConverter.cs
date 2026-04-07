@@ -14,6 +14,11 @@ namespace VizzyCode
     {
         private readonly HashSet<string> _listVariables = new();
         private readonly List<string> _warnings = new();
+        // Variables that are local parameters in the CI body currently being exported.
+        // Set before processing a CI body, cleared afterwards. Ordinal (case-sensitive).
+        private HashSet<string> _localVariables = new(StringComparer.Ordinal);
+        // Maps sanitized C# identifier → original CustomInstruction name for CI call detection.
+        private Dictionary<string, string> _ciNameMap = new(StringComparer.Ordinal);
         public IReadOnlyList<string> Warnings => _warnings;
 
         private static readonly Dictionary<string, string> CraftPropertyCallMap = new(StringComparer.OrdinalIgnoreCase)
@@ -207,9 +212,9 @@ namespace VizzyCode
                 string vname = v.Attribute("name")?.Value ?? "unnamed";
                 bool isList = v.Element("Items") != null;
                 string num = v.Attribute("number")?.Value ?? "0";
-                if (num == "-0") num = "0";
+                // Preserve -0 so it can be restored on round-trip
                 sb.AppendLine(isList
-                    ? $"// var {San(vname)} = [];   // list"
+                    ? $"// var {San(vname)} = [];   // list;"
                     : $"// var {San(vname)} = {num};");
             }
             sb.AppendLine();
@@ -230,11 +235,15 @@ namespace VizzyCode
                     pnames = expr.Elements("Parameter").Select(p => San(p.Attribute("name")?.Value ?? "p")).ToList();
                 string pStr = string.Join(", ", pnames.Select(p => $"\"{p}\""));
                 string pCall = string.Join(", ", pnames);
-                sb.AppendLine($"var {San(ename)} = Vz.DeclareCustomExpression(\"{Esc(ename)}\", {pStr}).SetReturn(({pCall}) =>");
+                // The return expression is the DIRECT child element (not wrapped in <Instructions>)
+                _localVariables = new HashSet<string>(pnames, StringComparer.Ordinal);
+                var returnEl = expr.Elements().FirstOrDefault(e => e.Name.LocalName != "Parameter");
+                string returnCode = returnEl != null ? ConvertExpression(returnEl) : "0";
+                _localVariables = new HashSet<string>();
+                string pStrArg = pStr.Length > 0 ? ", " + pStr : "";
+                sb.AppendLine($"var {San(ename)} = Vz.DeclareCustomExpression(\"{Esc(ename)}\"{pStrArg}).SetReturn(({pCall}) =>");
                 sb.AppendLine("{");
-                var body = expr.Element("Instructions");
-                if (body != null) EmitInstructions(body.Elements(), sb, 1);
-                sb.AppendLine("    return 0; // TODO: add return expression");
+                sb.AppendLine($"    return {returnCode};");
                 sb.AppendLine("});");
                 sb.AppendLine();
             }
@@ -328,9 +337,16 @@ namespace VizzyCode
                 case "WaitSeconds":     sb.AppendLine($"{ind}Vz.WaitSeconds({E1(el)});"); break;
                 case "WaitUntil":       sb.AppendLine($"{ind}using (new WaitUntil({E1(el)})) {{ }}"); break;
                 case "LogMessage":
-                case "Log":
+                case "Log":             sb.AppendLine($"{ind}Vz.Log({E1(el)});"); break;
                 case "Display":
-                case "DisplayMessage":  sb.AppendLine($"{ind}Vz.Log({E1(el)});"); break;
+                case "DisplayMessage":
+                {
+                    var _dch = el.Elements().ToList();
+                    string _dmsg = _dch.Count > 0 ? ConvertExpression(_dch[0]) : "\"\"";
+                    string _ddur = _dch.Count > 1 ? ConvertExpression(_dch[1]) : "7";
+                    sb.AppendLine($"{ind}Vz.Display({_dmsg}, {_ddur});");
+                    break;
+                }
                 case "LogFlight":
                 case "FlightLog":       sb.AppendLine($"{ind}Vz.FlightLog({E1(el)});"); break;
                 case "Break":           sb.AppendLine($"{ind}Vz.Break();"); break;
@@ -342,7 +358,7 @@ namespace VizzyCode
                 case "SetInput":        EmitSetInput(el, sb, ind); break;
                 case "SetTargetHeading":
                 case "LockHeading":     EmitLockHeading(el, sb, ind); break;
-                case "SetTimeMode":     sb.AppendLine($"{ind}Vz.SetTimeMode({E1(el)});"); break;
+                case "SetTimeMode":     sb.AppendLine($"{ind}Vz.SetTimeMode({(el.Elements().Any() ? E1(el) : $"\"{Esc(el.Attribute("mode")?.Value ?? "Normal")}\"")});"); break;
                 case "BroadcastMessage":EmitBroadcast(el, sb, ind); break;
                 case "SwitchCraft":     sb.AppendLine($"{ind}Vz.SwitchCraft({E1(el)});"); break;
                 case "SetTarget":       sb.AppendLine($"{ind}Vz.TargetNode({E1(el)});"); break;
@@ -783,7 +799,13 @@ namespace VizzyCode
             switch (el.Name.LocalName)
             {
                 case "Constant":           return ConvertConstant(el);
-                case "Variable":           return San(el.Attribute("variableName")?.Value ?? "var");
+                case "Variable":
+                {
+                    string variableName = el.Attribute("variableName")?.Value ?? "var";
+                    return System.Text.RegularExpressions.Regex.IsMatch(variableName, @"^[A-Za-z_]\w*$")
+                        ? San(variableName)
+                        : $"Vz.RawVar(\"{Esc(variableName)}\")";
+                }
                 case "BinaryOp":           return ConvertBinaryOp(el);
                 case "BoolOp":             return ConvertBoolOp(el);
                 case "Not":                return $"(!{E1(el)})";
@@ -850,14 +872,13 @@ namespace VizzyCode
             var ch = el.Elements().ToList();
             string l = ch.Count > 0 ? ConvertExpression(ch[0]) : "0";
             string r = ch.Count > 1 ? ConvertExpression(ch[1]) : "0";
+            // Special cases that aren't infix — handle both capitalized and lowercase op names
+            if (op.Equals("Rand",  StringComparison.OrdinalIgnoreCase)) return $"Vz.Random({l}, {r})";
+            if (op.Equals("Min",   StringComparison.OrdinalIgnoreCase)) return $"Vz.Min({l}, {r})";
+            if (op.Equals("Max",   StringComparison.OrdinalIgnoreCase)) return $"Vz.Max({l}, {r})";
+            if (op.Equals("ATan2", StringComparison.OrdinalIgnoreCase)) return $"Vz.Atan2({l}, {r})";
             string cs = op switch { "+" => "+", "-" => "-", "*" => "*", "/" => "/",
-                "^" => "^", "%" => "%", "Rand" => "/* rand */", "Min" => "/* min */",
-                "Max" => "/* max */", "ATan2" => "/* atan2 */", _ => op };
-            // Special cases that aren't infix
-            if (op == "Rand")  return $"Vz.Random({l}, {r})";
-            if (op == "Min")   return $"Vz.Min({l}, {r})";
-            if (op == "Max")   return $"Vz.Max({l}, {r})";
-            if (op == "ATan2") return $"Vz.Atan2({l}, {r})";
+                "^" => "^", "%" => "%", _ => op };
             return $"({l} {cs} {r})";
         }
 
@@ -915,7 +936,7 @@ namespace VizzyCode
                 "dot"                   => $"Vz.Dot({a}, {b})",
                 "cross"                 => $"Vz.Cross({a}, {b})",
                 "angle"                 => $"Vz.Angle({a}, {b})",
-                "distance"              => $"Vz.Distance({a}, {b})",
+                "dist" or "distance"    => $"Vz.Distance({a}, {b})",
                 "project"               => $"Vz.Project({a}, {b})",
                 "scale"                 => $"Vz.Scale({a}, {b})",
                 "min"                   => $"Vz.VecMin({a}, {b})",
@@ -1095,7 +1116,10 @@ namespace VizzyCode
                 "meananomaly"       => $"Vz.Planet({planet}).MeanAnomaly()",
                 "semimajoraxis"     => $"Vz.Planet({planet}).SemiMajorAxis()",
                 "trueanomaly"       => $"Vz.Planet({planet}).TrueAnomaly()",
-                "toLatLongAgl"      => $"Vz.PosToLatLongAgl({planet}, {(string.IsNullOrEmpty(arg2) ? "Vz.Craft.Nav.Position()" : arg2)})",
+                // Coordinate conversion ops: single child is the position/vector, not a planet name
+                "toLatLongAgl"   => $"Vz.PosToLatLongAgl({planet})",
+                "toLatLongAsl"   => $"Vz.PosToLatLongAsl({planet})",
+                "toPosition"     => $"Vz.ToPosition({planet})",
                 _ => $"Vz.Planet({planet}).Op(\"{Esc(op)}\")"
             };
         }
@@ -1145,14 +1169,18 @@ namespace VizzyCode
             string a = ch.Count > 0 ? ConvertExpression(ch[0]) : "\"\"";
             string b = ch.Count > 1 ? ConvertExpression(ch[1]) : "\"\"";
             string c = ch.Count > 2 ? ConvertExpression(ch[2]) : "0";
+            // Build extra args for join/format which can have more than 2 children
+            string extraArgs = ch.Count > 2
+                ? ", " + string.Join(", ", ch.Skip(2).Select(ConvertExpression))
+                : "";
             return op.ToLower() switch
             {
-                "join"      => $"Vz.Join({a}, {b})",
+                "join"      => $"Vz.Join({a}, {b}{extraArgs})",
                 "length"    => $"Vz.LengthOf({a})",
                 "letter"    => $"Vz.LetterOf({a}, {b})",
                 "substring" => $"Vz.SubString({a}, {b}, {c})",
                 "contains"  => $"Vz.Contains({a}, {b})",
-                "format"    => $"Vz.Format({a}, {b})",
+                "format"    => $"Vz.Format({a}, {b}{extraArgs})",
                 _           => $"Vz.StringOp(\"{op}\", {a}, {b})"
             };
         }
@@ -1262,6 +1290,7 @@ namespace VizzyCode
 
         private static string I(int depth) => new string(' ', depth * 4);
         private static string Esc(string s) => s.Replace("\\","\\\\").Replace("\"","\\\"").Replace("\n","\\n").Replace("\r","");
+        private static string Unescape(string s) => s.Replace("\\\"", "\"").Replace("\\\\", "\\").Replace("\\n", "\n");
         private static string San(string name)
         {
             if (string.IsNullOrWhiteSpace(name)) return "_var";
@@ -1289,16 +1318,48 @@ namespace VizzyCode
         public XDocument ConvertCodeToXml(string code, string programName = "GeneratedProgram")
         {
             var lines = code.Split('\n').Select(l => l.TrimEnd()).ToList();
-            var program = new XElement("Program", new XAttribute("name", programName));
+            string resolvedProgramName = programName;
+            foreach (var rawLine in lines)
+            {
+                var initMatch = System.Text.RegularExpressions.Regex.Match(rawLine.Trim(),
+                    @"^Vz\.Init\(""((?:\\.|[^""])*)""\)\s*;?\s*$");
+                if (initMatch.Success)
+                {
+                    resolvedProgramName = Unescape(initMatch.Groups[1].Value);
+                    break;
+                }
+            }
+            var program = new XElement("Program", new XAttribute("name", resolvedProgramName));
 
             var variables = new XElement("Variables");
-            var declaredVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var declaredVariables = new HashSet<string>(StringComparer.Ordinal); // Vizzy is case-sensitive: f ≠ F
 
             // Collect instruction blocks: one per event/CI, plus a preamble block
             var instructionBlocks = new List<XElement>();
             var preamble = new XElement("_preamble");
+            var ceElements = new List<XElement>(); // CustomExpression declarations
 
-            // First pass: extract variable declarations from "// var X = N;" comment lines.
+            // Pre-scan 1: build CI name map (sanitized C# identifier → original CI name).
+            // This lets us recognise calls like "Universal_Anomaly(a, b, c);" as
+            // <CallCustomInstruction call="Universal Anomaly">.
+            _ciNameMap = new Dictionary<string, string>(StringComparer.Ordinal);
+            var _ceNameMap = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var rawLine in lines)
+            {
+                var preCI = System.Text.RegularExpressions.Regex.Match(rawLine.Trim(),
+                    @"^var\s+(\w+)\s*=\s*Vz\.DeclareCustomInstruction\(""([^""]+)""");
+                if (preCI.Success)
+                    _ciNameMap[preCI.Groups[1].Value] = preCI.Groups[2].Value;
+                var preCE = System.Text.RegularExpressions.Regex.Match(rawLine.Trim(),
+                    @"^var\s+(\w+)\s*=\s*Vz\.DeclareCustomExpression\(""([^""]+)""");
+                if (preCE.Success)
+                {
+                    _ciNameMap[preCE.Groups[1].Value] = preCE.Groups[2].Value; // CE calls look identical to CI calls
+                    _ceNameMap[preCE.Groups[1].Value] = preCE.Groups[2].Value;
+                }
+            }
+
+            // Pre-scan 2: extract variable declarations from "// var X = N;" comment lines.
             // These are emitted by ConvertProgramToCode and are the authoritative source
             // for the <Variables> section.  Do this before the main loop so runtime
             // assignments inside lambdas are never misidentified as declarations.
@@ -1375,13 +1436,71 @@ namespace VizzyCode
                             else if (bl == "});" || bl == "})") { depth--; break; }
                             if (depth > 0) bodyLines.Add(lines[j]);
                         }
-                        // Parse the extracted body lines as instructions
+                        // Parse the extracted body lines as instructions.
+                        // Set _localVariables so Variable references that are CI
+                        // parameters get local="true" in the output XML.
+                        // Use Ordinal (case-sensitive) — Vizzy names are case-sensitive
+                        // and e.g. param "deltatime" must not match global "DeltaTime".
+                        _localVariables = new HashSet<string>(
+                            paramNames, StringComparer.Ordinal);
                         int bodyIndex = 0;
                         ParseInstructionLines(bodyLines, ref bodyIndex, ciBlock, stopAtClosingBrace: false);
+                        _localVariables = new HashSet<string>();
                         i = j; // advance outer loop past the closing `}` / `});`
                     }
 
                     instructionBlocks.Add(ciBlock);
+                    continue;
+                }
+
+                // ── DeclareCustomExpression block ───────────────────────────────
+                // Pattern: var <id> = Vz.DeclareCustomExpression("<name>", ...).SetReturn((<p>) =>
+                var ceMatch = System.Text.RegularExpressions.Regex.Match(line,
+                    @"var\s+\w+\s*=\s*Vz\.DeclareCustomExpression\(""([^""]+)""((?:\s*,\s*""[^""]*"")*)\s*,?\s*\)\s*\.SetReturn\(\(([^)]*)\)\s*=>");
+                if (ceMatch.Success)
+                {
+                    string ceName    = ceMatch.Groups[1].Value;
+                    string ceParamStr = ceMatch.Groups[3].Value;
+                    var ceParams = ceParamStr.Split(',').Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
+
+                    // Build callFormat and format attributes
+                    string ceCallFmt = ceName + string.Concat(ceParams.Select((_, idx) => $" ({idx})")) + " ";
+                    string ceFmt     = ceName + string.Concat(ceParams.Select(p => $" |{p}|")) + "  return (0)";
+
+                    // Extract body lines between { and });
+                    int ceBodyStart = i + 1;
+                    while (ceBodyStart < lines.Count && lines[ceBodyStart].Trim() != "{") ceBodyStart++;
+
+                    string returnExprCode = "0";
+                    int j2 = ceBodyStart + 1;
+                    if (ceBodyStart < lines.Count)
+                    {
+                        int depth2 = 1;
+                        for (; j2 < lines.Count && depth2 > 0; j2++)
+                        {
+                            string bl = lines[j2].Trim();
+                            if (bl == "{") depth2++;
+                            else if (bl == "}") { depth2--; if (depth2 == 0) break; }
+                            else if (bl == "});" || bl == "})") { depth2--; break; }
+                            else if (depth2 == 1 && bl.StartsWith("return ") && bl.EndsWith(";"))
+                                returnExprCode = bl.Substring(7, bl.Length - 8).Trim();
+                        }
+                    }
+
+                    _localVariables = new HashSet<string>(ceParams, StringComparer.Ordinal);
+                    var returnXml = ConvertApiCallToXml(returnExprCode);
+                    if (returnXml == null && returnExprCode != "0")
+                        returnXml = CreateVariableReference(returnExprCode);
+                    _localVariables = new HashSet<string>();
+
+                    var ceEl = new XElement("CustomExpression",
+                        new XAttribute("callFormat", ceCallFmt),
+                        new XAttribute("format",     ceFmt),
+                        new XAttribute("name",       ceName),
+                        new XAttribute("style",      "custom-expression"));
+                    if (returnXml != null) ceEl.Add(returnXml);
+                    ceElements.Add(ceEl);
+                    i = j2;
                     continue;
                 }
 
@@ -1430,10 +1549,10 @@ namespace VizzyCode
                 // ── Runtime assignments  ────────────────────────────────────────
                 // Only treated as a variable DECLARATION when not already declared via
                 // a "// var" comment and the value is a plain literal.
-                if (System.Text.RegularExpressions.Regex.IsMatch(line, @"(?<![=!<>])=(?!=)"))
+                if (System.Text.RegularExpressions.Regex.IsMatch(line, @"^(\w+)\s*=(?!=)"))
                 {
                     var assignMatch = System.Text.RegularExpressions.Regex.Match(
-                        line, @"(\w+)\s*=\s*(.+);");
+                        line, @"^(\w+)\s*=\s*(.+);$");
                     if (assignMatch.Success)
                     {
                         string varName  = assignMatch.Groups[1].Value;
@@ -1479,7 +1598,9 @@ namespace VizzyCode
             program.Add(variables);
             foreach (var block in instructionBlocks)
                 program.Add(block);
-            program.Add(new XElement("Expressions"));
+            var expressionsEl = new XElement("Expressions");
+            foreach (var ce in ceElements) expressionsEl.Add(ce);
+            program.Add(expressionsEl);
 
             // Post-process: assign sequential id and pos to all instruction-level elements
             AssignIdsAndPositions(program);
@@ -1684,6 +1805,21 @@ namespace VizzyCode
             // Strip trailing semicolon for matching
             string l = line.TrimEnd(';', ' ');
 
+            // ── CustomInstruction call ──────────────────────────────────────────
+            // Pattern: SanitizedName(arg1, arg2, ...);
+            // Only match if the sanitized name is in our CI registry.
+            var ciCallM = System.Text.RegularExpressions.Regex.Match(l, @"^(\w+)\((.*)\)$");
+            if (ciCallM.Success && _ciNameMap.TryGetValue(ciCallM.Groups[1].Value, out string? ciOrigName))
+            {
+                var ciEl = new XElement("CallCustomInstruction",
+                    new XAttribute("call",  ciOrigName),
+                    new XAttribute("style", "call-custom-instruction"));
+                var callArgs = SplitArgs(ciCallM.Groups[2].Value);
+                foreach (var a in callArgs)
+                    ciEl.Add(ConvertValueToXml(a.Trim()));
+                return ciEl;
+            }
+
             // Zero-argument instructions
             if (l == "Vz.ActivateStage()") return new XElement("ActivateStage", new XAttribute("style", "activate-stage"));
             if (l == "Vz.Break()") return new XElement("Break", new XAttribute("style", "break"));
@@ -1693,7 +1829,7 @@ namespace VizzyCode
             // One-argument instructions
             string c1 = ExtractParenthesisContent(l);
             if (l.StartsWith("Vz.Log("))
-                return new XElement("Log", new XAttribute("style", "log"), MakeConstantArg(c1));
+                return new XElement("Log", new XAttribute("style", "log"), ConvertValueToXml(c1));
             if (l.StartsWith("Vz.Beep("))
             {
                 var parts = SplitArgs(c1);
@@ -1707,14 +1843,12 @@ namespace VizzyCode
                         ConvertValueToXml(parts[2]));
                 }
             }
-            if (l.StartsWith("Vz.Display("))
-                return new XElement("DisplayMessage", new XAttribute("style", "display"), MakeConstantArg(c1), CreateConstant("7"));
-            if (l.StartsWith("Vz.DisplayMessage("))
+            if (l.StartsWith("Vz.Display(") || l.StartsWith("Vz.DisplayMessage("))
             {
                 var parts = SplitArgs(c1);
                 return new XElement("DisplayMessage", new XAttribute("style", "display"),
-                    MakeConstantArg(parts.Count > 0 ? parts[0] : "\"\""),
-                    MakeConstantArg(parts.Count > 1 ? parts[1] : "7"));
+                    ConvertValueToXml(parts.Count > 0 ? parts[0] : "\"\""),
+                    ConvertValueToXml(parts.Count > 1 ? parts[1] : "7"));
             }
             if (l.StartsWith("Vz.FlightLog("))
             {
@@ -1731,7 +1865,9 @@ namespace VizzyCode
                     new XAttribute("style", "set-input"),
                     MakeConstantArg(c1));
             if (l.StartsWith("Vz.SetTimeMode("))
-                return new XElement("SetTimeMode", new XAttribute("style", "set-time-mode"), MakeConstantArg(c1));
+                return new XElement("SetTimeMode",
+                    new XAttribute("style", "set-time-mode"),
+                    MakeConstantArg(c1));
             if (l.StartsWith("Vz.SwitchCraft("))
                 return new XElement("SwitchCraft", new XAttribute("style", "switch-craft"), MakeConstantArg(c1));
             if (l.StartsWith("Vz.TargetNode("))
@@ -1924,7 +2060,8 @@ namespace VizzyCode
         private XElement MakeListOp(string op, List<string> parts)
         {
             string opLower = op.ToLowerInvariant();
-            var el = new XElement("ListOp",
+            // Instructions that mutate a list are <SetList>; expression reads are <ListOp>.
+            var el = new XElement("SetList",
                 new XAttribute("op", opLower),
                 new XAttribute("style", $"list-{opLower}"));
             foreach (var p in parts) el.Add(MakeConstantArg(p));
@@ -1993,7 +2130,7 @@ namespace VizzyCode
 
             // String literal
             if (call.StartsWith("\"") && call.EndsWith("\""))
-                return CreateConstant(trimQuotes(call), forceText: true);
+                return CreateConstant(Unescape(trimQuotes(call)), forceText: true);
 
             // Boolean
             if (call == "true" || call == "false") return CreateConstant(call);
@@ -2003,6 +2140,116 @@ namespace VizzyCode
                 var inner = ConvertApiCallToXml(call.Substring(1));
                 if (inner != null)
                     return new XElement("Not", new XAttribute("style", "op-not"), inner);
+            }
+
+            // ── Ternary conditional: (condition ? trueVal : falseVal) ────────────
+            // The outer-paren strip above may have already unwrapped one level;
+            // scan for '?' and ':' at depth 0.
+            {
+                int qIdx = FindTopLevelOperator(call, "?");
+                if (qIdx > 0)
+                {
+                    string condPart  = call.Substring(0, qIdx).Trim();
+                    string remainder = call.Substring(qIdx + 1).Trim();
+                    int    cIdx      = FindTopLevelOperator(remainder, ":");
+                    if (cIdx > 0)
+                    {
+                        string truePart  = remainder.Substring(0, cIdx).Trim();
+                        string falsePart = remainder.Substring(cIdx + 1).Trim();
+                        var condEl = ConvertApiCallToXml(condPart)  ?? CreateVariableReference(condPart);
+                        var trueEl = ConvertApiCallToXml(truePart)  ?? CreateVariableReference(truePart);
+                        var falseEl= ConvertApiCallToXml(falsePart) ?? CreateVariableReference(falsePart);
+                        return new XElement("Conditional",
+                            new XAttribute("style", "conditional"),
+                            condEl, trueEl, falseEl);
+                    }
+                }
+            }
+
+            // ── Vector component access: expr.x / expr.y / expr.z ───────────────
+            // Matches when the expression ends with a literal ".x", ".y", ".z"
+            // (not inside parentheses).
+            {
+                foreach (var component in new[] { ".x", ".y", ".z" })
+                {
+                    if (call.EndsWith(component, StringComparison.OrdinalIgnoreCase)
+                        && call.Length > component.Length)
+                    {
+                        string vecPart = call.Substring(0, call.Length - component.Length).Trim();
+                        // Only split here if the part before .x/y/z is a valid expression
+                        // (not the end of a dotted identifier like "Vz.Craft.Nav.Position")
+                        var vecEl = ConvertApiCallToXml(vecPart);
+                        if (vecEl != null)
+                        {
+                            string axis = component.Substring(1); // "x", "y", or "z"
+                            return new XElement("VectorOp",
+                                new XAttribute("op",    axis),
+                                new XAttribute("style", "vec-op-1"),
+                                vecEl);
+                        }
+                    }
+                }
+            }
+
+            // Vz.PosToLatLongAgl(vec) → <Planet op="toLatLongAgl" style="planet-to-lat-long-agl">
+            if (call.StartsWith("Vz.PosToLatLongAgl("))
+            {
+                var pllArgs = SplitArgs(ExtractParenthesisContent(call));
+                var pEl = pllArgs.Count > 0 ? (ConvertApiCallToXml(pllArgs[0]) ?? CreateVariableReference(pllArgs[0])) : CreateConstant("0");
+                return new XElement("Planet", new XAttribute("op", "toLatLongAgl"), new XAttribute("style", "planet-to-lat-long-agl"), pEl);
+            }
+            if (call.StartsWith("Vz.PosToLatLongAsl("))
+            {
+                var pllArgs = SplitArgs(ExtractParenthesisContent(call));
+                var pEl = pllArgs.Count > 0 ? (ConvertApiCallToXml(pllArgs[0]) ?? CreateVariableReference(pllArgs[0])) : CreateConstant("0");
+                return new XElement("Planet", new XAttribute("op", "toLatLongAsl"), new XAttribute("style", "planet-to-lat-long-asl"), pEl);
+            }
+            if (call.StartsWith("Vz.ToPosition("))
+            {
+                var pllArgs = SplitArgs(ExtractParenthesisContent(call));
+                var pEl = pllArgs.Count > 0 ? (ConvertApiCallToXml(pllArgs[0]) ?? CreateVariableReference(pllArgs[0])) : CreateConstant("0");
+                return new XElement("Planet", new XAttribute("op", "toPosition"), new XAttribute("style", "planet-to-position"), pEl);
+            }
+
+            // ── Vz.Planet(p).Property() ─────────────────────────────────────────
+            if (call.StartsWith("Vz.Planet("))
+            {
+                // Vz.Planet(p).DayLength() → <Planet planet="p" op="day" ...>
+                var planetM = System.Text.RegularExpressions.Regex.Match(call,
+                    @"^Vz\.Planet\((.+)\)\.(\w+)\(\)$");
+                if (planetM.Success)
+                {
+                    string pArg = planetM.Groups[1].Value.Trim();
+                    string prop = planetM.Groups[2].Value.ToLowerInvariant();
+                    string opStr = prop switch
+                    {
+                        "mass"             => "mass",
+                        "radius"           => "radius",
+                        "atmospheredepth"  => "atmosphereHeight",
+                        "soi"              => "soiradius",
+                        "solarposition"    => "solarPosition",
+                        "childplanets"     => "childPlanets",
+                        "crafts"           => "crafts",
+                        "craftids"         => "craftids",
+                        "parent"           => "parent",
+                        "daylength"        => "day",
+                        "yearlength"       => "year",
+                        "velocity"         => "velocity",
+                        "apoapsis"         => "apoapsis",
+                        "periapsis"        => "periapsis",
+                        "period"           => "period",
+                        "inclination"      => "inclination",
+                        "eccentricity"     => "eccentricity",
+                        "meananomaly"      => "meananomaly",
+                        "semimajoraxis"    => "semimajoraxis",
+                        _                  => prop
+                    };
+                    var pEl = ConvertApiCallToXml(pArg) ?? CreateVariableReference(pArg);
+                    return new XElement("Planet",
+                        new XAttribute("op",    opStr),
+                        new XAttribute("style", "planet"),
+                        pEl);
+                }
             }
 
             if (TryConvertBinaryExpression(call, new[] { "||" }, tuple => CreateBoolOp("or", tuple.left, tuple.right), out var orExpr))
@@ -2017,10 +2264,27 @@ namespace VizzyCode
                 return mulExpr;
             if (TryConvertBinaryExpression(call, new[] { "^" }, CreateBinaryOpElement, out var powExpr))
                 return powExpr;
+            // Word infix operators: "A max B", "A min B", "A rand B"
+            if (TryConvertBinaryExpression(call, new[] { " max " }, CreateBinaryOpElement, out var maxWExpr))
+                return maxWExpr;
+            if (TryConvertBinaryExpression(call, new[] { " min " }, CreateBinaryOpElement, out var minWExpr))
+                return minWExpr;
+            if (TryConvertBinaryExpression(call, new[] { " rand " }, CreateBinaryOpElement, out var randWExpr))
+                return randWExpr;
 
             // Variable reference (plain identifier)
             if (System.Text.RegularExpressions.Regex.IsMatch(call, @"^[A-Za-z_]\w*$"))
                 return CreateVariableReference(call);
+
+            if (TryConvertFunctionCall(call, "Vz.RawVar",
+                args => CreateVariableReference(Unescape(trimQuotes(args[0]))), 1, out var rawVarExpr))
+                return rawVarExpr;
+
+            // Named constants — must come BEFORE the generic dotted-name fallback below
+            if (call == "Vz.Pi")       return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "pi")));
+            if (call == "Vz.E")        return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "e")));
+            if (call == "Vz.Infinity") return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "inf")));
+            if (call == "Vz.NaN")      return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "nan")));
 
             if (System.Text.RegularExpressions.Regex.IsMatch(call, @"^[A-Za-z_]\w*(\.[A-Za-z_]\w*)+$"))
                 return CreateConstant(call, forceText: true);
@@ -2049,7 +2313,7 @@ namespace VizzyCode
             if (TryConvertFunctionCall(call, "Vz.ListGet", args => CreateListExpression("get", args), 2, out var listGetExpr)) return listGetExpr;
             if (TryConvertFunctionCall(call, "Vz.ListLength", args => CreateListExpression("length", args), 1, out var listLengthExpr)) return listLengthExpr;
             if (TryConvertFunctionCall(call, "Vz.ListIndex", args => CreateListExpression("index", args), 2, out var listIndexExpr)) return listIndexExpr;
-            if (call == "Vz.CreateList()") return new XElement("ListExpression", new XAttribute("op", "create"));
+            if (call == "Vz.CreateList()") return new XElement("ListOp", new XAttribute("op", "create"), new XAttribute("style", "list-create"));
 
             if (TryConvertFunctionCall(call, "Vz.Length", args => CreateVectorOp("length", args), 1, out var vecLenExpr)) return vecLenExpr;
             if (TryConvertFunctionCall(call, "Vz.Norm", args => CreateVectorOp("norm", args), 1, out var vecNormExpr)) return vecNormExpr;
@@ -2063,17 +2327,77 @@ namespace VizzyCode
             if (TryConvertFunctionCall(call, "Vz.VecMax", args => CreateVectorOp("max", args), 2, out var vecMaxExpr)) return vecMaxExpr;
             if (TryConvertFunctionCall(call, "Vz.Clamp", args => CreateVectorOp("clamp", args), 2, out var vecClampExpr)) return vecClampExpr;
 
+            if (TryConvertFunctionCall(call, "Vz.PartNameToID", args => new XElement("CraftProperty",
+                new XAttribute("property", "Part.NameToID"),
+                new XAttribute("style", "prop-name"),
+                ConvertApiCallToXml(args[0]) ?? CreateVariableReference(args[0])), 1, out var partNameToIdExpr)) return partNameToIdExpr;
+            if (TryConvertFunctionCall(call, "Vz.PartPciToLocal", args => {
+                var cp = new XElement("CraftProperty", new XAttribute("property", "Part.PciToLocal"), new XAttribute("style", "prop-name"));
+                foreach (var a in args) cp.Add(ConvertApiCallToXml(a) ?? CreateVariableReference(a));
+                return cp;
+            }, 1, out var partPciToLocalExpr)) return partPciToLocalExpr;
+
             if (TryConvertCraftProperty(call, out var craftPropertyExpr))
                 return craftPropertyExpr;
 
             if (TryConvertFunctionCall(call, "Vz.CraftInput", args =>
-                new XElement("CraftInput", new XAttribute("input", trimQuotes(args[0]).Replace("CraftInput.", "")), new XAttribute("style", "prop-input")), 1, out var craftInputExpr))
+            {
+                string inputType = trimQuotes(args[0]).Replace("CraftInput.", "");
+                return new XElement("CraftProperty",
+                    new XAttribute("property", "Input." + inputType),
+                    new XAttribute("style", "prop-input"));
+            }, 1, out var craftInputExpr))
                 return craftInputExpr;
 
-            // Vz.Craft.AltitudeASL() → CraftProperty property="Altitude.ASL"
+            // Vz.Craft.Property("propName") → CraftProperty property="propName"
+            {
+                var craftPropM = System.Text.RegularExpressions.Regex.Match(call, @"^Vz\.Craft\.Property\(""([^""]*)""\)$");
+                if (craftPropM.Success)
+                {
+                    string prop = craftPropM.Groups[1].Value;
+                    return new XElement("CraftProperty",
+                        new XAttribute("property", prop),
+                        new XAttribute("style", CraftPropertyStyle(prop)));
+                }
+            }
+
+            // Vz.OtherCraft(craftId).Prop() → CraftOtherProperty
+            if (call.StartsWith("Vz.OtherCraft("))
+            {
+                var otherM = System.Text.RegularExpressions.Regex.Match(call, @"^Vz\.OtherCraft\((.+)\)\.(\w+)\(\)$");
+                if (otherM.Success)
+                {
+                    string craftIdStr = otherM.Groups[1].Value.Trim();
+                    string propName   = otherM.Groups[2].Value;
+                    var craftIdEl = ConvertApiCallToXml(craftIdStr) ?? CreateVariableReference(craftIdStr);
+                    return new XElement("CraftOtherProperty",
+                        new XAttribute("property", propName),
+                        new XAttribute("style", CraftPropertyStyle(propName)),
+                        craftIdEl);
+                }
+            }
+
+            // Vz.Time.DeltaTime() etc → CraftProperty (Time.*)
+            if (call.StartsWith("Vz.Time."))
+            {
+                // Already covered by CraftPropertyCallMap above, but handle any unknown ones
+                string timeProp = call.Substring(8);
+                if (timeProp.EndsWith("()")) timeProp = "Time." + timeProp.Substring(0, timeProp.Length - 2);
+                else timeProp = "Time." + timeProp;
+                return new XElement("CraftProperty",
+                    new XAttribute("property", timeProp),
+                    new XAttribute("style", "prop-time"));
+            }
+
+            // Vz.Craft.Nav.Position() → CraftProperty property="Nav.Position"
+            // Strip trailing "()" so property names are clean.
             if (call.StartsWith("Vz.Craft."))
             {
-                return new XElement("CraftProperty", new XAttribute("property", call.Substring(9)));
+                string prop = call.Substring(9);
+                if (prop.EndsWith("()")) prop = prop.Substring(0, prop.Length - 2);
+                return new XElement("CraftProperty",
+                    new XAttribute("property", prop),
+                    new XAttribute("style", CraftPropertyStyle(prop)));
             }
 
             // Vz.Sqrt(x) → MathFunction
@@ -2090,6 +2414,44 @@ namespace VizzyCode
                 }
             }
 
+            // Vz.Eval("expr") → <EvaluateExpression><Constant text="expr"/></EvaluateExpression>
+            if (call.StartsWith("Vz.Eval("))
+            {
+                string evalContent = ExtractParenthesisContent(call).Trim();
+                // Remove surrounding quotes if present
+                if (evalContent.StartsWith("\"") && evalContent.EndsWith("\"") && evalContent.Length >= 2)
+                    evalContent = evalContent.Substring(1, evalContent.Length - 2);
+                return new XElement("EvaluateExpression",
+                    new XElement("Constant", new XAttribute("text", Unescape(evalContent))));
+            }
+            // Named constants: Vz.Pi, Vz.E, Vz.Infinity, Vz.NaN
+            if (call == "Vz.Pi")       return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "pi")));
+            if (call == "Vz.E")        return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "e")));
+            if (call == "Vz.Infinity") return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "inf")));
+            if (call == "Vz.NaN")      return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "nan")));
+
+            // Custom instruction CALL as an expression (when used as a value).
+            // e.g. CallCustomExpression calls: Stump_C(z) where Stump_C is a CI expression.
+            // Note: CI instruction calls are handled as statements in ConvertInstructionToXml.
+            if (call.Contains("("))
+            {
+                string fnName = call.Substring(0, call.IndexOf('('));
+                if (_ciNameMap.TryGetValue(fnName, out string? ciCallName))
+                {
+                    string argsStr = ExtractParenthesisContent(call);
+                    var callArgs   = SplitArgs(argsStr);
+                    var ciExpr = new XElement("CallCustomExpression",
+                        new XAttribute("call", ciCallName),
+                        new XAttribute("style", "call-custom-expression"));
+                    foreach (var a in callArgs)
+                    {
+                        var argEl = ConvertApiCallToXml(a.Trim());
+                        ciExpr.Add(argEl ?? CreateVariableReference(a.Trim()));
+                    }
+                    return ciExpr;
+                }
+            }
+
             return null;
         }
 
@@ -2098,7 +2460,7 @@ namespace VizzyCode
             for (; index < lines.Count; index++)
             {
                 string line = lines[index].Trim();
-                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("//"))
+                if (string.IsNullOrWhiteSpace(line))
                     continue;
                 if (line == "{")
                     continue;
@@ -2107,6 +2469,44 @@ namespace VizzyCode
                     if (stopAtClosingBrace)
                         return;
                     continue;
+                }
+
+                // ── Comment lines → <Comment> ──────────────────────────────────
+                if (line.StartsWith("//"))
+                {
+                    // Skip system/metadata comments (separators, var declarations, TODOs)
+                    if (!line.StartsWith("// ──") && !line.StartsWith("// var ") &&
+                        !line.StartsWith("// [TODO]") && !line.StartsWith("// ═══") &&
+                        !line.StartsWith("// Program ") && !line.StartsWith("// ── "))
+                    {
+                        string commentText = line.Length > 3 ? line.Substring(3) : line.Substring(2);
+                        target.Add(new XElement("Comment",
+                            new XAttribute("style", "comment"),
+                            new XElement("Constant",
+                                new XAttribute("style", "comment-text"),
+                                new XAttribute("canReplace", "false"),
+                                new XAttribute("text", commentText))));
+                    }
+                    continue;
+                }
+
+                // ── ChangeVariable: varName += expr; ───────────────────────────
+                {
+                    var chgM = System.Text.RegularExpressions.Regex.Match(line, @"^(\w+)\s*\+=\s*(.+);$");
+                    if (chgM.Success)
+                    {
+                        string cvName = chgM.Groups[1].Value;
+                        string cvVal  = chgM.Groups[2].Value.Trim();
+                        var cvVarEl = new XElement("Variable",
+                            new XAttribute("list",  "false"),
+                            new XAttribute("local", _localVariables.Contains(cvName) ? "true" : "false"),
+                            new XAttribute("variableName", cvName));
+                        var cvValEl = ConvertApiCallToXml(cvVal) ?? CreateVariableReference(cvVal);
+                        target.Add(new XElement("ChangeVariable",
+                            new XAttribute("style", "change-variable"),
+                            cvVarEl, cvValEl));
+                        continue;
+                    }
                 }
 
                 if (line.StartsWith("using (new "))
@@ -2121,9 +2521,9 @@ namespace VizzyCode
                     continue;
                 }
 
-                if (System.Text.RegularExpressions.Regex.IsMatch(line, @"(?<![=!<>])=(?!=)"))
+                if (System.Text.RegularExpressions.Regex.IsMatch(line, @"^(\w+)\s*=(?!=)"))
                 {
-                    var assignMatch = System.Text.RegularExpressions.Regex.Match(line, @"(\w+)\s*=\s*(.+);");
+                    var assignMatch = System.Text.RegularExpressions.Regex.Match(line, @"^(\w+)\s*=\s*(.+);$");
                     if (assignMatch.Success)
                     {
                         var setVar = ConvertSetVariableToXml(assignMatch.Groups[1].Value, assignMatch.Groups[2].Value);
@@ -2165,6 +2565,12 @@ namespace VizzyCode
                 return variable;
             }
 
+            // Preserve -0 literally (Vizzy uses -0 as the "uninitialized" sentinel)
+            if (trimmed == "-0")
+            {
+                variable.Add(new XAttribute("number", "-0"));
+                return variable;
+            }
             if (double.TryParse(trimmed, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double num))
             {
                 variable.Add(new XAttribute("number", num.ToString(System.Globalization.CultureInfo.InvariantCulture)));
@@ -2173,7 +2579,7 @@ namespace VizzyCode
 
             if (trimmed.StartsWith("\"") && trimmed.EndsWith("\""))
             {
-                variable.Add(CreateConstant(trimQuotes(trimmed), forceText: true));
+                variable.Add(CreateConstant(Unescape(trimQuotes(trimmed)), forceText: true));
                 return variable;
             }
 
@@ -2181,12 +2587,14 @@ namespace VizzyCode
             return variable;
         }
 
-        private static XElement CreateVariableReference(string variableName)
+        private XElement CreateVariableReference(string variableName)
         {
+            string name  = variableName.Trim();
+            bool isLocal = _localVariables.Contains(name);
             return new XElement("Variable",
-                new XAttribute("list", "false"),
-                new XAttribute("local", "false"),
-                new XAttribute("variableName", variableName.Trim()));
+                new XAttribute("list",  "false"),
+                new XAttribute("local", isLocal ? "true" : "false"),
+                new XAttribute("variableName", name));
         }
 
         private XElement CreateVariableOrExpression(string value)
@@ -2266,7 +2674,10 @@ namespace VizzyCode
 
         private XElement CreateListExpression(string op, IReadOnlyList<string> args)
         {
-            var el = new XElement("ListExpression", new XAttribute("op", op));
+            // Expression-context list ops use <ListOp> (matches Juno XML format)
+            var el = new XElement("ListOp",
+                new XAttribute("op", op),
+                new XAttribute("style", $"list-{op}"));
             foreach (var arg in args)
                 el.Add(CreateVariableOrExpression(arg));
             return el;
@@ -2361,8 +2772,15 @@ namespace VizzyCode
                 if (depth == 0 && i + op.Length <= expr.Length &&
                     expr.Substring(i).StartsWith(op, StringComparison.Ordinal))
                 {
-                    if ((op == "+" || op == "-") && (i == 0 || "+-*/%^<>=!&|(".Contains(expr[i - 1])))
-                        continue;
+                    if (op == "+" || op == "-")
+                    {
+                        if (i == 0 || "+-*/%^<>=!&|(".Contains(expr[i - 1]))
+                            continue;
+                        if (i > 1
+                            && (expr[i - 1] == 'E' || expr[i - 1] == 'e')
+                            && (char.IsDigit(expr[i - 2]) || expr[i - 2] == '.'))
+                            continue;
+                    }
                     return i;
                 }
             }
@@ -2421,16 +2839,19 @@ namespace VizzyCode
                 || trimmed.Contains(" * ")
                 || trimmed.Contains(" / ")
                 || trimmed.Contains(" ^ ")
-                || trimmed.Contains(" % ");
+                || trimmed.Contains(" % ")
+                || trimmed.Contains(" max ")
+                || trimmed.Contains(" min ")
+                || trimmed.Contains(" rand ");
         }
 
-        private static string NormalizeBinaryOp(string op) => op.ToLowerInvariant() switch
+        private static string NormalizeBinaryOp(string op) => op.Trim().ToLowerInvariant() switch
         {
             "rand" => "rand",
             "min" => "min",
             "max" => "max",
             "atan2" => "atan2",
-            _ => op
+            _ => op.Trim()
         };
 
         private static string BinaryStyle(string op) => op switch
@@ -2461,15 +2882,25 @@ namespace VizzyCode
 
         private static string CraftPropertyStyle(string property)
         {
+            // Properties that return a name/string value use "prop-name"
+            if (property.Equals("Orbit.Planet", StringComparison.OrdinalIgnoreCase)) return "prop-name";
+            if (property.Equals("Target.Planet", StringComparison.OrdinalIgnoreCase)) return "prop-name";
+            if (property.Equals("Target.Name", StringComparison.OrdinalIgnoreCase)) return "prop-name";
+            if (property.Equals("Craft.Planet", StringComparison.OrdinalIgnoreCase)) return "prop-name";
+            if (property.StartsWith("Name.", StringComparison.OrdinalIgnoreCase)) return "prop-name";
+
             if (property.StartsWith("Altitude.", StringComparison.OrdinalIgnoreCase)) return "prop-altitude";
             if (property.StartsWith("Orbit.", StringComparison.OrdinalIgnoreCase)) return "prop-orbit";
             if (property.StartsWith("Vel.", StringComparison.OrdinalIgnoreCase)) return "prop-velocity";
             if (property.StartsWith("Nav.", StringComparison.OrdinalIgnoreCase)) return "prop-nav";
-            if (property.StartsWith("Target.", StringComparison.OrdinalIgnoreCase) || property.StartsWith("Name.", StringComparison.OrdinalIgnoreCase)) return "prop-name";
+            if (property.StartsWith("Target.", StringComparison.OrdinalIgnoreCase)) return "prop-name";
             if (property.StartsWith("Fuel.", StringComparison.OrdinalIgnoreCase)) return "prop-fuel";
             if (property.StartsWith("Performance.", StringComparison.OrdinalIgnoreCase)) return "prop-performance";
             if (property.StartsWith("Input.", StringComparison.OrdinalIgnoreCase)) return "prop-input";
             if (property.StartsWith("Time.", StringComparison.OrdinalIgnoreCase)) return "prop-time";
+            if (property.StartsWith("Craft.", StringComparison.OrdinalIgnoreCase)) return "craft";
+            if (property.StartsWith("Misc.", StringComparison.OrdinalIgnoreCase)) return "prop-misc";
+            if (property.StartsWith("Atmosphere.", StringComparison.OrdinalIgnoreCase)) return "prop-atmosphere";
             return "craft";
         }
 

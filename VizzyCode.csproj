@@ -14,8 +14,17 @@
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="obj\**\*.cs" />
+    <Compile Remove="bin\**\*.cs" />
+    <Compile Remove="TestRT\**\*.cs" />
     <Compile Remove="VizzyBuilder\**\*.cs" />
+    <EmbeddedResource Remove="obj\**\*" />
+    <EmbeddedResource Remove="bin\**\*" />
+    <EmbeddedResource Remove="TestRT\**\*" />
     <EmbeddedResource Remove="VizzyBuilder\**\*" />
+    <None Remove="obj\**\*" />
+    <None Remove="bin\**\*" />
+    <None Remove="TestRT\**\*" />
     <None Remove="VizzyBuilder\**\*" />
   </ItemGroup>
 </Project>
