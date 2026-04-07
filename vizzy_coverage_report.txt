@@ -1,0 +1,26 @@
+Vizzy Coverage Report
+Root: C:\Users\adryl\AppData\Local\Temp\VizzyCode
+Date: 2026-04-06 22:26:34
+
+Builder nodes:
+ActivateStage, ActivationGroup, Break, BroadcastMessage, CallCustomExpression, CallCustomInstruction, ChangeVariable, Comment, Conditional, Constant, CraftProperty, CustomExpression, CustomInstruction, DisplayMessage, ElseIf, EvaluateExpression, Event, Expressions, FlightProgram, For, If, Instructions, Items, ListOp, LockNavSphere, LogFlight, LogMessage, MathFunction, Not, Planet, Program, Repeat, SetActivationGroup, SetCameraProperty, SetCraftProperty, SetInput, SetList, SetTarget, SetTargetHeading, SetTimeMode, SetVariable, StringOp, SwitchCraft, Unknown, UserInput, Variable, Variables, Vector, VectorOp, WaitSeconds, WaitUntil, While
+
+Unsupported builder nodes after alias mapping:
+none
+
+Round-trip samples:
+orbitin quizas.xml
+  import warnings: 0
+  code contains TODO: True
+  export root program: True
+  export has instructions: True
+orbiting maybe.xml
+  import warnings: 0
+  code contains TODO: False
+  export root program: True
+  export has instructions: True
+Universal Vizzy Mission 2 - Enhanced.xml
+  import warnings: 0
+  code contains TODO: False
+  export root program: True
+  export has instructions: True

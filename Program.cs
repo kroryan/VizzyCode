@@ -25,6 +25,24 @@ namespace VizzyCode
                 return;
             }
 
+            if (args.Length > 1 && args[0].Equals("--test-roundtrip", StringComparison.OrdinalIgnoreCase))
+            {
+                string xmlPath = args[1];
+                var doc = System.Xml.Linq.XDocument.Load(xmlPath);
+                var conv = new VizzyXmlConverter();
+                bool isCraft = doc.Root?.Name.LocalName is "Craft" or "Assembly";
+                string code = isCraft ? conv.ConvertCraftToCode(doc) : conv.ConvertProgramToCode(doc);
+                if (args.Length > 2 && args[2] == "--show-code")
+                {
+                    Console.WriteLine(code);
+                    return;
+                }
+                string programName = Path.GetFileNameWithoutExtension(xmlPath) + "_rt";
+                var xml2 = conv.ConvertCodeToXml(code, programName);
+                Console.WriteLine(xml2.ToString());
+                return;
+            }
+
             ApplicationConfiguration.Initialize();
             string? fileToOpen = args.Length > 0 ? args[0] : null;
             var form = new MainForm(fileToOpen);

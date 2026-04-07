@@ -158,11 +158,32 @@ namespace VizzyCode
 
             if (variables != null) EmitVariableDeclarations(variables, sb);
 
-            var instructions = program.Element("Instructions");
-            if (instructions != null)
+            // Each <Instructions> block in Vizzy either declares a CustomInstruction
+            // (first element is <CustomInstruction pos="..."/>) or is an event handler
+            // (first element is <Event .../>) or a standalone block.
+            bool ciHeaderPrinted = false;
+            foreach (var instrBlock in program.Elements("Instructions"))
             {
-                EmitCustomInstructionDeclarations(instructions, sb);
-                EmitInstructions(instructions.Elements(), sb, 0);
+                var elements = instrBlock.Elements().ToList();
+                if (elements.Count == 0) continue;
+
+                var firstEl = elements[0];
+                if (firstEl.Name.LocalName == "CustomInstruction" &&
+                    firstEl.Attribute("pos") != null)
+                {
+                    // Custom instruction block: header + sibling body elements
+                    if (!ciHeaderPrinted)
+                    {
+                        sb.AppendLine("// ── Custom Instructions ──────────────────────────────");
+                        ciHeaderPrinted = true;
+                    }
+                    EmitCustomInstructionBlock(firstEl, elements.Skip(1), sb);
+                }
+                else
+                {
+                    // Event handler or standalone preamble block
+                    EmitInstructions(elements, sb, 0);
+                }
             }
 
             var expressions = program.Element("Expressions");
@@ -221,6 +242,26 @@ namespace VizzyCode
 
         // ── Custom Instruction declarations ───────────────────────────────────
 
+        /// <summary>
+        /// Emits one custom instruction whose header is <paramref name="ci"/> and
+        /// whose body is <paramref name="bodyElements"/> (siblings in the same
+        /// &lt;Instructions&gt; block, NOT children of the CI element).
+        /// </summary>
+        private void EmitCustomInstructionBlock(XElement ci, IEnumerable<XElement> bodyElements, StringBuilder sb)
+        {
+            string ciname = ci.Attribute("name")?.Value ?? "MyInstr";
+            var pnames = GetFormatParams(ci.Attribute("format")?.Value ?? "");
+            if (pnames.Count == 0)
+                pnames = ci.Elements("Parameter").Select(p => San(p.Attribute("name")?.Value ?? "p")).ToList();
+            string pStr = string.Join(", ", pnames.Select(p => $"\"{p}\""));
+            string pCall = string.Join(", ", pnames);
+            sb.AppendLine($"var {San(ciname)} = Vz.DeclareCustomInstruction(\"{Esc(ciname)}\", {pStr}).SetInstructions(({pCall}) =>");
+            sb.AppendLine("{");
+            EmitInstructions(bodyElements, sb, 1);
+            sb.AppendLine("});");
+            sb.AppendLine();
+        }
+
         private void EmitCustomInstructionDeclarations(XElement instructions, StringBuilder sb)
         {
             var customs = instructions.Elements("CustomInstruction").ToList();
@@ -247,7 +288,23 @@ namespace VizzyCode
 
         private void EmitInstructions(IEnumerable<XElement> elements, StringBuilder sb, int depth)
         {
-            foreach (var el in elements) EmitInstruction(el, sb, depth);
+            var list = elements.ToList();
+            for (int i = 0; i < list.Count; i++)
+            {
+                var el = list[i];
+                EmitInstruction(el, sb, depth);
+
+                // If we just emitted an Event whose body comes from sibling elements
+                // (rather than a nested <Instructions> child), skip those siblings so
+                // the outer loop doesn't process them a second time.
+                if (el.Name.LocalName == "Event" && el.Element("Instructions") == null)
+                {
+                    int j = i + 1;
+                    while (j < list.Count && list[j].Name.LocalName != "Event")
+                        j++;
+                    i = j - 1; // the for-loop will do i++ → j
+                }
+            }
         }
 
         private void EmitInstruction(XElement el, StringBuilder sb, int depth)
@@ -1235,13 +1292,16 @@ namespace VizzyCode
             var program = new XElement("Program", new XAttribute("name", programName));
 
             var variables = new XElement("Variables");
-            var instructions = new XElement("Instructions");
             var declaredVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Collect instruction blocks: one per event chain, plus a preamble block
+            var instructionBlocks = new List<XElement>();
+            // Preamble accumulates non-event instructions before the first event
+            var preamble = new XElement("_preamble");
 
             for (int i = 0; i < lines.Count; i++)
             {
                 string line = lines[i].Trim();
-
                 if (string.IsNullOrWhiteSpace(line) || line.StartsWith("//")) continue;
 
                 if (line.StartsWith("using (new "))
@@ -1252,10 +1312,38 @@ namespace VizzyCode
                         string blockType = blockMatch.Groups[1].Value;
                         string blockArgs = blockMatch.Groups[2].Value;
 
-                        var block = ConvertBlockToXml(blockType, blockArgs, lines, ref i);
-                        if (block != null)
+                        if (IsEventType(blockType))
                         {
-                            instructions.Add(block);
+                            // Flush any pending preamble instructions
+                            if (preamble.HasElements)
+                            {
+                                var pb = new XElement("Instructions");
+                                foreach (var e in preamble.Elements().ToList()) pb.Add(new XElement(e));
+                                instructionBlocks.Add(pb);
+                                preamble = new XElement("_preamble");
+                            }
+
+                            // Build a new <Instructions> block:
+                            // first child = <Event ... /> (self-closing, no body)
+                            // following children = the event body instructions (flat siblings)
+                            var instrBlock = new XElement("Instructions");
+                            var eventHeader = BuildEventHeaderElement(blockType, blockArgs);
+                            if (eventHeader != null) instrBlock.Add(eventHeader);
+
+                            int start = FindBlockStart(lines, i + 1);
+                            if (start >= 0)
+                            {
+                                int bodyIndex = start;
+                                ParseInstructionLines(lines, ref bodyIndex, instrBlock, stopAtClosingBrace: true);
+                                i = bodyIndex;
+                            }
+                            instructionBlocks.Add(instrBlock);
+                        }
+                        else
+                        {
+                            // Control-flow block in preamble (If/While/etc.)
+                            var block = ConvertBlockToXml(blockType, blockArgs, lines, ref i);
+                            if (block != null) preamble.Add(block);
                         }
                     }
                 }
@@ -1271,10 +1359,7 @@ namespace VizzyCode
                         if (isExpressionAssignment || declaredVariables.Contains(varName))
                         {
                             var setVar = ConvertSetVariableToXml(varName, varValue);
-                            if (setVar != null)
-                            {
-                                instructions.Add(setVar);
-                            }
+                            if (setVar != null) preamble.Add(setVar);
                         }
                         else
                         {
@@ -1285,30 +1370,151 @@ namespace VizzyCode
                 }
                 else if (line.StartsWith("Vz."))
                 {
+                    // Skip Vz.Init(...) — it's a program header, not an instruction
+                    if (line.StartsWith("Vz.Init(")) continue;
                     var instruction = ConvertInstructionToXml(line);
-                    if (instruction != null)
-                    {
-                        instructions.Add(instruction);
-                    }
+                    if (instruction != null) preamble.Add(instruction);
                 }
             }
 
+            // Flush remaining preamble (program with no events)
+            if (preamble.HasElements)
+            {
+                var pb = new XElement("Instructions");
+                foreach (var e in preamble.Elements().ToList()) pb.Add(new XElement(e));
+                instructionBlocks.Add(pb);
+            }
+            // If no instruction blocks at all, add an empty one so the structure is valid
+            if (instructionBlocks.Count == 0)
+                instructionBlocks.Add(new XElement("Instructions"));
+
             program.Add(variables);
-            program.Add(instructions);
+            foreach (var block in instructionBlocks)
+                program.Add(block);
             program.Add(new XElement("Expressions"));
+
+            // Post-process: assign sequential id and pos to all instruction-level elements
+            AssignIdsAndPositions(program);
 
             return new XDocument(program);
         }
 
+        /// <summary>
+        /// Returns true if blockType represents a top-level event (OnStart, OnEnd, etc.)
+        /// These become the first element of a new <Instructions> block, NOT nested inside Event.
+        /// </summary>
+        private static bool IsEventType(string blockType) =>
+            blockType.ToLowerInvariant() is "onstart" or "onend" or "onreceivemessage"
+                or "ondocked" or "onchangesoi" or "onpartcollision" or "onpartexplode"
+                or "on";
+
+        /// <summary>
+        /// Builds the <Event .../> header element (self-closing, no body children).
+        /// The event body becomes flat siblings in the containing <Instructions> block.
+        /// </summary>
+        private XElement? BuildEventHeaderElement(string blockType, string blockArgs)
+        {
+            string arg = string.IsNullOrWhiteSpace(blockArgs) ? "" : blockArgs.Trim();
+            return blockType.ToLowerInvariant() switch
+            {
+                "onstart" => new XElement("Event",
+                    new XAttribute("event", "FlightStart"),
+                    new XAttribute("style", "flight-start")),
+                "onend" => new XElement("Event",
+                    new XAttribute("event", "FlightEnd"),
+                    new XAttribute("style", "flight-end")),
+                "onreceivemessage" => new XElement("Event",
+                    new XAttribute("event", "ReceiveMessage"),
+                    new XAttribute("style", "receive-msg"),
+                    CreateConstant(trimQuotes(arg), forceText: true, canReplace: false)),
+                "ondocked" => new XElement("Event",
+                    new XAttribute("event", "Docked"),
+                    new XAttribute("style", "craft-docked")),
+                "onchangesoi" => new XElement("Event",
+                    new XAttribute("event", "ChangeSoi"),
+                    new XAttribute("style", "change-soi")),
+                "onpartcollision" => new XElement("Event",
+                    new XAttribute("event", "PartCollision"),
+                    new XAttribute("style", "part-collision"),
+                    new XAttribute("part", trimQuotes(arg))),
+                "onpartexplode" => new XElement("Event",
+                    new XAttribute("event", "PartExplode"),
+                    new XAttribute("style", "part-explode"),
+                    new XAttribute("part", trimQuotes(arg))),
+                "on" => new XElement("Event",
+                    new XAttribute("event", trimQuotes(arg)),
+                    new XAttribute("style", trimQuotes(arg).ToLower().Replace(" ", "-"))),
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// Assigns sequential id and pos attributes to all instruction-level elements
+        /// (direct children of every <Instructions> block, recursively).
+        /// Expression-level nodes (Constant, BinaryOp, CraftProperty, etc.) are not modified.
+        /// </summary>
+        private static void AssignIdsAndPositions(XElement program)
+        {
+            int nextId = 0;
+            int blockPosX = 0;
+            const int BlockXSpacing = 300;
+            const int InstrYSpacing = 60;
+
+            foreach (var instrBlock in program.Elements("Instructions"))
+            {
+                int posY = 0;
+                foreach (var instr in instrBlock.Elements())
+                {
+                    AssignNodeIdsRecursive(instr, ref nextId, blockPosX, posY);
+                    posY += InstrYSpacing;
+                }
+                blockPosX += BlockXSpacing;
+            }
+        }
+
+        private static void AssignNodeIdsRecursive(XElement el, ref int nextId, int posX, int posY)
+        {
+            if (el.Attribute("id") == null)
+                el.Add(new XAttribute("id", nextId));
+            nextId++;
+
+            if (el.Attribute("pos") == null)
+                el.Add(new XAttribute("pos", $"{posX},{posY}"));
+
+            // Recurse into nested <Instructions> bodies (If/While/Repeat/For bodies)
+            int nestedPosY = posY + InstrNestYOffset;
+            foreach (var nested in el.Elements("Instructions"))
+            {
+                foreach (var nestedInstr in nested.Elements())
+                {
+                    AssignNodeIdsRecursive(nestedInstr, ref nextId, posX + InstrNestXOffset, nestedPosY);
+                    nestedPosY += NestedInstrYSpacing;
+                }
+            }
+        }
+
+        private const int InstrNestYOffset = 30;
+        private const int InstrNestXOffset = 20;
+        private const int NestedInstrYSpacing = 50;
+
         private XElement? ConvertBlockToXml(string blockType, string blockArgs, List<string> lines, ref int index)
         {
             var body = new XElement("Instructions");
-            int start = FindBlockStart(lines, index + 1);
-            if (start >= 0)
+
+            // Check for inline empty body: "using (new Foo(...)) { }" on the same line.
+            // In that case the body is empty and the next lines belong to the parent scope.
+            string currentLine = index < lines.Count ? lines[index].Trim() : "";
+            bool inlineEmpty = currentLine.EndsWith("{ }") || currentLine.EndsWith("{}");
+
+            if (!inlineEmpty)
             {
-                int bodyIndex = start;
-                ParseInstructionLines(lines, ref bodyIndex, body, stopAtClosingBrace: true);
-                index = bodyIndex;
+                int start = FindBlockStart(lines, index + 1);
+                if (start >= 0)
+                {
+                    int bodyIndex = start;
+                    ParseInstructionLines(lines, ref bodyIndex, body, stopAtClosingBrace: true);
+                    index = bodyIndex;
+                }
             }
 
             return BuildBlockElement(blockType, blockArgs, body);
@@ -1319,21 +1525,25 @@ namespace VizzyCode
             string condArg = string.IsNullOrWhiteSpace(blockArgs) ? "0" : blockArgs.Trim();
             return blockType.ToLower() switch
             {
+                // Events: these are handled by BuildEventHeaderElement in the new ConvertCodeToXml path.
+                // If they arrive here (nested context), produce the header with body attached for fallback.
                 "onstart" => new XElement("Event", new XAttribute("event", "FlightStart"), new XAttribute("style", "flight-start"), body),
-                "onend" => new XElement("Event", new XAttribute("event", "FlightEnd"), body),
+                "onend" => new XElement("Event", new XAttribute("event", "FlightEnd"), new XAttribute("style", "flight-end"), body),
                 "onreceivemessage" => new XElement("Event", new XAttribute("event", "ReceiveMessage"),
                     new XAttribute("style", "receive-msg"), CreateConstant(trimQuotes(condArg), forceText: true, canReplace: false), body),
                 "ondocked" => new XElement("Event", new XAttribute("event", "Docked"), new XAttribute("style", "craft-docked"), body),
                 "onchangesoi" => new XElement("Event", new XAttribute("event", "ChangeSoi"), new XAttribute("style", "change-soi"), body),
-                "onpartcollision" => new XElement("Event", new XAttribute("event", "Collide"),
-                    new XAttribute("part", trimQuotes(condArg)), body),
-                "onpartexplode" => new XElement("Event", new XAttribute("event", "Explode"),
-                    new XAttribute("part", trimQuotes(condArg)), body),
+                "onpartcollision" => new XElement("Event", new XAttribute("event", "PartCollision"),
+                    new XAttribute("style", "part-collision"), new XAttribute("part", trimQuotes(condArg)), body),
+                "onpartexplode" => new XElement("Event", new XAttribute("event", "PartExplode"),
+                    new XAttribute("style", "part-explode"), new XAttribute("part", trimQuotes(condArg)), body),
+                // Control-flow blocks — these have a condition and a nested <Instructions> body
                 "if" => new XElement("If", new XAttribute("style", "if"), ConvertValueToXml(condArg), body),
                 "elseif" => new XElement("ElseIf", new XAttribute("style", "else-if"), ConvertValueToXml(condArg), body),
                 "else" => new XElement("Else", new XAttribute("style", "else"), body),
                 "while" => new XElement("While", new XAttribute("style", "while"), ConvertValueToXml(condArg), body),
-                "waituntil" => new XElement("WaitUntil", new XAttribute("style", "wait-until"), ConvertValueToXml(condArg), body),
+                // WaitUntil has ONLY a condition child — NO nested <Instructions>
+                "waituntil" => new XElement("WaitUntil", new XAttribute("style", "wait-until"), ConvertValueToXml(condArg)),
                 "repeat" => new XElement("Repeat", new XAttribute("style", "repeat"), ConvertValueToXml(condArg), body),
                 "for" => ParseForBlock(blockArgs, body),
                 _ => null
@@ -1428,9 +1638,12 @@ namespace VizzyCode
             if (l.StartsWith("Vz.WaitSeconds("))
                 return new XElement("WaitSeconds", new XAttribute("style", "wait-seconds"), MakeConstantArg(c1));
             if (l.StartsWith("Vz.SetThrottle("))
-                return new XElement("SetThrottle", MakeConstantArg(c1));
+                return new XElement("SetInput",
+                    new XAttribute("input", "throttle"),
+                    new XAttribute("style", "set-input"),
+                    MakeConstantArg(c1));
             if (l.StartsWith("Vz.SetTimeMode("))
-                return new XElement("SetTimeMode", MakeConstantArg(c1));
+                return new XElement("SetTimeMode", new XAttribute("style", "set-time-mode"), MakeConstantArg(c1));
             if (l.StartsWith("Vz.SwitchCraft("))
                 return new XElement("SwitchCraft", new XAttribute("style", "switch-craft"), MakeConstantArg(c1));
             if (l.StartsWith("Vz.TargetNode("))
@@ -1566,7 +1779,8 @@ namespace VizzyCode
                 string type  = parts.Count > 0 ? parts[0].Replace("BroadCastType.", "") : "Craft";
                 bool global  = type == "AllCraft";
                 bool local   = type == "Local";
-                var el = new XElement("BroadcastMessage");
+                string broadcastStyle = global ? "broadcast-msg-all-crafts" : (local ? "broadcast-msg" : "broadcast-msg-craft");
+                var el = new XElement("BroadcastMessage", new XAttribute("style", broadcastStyle));
                 if (global) el.Add(new XAttribute("global", "true"));
                 if (local)  el.Add(new XAttribute("local", "true"));
                 el.Add(MakeConstantArg(parts.Count > 1 ? parts[1] : "\"msg\""));
@@ -1621,7 +1835,10 @@ namespace VizzyCode
 
         private XElement MakeListOp(string op, List<string> parts)
         {
-            var el = new XElement("ListOp", new XAttribute("op", op.ToLowerInvariant()), new XAttribute("style", "list-"));
+            string opLower = op.ToLowerInvariant();
+            var el = new XElement("ListOp",
+                new XAttribute("op", opLower),
+                new XAttribute("style", $"list-{opLower}"));
             foreach (var p in parts) el.Add(MakeConstantArg(p));
             return el;
         }
@@ -2035,7 +2252,11 @@ namespace VizzyCode
         {
             int depth = 0;
             bool inString = false;
-            for (int i = expr.Length - op.Length; i >= 0; i--)
+            // Start at expr.Length - 1 (not expr.Length - op.Length) so that trailing
+            // bracket characters are processed into the depth counter before we attempt
+            // to match any operator.  Skipping them caused depth to be wrong for
+            // multi-char operators such as "&&" and "<=".
+            for (int i = expr.Length - 1; i >= 0; i--)
             {
                 char c = expr[i];
                 if (c == '"' && (i == 0 || expr[i - 1] != '\\'))
@@ -2048,7 +2269,9 @@ namespace VizzyCode
                 if (c == ')' || c == ']' || c == '}') depth++;
                 else if (c == '(' || c == '[' || c == '{') depth--;
 
-                if (depth == 0 && expr.Substring(i).StartsWith(op, StringComparison.Ordinal))
+                // Only attempt a match when enough characters remain for the operator.
+                if (depth == 0 && i + op.Length <= expr.Length &&
+                    expr.Substring(i).StartsWith(op, StringComparison.Ordinal))
                 {
                     if ((op == "+" || op == "-") && (i == 0 || "+-*/%^<>=!&|(".Contains(expr[i - 1])))
                         continue;
