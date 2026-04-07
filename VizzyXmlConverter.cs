@@ -255,7 +255,7 @@ namespace VizzyCode
                 pnames = ci.Elements("Parameter").Select(p => San(p.Attribute("name")?.Value ?? "p")).ToList();
             string pStr = string.Join(", ", pnames.Select(p => $"\"{p}\""));
             string pCall = string.Join(", ", pnames);
-            sb.AppendLine($"var {San(ciname)} = Vz.DeclareCustomInstruction(\"{Esc(ciname)}\", {pStr}).SetInstructions(({pCall}) =>");
+            sb.AppendLine($"var {San(ciname)} = Vz.DeclareCustomInstruction(\"{Esc(ciname)}\"{(pStr.Length > 0 ? ", " + pStr : "")}).SetInstructions(({pCall}) =>");
             sb.AppendLine("{");
             EmitInstructions(bodyElements, sb, 1);
             sb.AppendLine("});");
@@ -275,7 +275,7 @@ namespace VizzyCode
                     pnames = ci.Elements("Parameter").Select(p => San(p.Attribute("name")?.Value ?? "p")).ToList();
                 string pStr = string.Join(", ", pnames.Select(p => $"\"{p}\""));
                 string pCall = string.Join(", ", pnames);
-                sb.AppendLine($"var {San(ciname)} = Vz.DeclareCustomInstruction(\"{Esc(ciname)}\", {pStr}).SetInstructions(({pCall}) =>");
+                sb.AppendLine($"var {San(ciname)} = Vz.DeclareCustomInstruction(\"{Esc(ciname)}\"{(pStr.Length > 0 ? ", " + pStr : "")}).SetInstructions(({pCall}) =>");
                 sb.AppendLine("{");
                 var body = ci.Element("Instructions");
                 if (body != null) EmitInstructions(body.Elements(), sb, 1);
@@ -1294,19 +1294,102 @@ namespace VizzyCode
             var variables = new XElement("Variables");
             var declaredVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // Collect instruction blocks: one per event chain, plus a preamble block
+            // Collect instruction blocks: one per event/CI, plus a preamble block
             var instructionBlocks = new List<XElement>();
-            // Preamble accumulates non-event instructions before the first event
             var preamble = new XElement("_preamble");
+
+            // First pass: extract variable declarations from "// var X = N;" comment lines.
+            // These are emitted by ConvertProgramToCode and are the authoritative source
+            // for the <Variables> section.  Do this before the main loop so runtime
+            // assignments inside lambdas are never misidentified as declarations.
+            foreach (var rawLine in lines)
+            {
+                var varCmt = System.Text.RegularExpressions.Regex.Match(
+                    rawLine.Trim(), @"^//\s*var\s+(\w+)\s*=\s*(.+);");
+                if (!varCmt.Success) continue;
+                string vname = varCmt.Groups[1].Value;
+                string vval  = varCmt.Groups[2].Value.Trim();
+                if (declaredVariables.Contains(vname)) continue;
+                bool isList = vval.StartsWith("[]");
+                variables.Add(isList
+                    ? new XElement("Variable", new XAttribute("name", vname), new XElement("Items"))
+                    : CreateVariableDeclaration(vname, vval));
+                declaredVariables.Add(vname);
+            }
 
             for (int i = 0; i < lines.Count; i++)
             {
                 string line = lines[i].Trim();
-                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("//")) continue;
+                if (string.IsNullOrWhiteSpace(line)) continue;
 
+                // Skip plain comments — but NOT the "// var" lines (already processed above)
+                if (line.StartsWith("//")) continue;
+
+                // ── DeclareCustomInstruction block ──────────────────────────────
+                // Pattern emitted by ConvertProgramToCode:
+                //   var <id> = Vz.DeclareCustomInstruction("<name>", "p1", ...).SetInstructions((<p1>, ...) =>
+                //   {
+                //       <body>
+                //   });
+                var ciMatch = System.Text.RegularExpressions.Regex.Match(line,
+                    @"var\s+\w+\s*=\s*Vz\.DeclareCustomInstruction\(""([^""]+)""((?:\s*,\s*""[^""]*"")*)\s*,?\s*\)\s*\.SetInstructions\(\(([^)]*)\)\s*=>");
+                if (ciMatch.Success)
+                {
+                    string ciName   = ciMatch.Groups[1].Value;
+                    string paramStr = ciMatch.Groups[3].Value; // "p1, p2, ..."
+                    var paramNames  = paramStr.Split(',')
+                        .Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
+
+                    string callFormat = ciName + string.Concat(
+                        paramNames.Select((p, idx) => $" ({idx})"));
+                    string format = ciName + string.Concat(
+                        paramNames.Select(p => $" |{p}|"));
+
+                    var ciBlock = new XElement("Instructions");
+                    var ciHeader = new XElement("CustomInstruction",
+                        new XAttribute("callFormat", callFormat),
+                        new XAttribute("format",     format),
+                        new XAttribute("name",       ciName),
+                        new XAttribute("style",      "custom-instruction"));
+                    ciBlock.Add(ciHeader);
+
+                    // Extract the CI body using brace-depth counting so that we stop
+                    // at the MATCHING `});` rather than the first bare `}` (which would
+                    // be the closing brace of a nested While/If inside the body).
+                    int ciBodyStart = i + 1;
+                    // find the opening `{`
+                    while (ciBodyStart < lines.Count && lines[ciBodyStart].Trim() != "{")
+                        ciBodyStart++;
+                    if (ciBodyStart < lines.Count)
+                    {
+                        // Extract lines between the opening `{` and the matching `}`
+                        // (the `}` that precedes `);`).
+                        var bodyLines = new List<string>();
+                        int depth = 1;
+                        int j = ciBodyStart + 1; // first line inside the block
+                        for (; j < lines.Count && depth > 0; j++)
+                        {
+                            string bl = lines[j].Trim();
+                            if (bl == "{")       depth++;
+                            else if (bl == "}")  { depth--; if (depth == 0) break; }
+                            else if (bl == "});" || bl == "})") { depth--; break; }
+                            if (depth > 0) bodyLines.Add(lines[j]);
+                        }
+                        // Parse the extracted body lines as instructions
+                        int bodyIndex = 0;
+                        ParseInstructionLines(bodyLines, ref bodyIndex, ciBlock, stopAtClosingBrace: false);
+                        i = j; // advance outer loop past the closing `}` / `});`
+                    }
+
+                    instructionBlocks.Add(ciBlock);
+                    continue;
+                }
+
+                // ── Event handler block ─────────────────────────────────────────
                 if (line.StartsWith("using (new "))
                 {
-                    var blockMatch = System.Text.RegularExpressions.Regex.Match(line, @"using\s+\(new\s+(\w+)\((.*)\)\)");
+                    var blockMatch = System.Text.RegularExpressions.Regex.Match(
+                        line, @"using\s+\(new\s+(\w+)\((.*)\)\)");
                     if (blockMatch.Success)
                     {
                         string blockType = blockMatch.Groups[1].Value;
@@ -1314,7 +1397,6 @@ namespace VizzyCode
 
                         if (IsEventType(blockType))
                         {
-                            // Flush any pending preamble instructions
                             if (preamble.HasElements)
                             {
                                 var pb = new XElement("Instructions");
@@ -1323,10 +1405,7 @@ namespace VizzyCode
                                 preamble = new XElement("_preamble");
                             }
 
-                            // Build a new <Instructions> block:
-                            // first child = <Event ... /> (self-closing, no body)
-                            // following children = the event body instructions (flat siblings)
-                            var instrBlock = new XElement("Instructions");
+                            var instrBlock  = new XElement("Instructions");
                             var eventHeader = BuildEventHeaderElement(blockType, blockArgs);
                             if (eventHeader != null) instrBlock.Add(eventHeader);
 
@@ -1341,36 +1420,46 @@ namespace VizzyCode
                         }
                         else
                         {
-                            // Control-flow block in preamble (If/While/etc.)
                             var block = ConvertBlockToXml(blockType, blockArgs, lines, ref i);
                             if (block != null) preamble.Add(block);
                         }
                     }
+                    continue;
                 }
-                else if (System.Text.RegularExpressions.Regex.IsMatch(line, @"(?<![=!<>])=(?!=)"))
+
+                // ── Runtime assignments  ────────────────────────────────────────
+                // Only treated as a variable DECLARATION when not already declared via
+                // a "// var" comment and the value is a plain literal.
+                if (System.Text.RegularExpressions.Regex.IsMatch(line, @"(?<![=!<>])=(?!=)"))
                 {
-                    var assignMatch = System.Text.RegularExpressions.Regex.Match(line, @"(\w+)\s*=\s*(.+);");
+                    var assignMatch = System.Text.RegularExpressions.Regex.Match(
+                        line, @"(\w+)\s*=\s*(.+);");
                     if (assignMatch.Success)
                     {
-                        string varName = assignMatch.Groups[1].Value;
+                        string varName  = assignMatch.Groups[1].Value;
                         string varValue = assignMatch.Groups[2].Value;
 
-                        bool isExpressionAssignment = IsVizzyExpression(varValue);
-                        if (isExpressionAssignment || declaredVariables.Contains(varName))
+                        bool alreadyDeclared = declaredVariables.Contains(varName);
+                        bool isExpr          = IsVizzyExpression(varValue);
+
+                        if (alreadyDeclared || isExpr)
                         {
                             var setVar = ConvertSetVariableToXml(varName, varValue);
                             if (setVar != null) preamble.Add(setVar);
                         }
                         else
                         {
+                            // Plain literal not seen before — declare it
                             variables.Add(CreateVariableDeclaration(varName, varValue));
                             declaredVariables.Add(varName);
                         }
                     }
+                    continue;
                 }
-                else if (line.StartsWith("Vz."))
+
+                // ── Top-level Vz.* calls ────────────────────────────────────────
+                if (line.StartsWith("Vz."))
                 {
-                    // Skip Vz.Init(...) — it's a program header, not an instruction
                     if (line.StartsWith("Vz.Init(")) continue;
                     var instruction = ConvertInstructionToXml(line);
                     if (instruction != null) preamble.Add(instruction);
@@ -1384,7 +1473,6 @@ namespace VizzyCode
                 foreach (var e in preamble.Elements().ToList()) pb.Add(new XElement(e));
                 instructionBlocks.Add(pb);
             }
-            // If no instruction blocks at all, add an empty one so the structure is valid
             if (instructionBlocks.Count == 0)
                 instructionBlocks.Add(new XElement("Instructions"));
 
