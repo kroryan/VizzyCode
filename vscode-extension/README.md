@@ -94,7 +94,7 @@ The repository build pipeline is:
 1. publish `VizzyCode.Cli` as a standalone Windows binary
 2. copy the extension files into `vscode-extension-dist`
 3. place the CLI in `vscode-extension-dist\bin\win-x64`
-4. generate `vizzycode-tools-0.0.4.vsix`
+4. generate `vizzycode-tools-0.0.5.vsix`
 5. install that `.vsix` into VS Code
 
 Repository command:
@@ -106,7 +106,7 @@ Repository command:
 Outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.4.vsix`
+- `vizzycode-tools-0.0.5.vsix`
 
 ## Self-Contained Bundle Layout
 

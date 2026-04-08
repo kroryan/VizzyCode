@@ -40,6 +40,8 @@ Start here if you want to write, maintain, or debug Vizzy scripts with this proj
 
 - [Vizzy Authoring Guide](docs/VizzyAuthoringGuide.md)
 - [Vizzy Blocks Mega Guide](docs/VizzyBlocksMegaGuide.md)
+- [AI Repair Context Guide](docs/AiRepairContextGuide.md)
+- [Mastering Vizzy - A Complete Guide](docs/Mastering%20Vizzy%20_%20A%20Complete%20Guide%20-%20Early%20Access%2008.07.25.md)
 
 Useful reference examples:
 
@@ -86,7 +88,7 @@ That script:
 Generated artifacts:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.4.vsix`
+- `vizzycode-tools-0.0.5.vsix`
 
 After installation, restart VS Code or run `Developer: Reload Window`.
 
@@ -210,7 +212,7 @@ That script performs all of these steps:
 Generated outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.4.vsix`
+- `vizzycode-tools-0.0.5.vsix`
 
 ## How To Create A Distributable Extension Bundle
 
@@ -225,7 +227,7 @@ If you want to distribute only the extension without the whole repository:
 2. take one of these outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.4.vsix`
+- `vizzycode-tools-0.0.5.vsix`
 
 The bundle in `vscode-extension-dist\` is self-contained and already includes:
 
@@ -248,7 +250,7 @@ inside the extension folder.
 If you already have the generated `.vsix`, you can install it manually with either:
 
 ```powershell
-code --install-extension .\vizzycode-tools-0.0.4.vsix --force
+code --install-extension .\vizzycode-tools-0.0.5.vsix --force
 ```
 
 or from inside VS Code:
@@ -256,7 +258,7 @@ or from inside VS Code:
 1. open Extensions
 2. open the `...` menu
 3. choose `Install from VSIX...`
-4. select `vizzycode-tools-0.0.4.vsix`
+4. select `vizzycode-tools-0.0.5.vsix`
 
 ## Current Converter Capabilities
 
@@ -323,6 +325,29 @@ If the diff is empty, the current round-trip output is identical.
 
 ## AI Integration
 
+For AI-assisted work, giving the model only the current `.cs` file is not enough.
+
+It is necessary to provide the relevant project documentation as context, especially when asking an AI to:
+
+- repair a failing Vizzy export
+- modify a mission-scale script
+- preserve round-trip fidelity
+- debug Juno editor loading failures
+- add new authoring patterns
+
+Minimum recommended context for AI:
+
+- `README.md`
+- `docs/VizzyAuthoringGuide.md`
+- `docs/VizzyBlocksMegaGuide.md`
+- `docs/AiRepairContextGuide.md`
+
+Strongly recommended when the task is about general Vizzy behavior, not only this converter:
+
+- `docs/Mastering Vizzy _ A Complete Guide - Early Access 08.07.25.md`
+
+If the task is fidelity-sensitive, also include the original working XML and the current `.cs`.
+
 The app supports two distinct ways to use Claude Code, Gemini CLI, Codex CLI, and OpenCode.
 
 1. In-app headless chat  
@@ -386,12 +411,16 @@ Use these references first:
 
 - [Vizzy Authoring Guide](docs/VizzyAuthoringGuide.md)
 - [Vizzy Blocks Mega Guide](docs/VizzyBlocksMegaGuide.md)
+- [AI Repair Context Guide](docs/AiRepairContextGuide.md)
+- [Mastering Vizzy - A Complete Guide](docs/Mastering%20Vizzy%20_%20A%20Complete%20Guide%20-%20Early%20Access%2008.07.25.md)
 - `Vizzy examples/orbiting maybe.xml`
 - `Vizzy examples/orbiting maybe starter.cs`
 - `Vizzy examples/Auto Orbit authoring-safe.cs`
 - `Vizzy examples/T.T.cs`
 
 Those files define the current safe and tested authoring subset.
+
+For AI-generated Vizzy code, do not ask the AI to work from code alone. Give it the documentation above as context first.
 
 ## Build
 

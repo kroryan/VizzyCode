@@ -2,7 +2,7 @@
   "name": "vizzycode-tools",
   "displayName": "VizzyCode Tools",
   "description": "Import Vizzy XML to code, export code back to Vizzy XML, and run round-trip tests from VS Code.",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "vizzycode",
   "engines": {
     "vscode": "^1.85.0"

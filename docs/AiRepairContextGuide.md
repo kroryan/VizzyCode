@@ -13,6 +13,27 @@ There are two fundamentally different cases:
 
 If those are confused, the AI will often "fix" the wrong thing and make the mission worse.
 
+## Required Context For AI
+
+If you want an AI to work reliably on VizzyCode, do not provide only the current code file.
+
+Minimum documentation context:
+
+- `README.md`
+- `docs/VizzyAuthoringGuide.md`
+- `docs/VizzyBlocksMegaGuide.md`
+- `docs/AiRepairContextGuide.md`
+
+Recommended additional Vizzy language reference:
+
+- `docs/Mastering Vizzy _ A Complete Guide - Early Access 08.07.25.md`
+
+For fidelity-sensitive work, also provide:
+
+- the original working XML
+- the current `.cs`
+- the currently exported XML if one exists
+
 ## The First Question To Ask
 
 Before changing code, determine:
