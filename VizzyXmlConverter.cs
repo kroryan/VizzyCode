@@ -19,6 +19,8 @@ namespace VizzyCode
         private HashSet<string> _localVariables = new(StringComparer.Ordinal);
         // Maps sanitized C# identifier → original CustomInstruction name for CI call detection.
         private Dictionary<string, string> _ciNameMap = new(StringComparer.Ordinal);
+        private XElement? _pendingTopLevelHeader;
+        private XElement? _pendingInstructionMetadata;
         public IReadOnlyList<string> Warnings => _warnings;
 
         private static readonly Dictionary<string, string> CraftPropertyCallMap = new(StringComparer.OrdinalIgnoreCase)
@@ -169,10 +171,12 @@ namespace VizzyCode
             bool ciHeaderPrinted = false;
             foreach (var instrBlock in program.Elements("Instructions"))
             {
+                sb.AppendLine("// VZTOPBLOCK");
                 var elements = instrBlock.Elements().ToList();
                 if (elements.Count == 0) continue;
 
                 var firstEl = elements[0];
+                EmitTopLevelBlockMetadata(firstEl, sb);
                 if (firstEl.Name.LocalName == "CustomInstruction" &&
                     firstEl.Attribute("pos") != null)
                 {
@@ -229,6 +233,7 @@ namespace VizzyCode
             sb.AppendLine("// ── Custom Expressions ───────────────────────────────");
             foreach (var expr in exprs)
             {
+                EmitTopLevelBlockMetadata(expr, sb);
                 string ename = expr.Attribute("name")?.Value ?? "MyExpr";
                 var pnames = GetFormatParams(expr.Attribute("format")?.Value ?? "");
                 if (pnames.Count == 0)
@@ -269,6 +274,38 @@ namespace VizzyCode
             EmitInstructions(bodyElements, sb, 1);
             sb.AppendLine("});");
             sb.AppendLine();
+        }
+
+        private void EmitTopLevelBlockMetadata(XElement firstEl, StringBuilder sb)
+        {
+            if (firstEl.Name.LocalName is not ("CustomInstruction" or "Event" or "CustomExpression"))
+                return;
+
+            string xml = firstEl.ToString(SaveOptions.DisableFormatting);
+            string payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(xml));
+            sb.AppendLine($"// VZBLOCK {payload}");
+        }
+
+        private void EmitInstructionMetadata(XElement el, StringBuilder sb, string ind)
+        {
+            if (!ShouldPreserveInstructionMetadata(el))
+                return;
+
+            var shell = new XElement(el.Name, el.Attributes());
+            if (el.Name.LocalName is "SetVariable" or "ChangeVariable")
+            {
+                var targetVar = el.Elements().FirstOrDefault(e => e.Name.LocalName == "Variable");
+                if (targetVar != null)
+                    shell.Add(new XElement(targetVar));
+            }
+            else if (el.Name.LocalName == "For")
+            {
+                foreach (var child in el.Elements().Where(e => e.Name.LocalName != "Instructions"))
+                    shell.Add(new XElement(child));
+            }
+            string xml = shell.ToString(SaveOptions.DisableFormatting);
+            string payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(xml));
+            sb.AppendLine($"{ind}// VZEL {payload}");
         }
 
         private void EmitCustomInstructionDeclarations(XElement instructions, StringBuilder sb)
@@ -321,6 +358,7 @@ namespace VizzyCode
             if (el.Name.LocalName == "CustomInstruction" && el.Attribute("pos") != null) return;
 
             string ind = I(depth);
+            EmitInstructionMetadata(el, sb, ind);
             switch (el.Name.LocalName)
             {
                 case "Comment":         EmitComment(el, sb, ind); break;
@@ -358,7 +396,12 @@ namespace VizzyCode
                 case "SetInput":        EmitSetInput(el, sb, ind); break;
                 case "SetTargetHeading":
                 case "LockHeading":     EmitLockHeading(el, sb, ind); break;
-                case "SetTimeMode":     sb.AppendLine($"{ind}Vz.SetTimeMode({(el.Elements().Any() ? E1(el) : $"\"{Esc(el.Attribute("mode")?.Value ?? "Normal")}\"")});"); break;
+                case "SetTimeMode":
+                    if (el.Elements().Any())
+                        sb.AppendLine($"{ind}Vz.SetTimeMode({E1(el)});");
+                    else
+                        sb.AppendLine($"{ind}Vz.SetTimeModeAttr(\"{Esc(el.Attribute("mode")?.Value ?? "Normal")}\");");
+                    break;
                 case "BroadcastMessage":EmitBroadcast(el, sb, ind); break;
                 case "SwitchCraft":     sb.AppendLine($"{ind}Vz.SwitchCraft({E1(el)});"); break;
                 case "SetTarget":       sb.AppendLine($"{ind}Vz.TargetNode({E1(el)});"); break;
@@ -467,7 +510,7 @@ namespace VizzyCode
         {
             var exprs = el.Elements().Where(c => c.Name.LocalName != "Instructions").ToList();
             var body = el.Element("Instructions");
-            string vname = el.Attribute("variable")?.Value ?? "i";
+            string vname = el.Attribute("var")?.Value ?? el.Attribute("variable")?.Value ?? "i";
             string from  = exprs.Count > 0 ? ConvertExpression(exprs[0]) : "0";
             string to    = exprs.Count > 1 ? ConvertExpression(exprs[1]) : "10";
             string step  = exprs.Count > 2 ? ConvertExpression(exprs[2]) : "1";
@@ -802,6 +845,8 @@ namespace VizzyCode
                 case "Variable":
                 {
                     string variableName = el.Attribute("variableName")?.Value ?? "var";
+                    if (el.Attribute("variableName") != null)
+                        return $"Vz.RawVariable(\"{Esc(EncodePreservedElement(el))}\")";
                     return System.Text.RegularExpressions.Regex.IsMatch(variableName, @"^[A-Za-z_]\w*$")
                         ? San(variableName)
                         : $"Vz.RawVar(\"{Esc(variableName)}\")";
@@ -849,12 +894,21 @@ namespace VizzyCode
 
         private string ConvertConstant(XElement el)
         {
+            if (NeedsRawConstantPreservation(el))
+                return $"Vz.RawConstant(\"{Esc(EncodePreservedElement(el))}\")";
+
             string? style = el.Attribute("style")?.Value;
             string? boolVal = el.Attribute("bool")?.Value;
             if (style == "true" || boolVal == "true")  return "true";
             if (style == "false" || boolVal == "false") return "false";
             var numAttr = el.Attribute("number");
-            if (numAttr != null) { string nv = numAttr.Value; return nv == "-0" ? "0" : nv; }
+            if (numAttr != null)
+            {
+                string nv = numAttr.Value;
+                if (nv == "-0")
+                    return $"Vz.RawConstant(\"{Esc(EncodePreservedElement(el))}\")";
+                return nv;
+            }
             var textAttr = el.Attribute("text");
             if (textAttr != null)
             {
@@ -971,8 +1025,12 @@ namespace VizzyCode
         private string ConvertCraftProperty(XElement el)
         {
             string prop = el.Attribute("property")?.Value ?? "";
+            string? style = el.Attribute("style")?.Value;
+            if (style != null && !string.Equals(style, CraftPropertyStyle(prop), StringComparison.Ordinal))
+                return $"Vz.RawCraftProperty(\"{Esc(EncodePreservedElement(el))}\")";
             var ch = el.Elements().ToList();
             string arg = ch.Count > 0 ? ConvertExpression(ch[0]) : "";
+            string arg2 = ch.Count > 1 ? ConvertExpression(ch[1]) : "";
             string craftArg = ch.Count > 0 ? $"({arg})" : "()";
 
             return prop switch
@@ -1065,14 +1123,14 @@ namespace VizzyCode
                 "Name.Craft"                      => "Vz.NameOf(Vz.Craft.Self)",
                 // Craft queries (take an argument)
                 "Craft.NameToID"                  => $"Vz.Craft.NameToID({arg})",
-                "Craft.Planet"                    => "Vz.Craft.Planet()",
+                "Craft.Planet"                    => ch.Count > 0 ? $"Vz.OtherCraft({arg}).Planet()" : "Vz.Craft.Planet()",
                 // Part queries
                 "Part.NameToID"                   => $"Vz.PartNameToID({arg})",
-                "Part.PciToLocal"                 => $"Vz.PartPciToLocal({arg})",
+                "Part.PciToLocal"                 => ch.Count > 1 ? $"Vz.PartPciToLocal({arg}, {arg2})" : $"Vz.PartPciToLocal({arg})",
                 "Part.SetActivated"               => $"Vz.SetPartActivated({arg})",
                 // Input
                 "Input.Throttle"                  => "Vz.CraftInput(CraftInput.Throttle)",
-                "Input.TranslationMode"           => "Vz.CraftInput(CraftInput.TranslateMode)",
+                "Input.TranslationMode"           => "Vz.CraftInput(CraftInput.TranslationMode)",
                 // Legacy/simple
                 "heading"                         => "Vz.Craft.Nav.Heading()",
                 "pitch"                           => "Vz.Craft.Nav.Pitch()",
@@ -1128,6 +1186,8 @@ namespace VizzyCode
         {
             var child = el.Elements().FirstOrDefault();
             string expr = child?.Attribute("text")?.Value ?? child?.Attribute("number")?.Value ?? "";
+            if (el.Attribute("style")?.Value == "evaluate-expression")
+                return $"Vz.RawEval(\"{Esc(EncodePreservedElement(el))}\")";
             return expr.ToLower() switch { "pi" => "Vz.Pi", "e" => "Vz.E",
                 "inf" or "infinity" => "Vz.Infinity", "nan" => "Vz.NaN",
                 _ => $"Vz.Eval(\"{Esc(expr)}\")" };
@@ -1157,7 +1217,9 @@ namespace VizzyCode
                 "get"    => $"Vz.ListGet({list}, {idx})",
                 "length" => $"Vz.ListLength({list})",
                 "index"  => $"Vz.ListIndex({list}, {idx})",
-                "create" => $"Vz.CreateList()",
+                "create" => ch.Count > 0
+                    ? $"Vz.CreateListRaw({ConvertExpression(ch[0])})"
+                    : $"Vz.CreateList()",
                 _        => $"Vz.List{Cap(op)}({list})"
             };
         }
@@ -1317,6 +1379,9 @@ namespace VizzyCode
 
         public XDocument ConvertCodeToXml(string code, string programName = "GeneratedProgram")
         {
+            _pendingTopLevelHeader = null;
+            _pendingInstructionMetadata = null;
+            _listVariables.Clear();
             var lines = code.Split('\n').Select(l => l.TrimEnd()).ToList();
             string resolvedProgramName = programName;
             foreach (var rawLine in lines)
@@ -1372,6 +1437,8 @@ namespace VizzyCode
                 string vval  = varCmt.Groups[2].Value.Trim();
                 if (declaredVariables.Contains(vname)) continue;
                 bool isList = vval.StartsWith("[]");
+                if (isList)
+                    _listVariables.Add(vname);
                 variables.Add(isList
                     ? new XElement("Variable", new XAttribute("name", vname), new XElement("Items"))
                     : CreateVariableDeclaration(vname, vval));
@@ -1383,8 +1450,75 @@ namespace VizzyCode
                 string line = lines[i].Trim();
                 if (string.IsNullOrWhiteSpace(line)) continue;
 
-                // Skip plain comments — but NOT the "// var" lines (already processed above)
-                if (line.StartsWith("//")) continue;
+                if (line == "// VZTOPBLOCK")
+                {
+                    if (preamble.HasElements)
+                    {
+                        var pb = new XElement("Instructions");
+                        foreach (var e in preamble.Elements().ToList()) pb.Add(new XElement(e));
+                        instructionBlocks.Add(pb);
+                        preamble = new XElement("_preamble");
+                    }
+                    continue;
+                }
+
+                if (line.StartsWith("// VZBLOCK ", StringComparison.Ordinal))
+                {
+                    if (preamble.HasElements)
+                    {
+                        var pb = new XElement("Instructions");
+                        foreach (var e in preamble.Elements().ToList()) pb.Add(new XElement(e));
+                        instructionBlocks.Add(pb);
+                        preamble = new XElement("_preamble");
+                    }
+
+                    string payload = line.Substring("// VZBLOCK ".Length).Trim();
+                    try
+                    {
+                        string xml = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+                        _pendingTopLevelHeader = XElement.Parse(xml);
+                    }
+                    catch
+                    {
+                        _pendingTopLevelHeader = null;
+                    }
+                    continue;
+                }
+
+                if (line.StartsWith("// VZEL ", StringComparison.Ordinal))
+                {
+                    string payload = line.Substring("// VZEL ".Length).Trim();
+                    try
+                    {
+                        string xml = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+                        _pendingInstructionMetadata = XElement.Parse(xml);
+                    }
+                    catch
+                    {
+                        _pendingInstructionMetadata = null;
+                    }
+                    continue;
+                }
+
+                // Preserve top-level comment blocks; only skip system/meta comments.
+                if (line.StartsWith("//", StringComparison.Ordinal))
+                {
+                    if (!line.StartsWith("// var ", StringComparison.Ordinal) &&
+                        !line.StartsWith("// [TODO]", StringComparison.Ordinal) &&
+                        !line.StartsWith("// Program ", StringComparison.Ordinal) &&
+                        !line.StartsWith("// ──", StringComparison.Ordinal) &&
+                        !line.StartsWith("// ═══", StringComparison.Ordinal))
+                    {
+                        string commentText = line.Length > 3 ? line.Substring(3) : line.Substring(2);
+                        preamble.Add(ApplyPendingInstructionMetadata(new XElement("Comment",
+                            new XAttribute("style", "comment"),
+                            new XElement("Constant",
+                                new XAttribute("style", "comment-text"),
+                                new XAttribute("canReplace", "false"),
+                                new XAttribute("text", commentText)))));
+                    }
+                    continue;
+                }
 
                 // ── DeclareCustomInstruction block ──────────────────────────────
                 // Pattern emitted by ConvertProgramToCode:
@@ -1407,11 +1541,21 @@ namespace VizzyCode
                         paramNames.Select(p => $" |{p}|"));
 
                     var ciBlock = new XElement("Instructions");
-                    var ciHeader = new XElement("CustomInstruction",
-                        new XAttribute("callFormat", callFormat),
-                        new XAttribute("format",     format),
-                        new XAttribute("name",       ciName),
-                        new XAttribute("style",      "custom-instruction"));
+                    XElement ciHeader;
+                    if (_pendingTopLevelHeader?.Name.LocalName == "CustomInstruction" &&
+                        string.Equals(_pendingTopLevelHeader.Attribute("name")?.Value, ciName, StringComparison.Ordinal))
+                    {
+                        ciHeader = new XElement(_pendingTopLevelHeader);
+                    }
+                    else
+                    {
+                        ciHeader = new XElement("CustomInstruction",
+                            new XAttribute("callFormat", callFormat),
+                            new XAttribute("format",     format),
+                            new XAttribute("name",       ciName),
+                            new XAttribute("style",      "custom-instruction"));
+                    }
+                    _pendingTopLevelHeader = null;
                     ciBlock.Add(ciHeader);
 
                     // Extract the CI body using brace-depth counting so that we stop
@@ -1493,12 +1637,30 @@ namespace VizzyCode
                         returnXml = CreateVariableReference(returnExprCode);
                     _localVariables = new HashSet<string>();
 
-                    var ceEl = new XElement("CustomExpression",
-                        new XAttribute("callFormat", ceCallFmt),
-                        new XAttribute("format",     ceFmt),
-                        new XAttribute("name",       ceName),
-                        new XAttribute("style",      "custom-expression"));
-                    if (returnXml != null) ceEl.Add(returnXml);
+                    XElement ceEl;
+                    if (_pendingTopLevelHeader?.Name.LocalName == "CustomExpression")
+                    {
+                        var preservedChildren = _pendingTopLevelHeader.Elements()
+                            .Where(e => e.Name.LocalName == "Parameter")
+                            .Select(e => new XElement(e))
+                            .Cast<object>()
+                            .ToList();
+                        if (returnXml != null)
+                            preservedChildren.Add(returnXml);
+                        ceEl = new XElement("CustomExpression",
+                            _pendingTopLevelHeader.Attributes(),
+                            preservedChildren);
+                    }
+                    else
+                    {
+                        ceEl = new XElement("CustomExpression",
+                            new XAttribute("callFormat", ceCallFmt),
+                            new XAttribute("format",     ceFmt),
+                            new XAttribute("name",       ceName),
+                            new XAttribute("style",      "custom-expression"));
+                        if (returnXml != null) ceEl.Add(returnXml);
+                    }
+                    _pendingTopLevelHeader = null;
                     ceElements.Add(ceEl);
                     i = j2;
                     continue;
@@ -1525,7 +1687,12 @@ namespace VizzyCode
                             }
 
                             var instrBlock  = new XElement("Instructions");
-                            var eventHeader = BuildEventHeaderElement(blockType, blockArgs);
+                            XElement? eventHeader = null;
+                            if (_pendingTopLevelHeader?.Name.LocalName == "Event")
+                                eventHeader = new XElement(_pendingTopLevelHeader);
+                            else
+                                eventHeader = BuildEventHeaderElement(blockType, blockArgs);
+                            _pendingTopLevelHeader = null;
                             if (eventHeader != null) instrBlock.Add(eventHeader);
 
                             int start = FindBlockStart(lines, i + 1);
@@ -1683,12 +1850,17 @@ namespace VizzyCode
 
         private static void AssignNodeIdsRecursive(XElement el, ref int nextId, int posX, int posY)
         {
-            if (el.Attribute("id") == null)
+            bool hadOriginalId = el.Attribute("id") != null;
+            if (hadOriginalId)
+            {
+                if (int.TryParse(el.Attribute("id")?.Value, out int existingId) && existingId >= nextId)
+                    nextId = existingId + 1;
+            }
+            else
+            {
                 el.Add(new XAttribute("id", nextId));
-            nextId++;
-
-            if (el.Attribute("pos") == null)
-                el.Add(new XAttribute("pos", $"{posX},{posY}"));
+                nextId++;
+            }
 
             // Recurse into nested <Instructions> bodies (If/While/Repeat/For bodies)
             int nestedPosY = posY + InstrNestYOffset;
@@ -1709,6 +1881,8 @@ namespace VizzyCode
         private XElement? ConvertBlockToXml(string blockType, string blockArgs, List<string> lines, ref int index)
         {
             var body = new XElement("Instructions");
+            var pendingBlockMetadata = _pendingInstructionMetadata;
+            _pendingInstructionMetadata = null;
 
             // Check for inline empty body: "using (new Foo(...)) { }" on the same line.
             // In that case the body is empty and the next lines belong to the parent scope.
@@ -1726,13 +1900,14 @@ namespace VizzyCode
                 }
             }
 
+            _pendingInstructionMetadata = pendingBlockMetadata;
             return BuildBlockElement(blockType, blockArgs, body);
         }
 
         private XElement? BuildBlockElement(string blockType, string blockArgs, XElement body)
         {
             string condArg = string.IsNullOrWhiteSpace(blockArgs) ? "0" : blockArgs.Trim();
-            return blockType.ToLower() switch
+            var element = blockType.ToLower() switch
             {
                 // Events: these are handled by BuildEventHeaderElement in the new ConvertCodeToXml path.
                 // If they arrive here (nested context), produce the header with body attached for fallback.
@@ -1757,6 +1932,7 @@ namespace VizzyCode
                 "for" => ParseForBlock(blockArgs, body),
                 _ => null
             };
+            return element != null ? ApplyPendingInstructionMetadata(element) : null;
         }
 
         private XElement ParseForBlock(string blockArgs, XElement body)
@@ -1766,17 +1942,14 @@ namespace VizzyCode
             string from = "0", to = "10", step = "1";
             var varMatch = System.Text.RegularExpressions.Regex.Match(blockArgs, "\"(\\w+)\"");
             if (varMatch.Success) variable = varMatch.Groups[1].Value;
-            var fromMatch = System.Text.RegularExpressions.Regex.Match(blockArgs, @"\.From\(([^)]+)\)");
-            if (fromMatch.Success) from = fromMatch.Groups[1].Value;
-            var toMatch = System.Text.RegularExpressions.Regex.Match(blockArgs, @"\.To\(([^)]+)\)");
-            if (toMatch.Success) to = toMatch.Groups[1].Value;
-            var byMatch = System.Text.RegularExpressions.Regex.Match(blockArgs, @"\.By\(([^)]+)\)");
-            if (byMatch.Success) step = byMatch.Groups[1].Value;
-            return new XElement("For", new XAttribute("variable", variable), new XAttribute("style", "for"),
-                CreateConstant(from),
-                CreateConstant(to),
-                CreateConstant(step),
-                body);
+            from = TryExtractChainedCallArgument(blockArgs, "From") ?? from;
+            to = TryExtractChainedCallArgument(blockArgs, "To") ?? to;
+            step = TryExtractChainedCallArgument(blockArgs, "By") ?? step;
+            return ApplyPendingInstructionMetadata(new XElement("For", new XAttribute("var", variable), new XAttribute("style", "for"),
+                ConvertValueToXml(from),
+                ConvertValueToXml(to),
+                ConvertValueToXml(step),
+                body));
         }
 
         private XElement? ConvertSetVariableToXml(string varName, string varValue)
@@ -1784,10 +1957,10 @@ namespace VizzyCode
             string trimmedValue = varValue.Trim();
             if (trimmedValue.StartsWith("Vz.UserInput("))
             {
-                return new XElement("UserInput",
+                return ApplyPendingInstructionMetadata(new XElement("UserInput",
                     new XAttribute("style", "user-input"),
                     CreateVariableReference(varName),
-                    ConvertValueToXml(ExtractParenthesisContent(trimmedValue)));
+                    ConvertValueToXml(ExtractParenthesisContent(trimmedValue))));
             }
 
             var setVar = new XElement("SetVariable", new XAttribute("style", "set-variable"));
@@ -1797,7 +1970,7 @@ namespace VizzyCode
 
             setVar.Add(ConvertValueToXml(trimmedValue));
 
-            return setVar;
+            return ApplyPendingInstructionMetadata(setVar);
         }
 
         private XElement? ConvertInstructionToXml(string line)
@@ -1868,6 +2041,10 @@ namespace VizzyCode
                 return new XElement("SetTimeMode",
                     new XAttribute("style", "set-time-mode"),
                     MakeConstantArg(c1));
+            if (l.StartsWith("Vz.SetTimeModeAttr("))
+                return new XElement("SetTimeMode",
+                    new XAttribute("mode", trimQuotes(c1)),
+                    new XAttribute("style", "set-time-mode"));
             if (l.StartsWith("Vz.SwitchCraft("))
                 return new XElement("SwitchCraft", new XAttribute("style", "switch-craft"), MakeConstantArg(c1));
             if (l.StartsWith("Vz.TargetNode("))
@@ -2035,9 +2212,9 @@ namespace VizzyCode
             // UserInput: var = Vz.UserInput(prompt) — handled via assignment, but also as statement
             // Generic Vz. call fallback — treat as comment
             if (l.StartsWith("Vz."))
-                return new XElement("Comment",
+                return ApplyPendingInstructionMetadata(new XElement("Comment",
                     new XAttribute("style", "comment"),
-                    CreateConstant($"[TODO] {l}", forceText: true));
+                    CreateConstant($"[TODO] {l}", forceText: true)));
 
             return null;
         }
@@ -2122,6 +2299,13 @@ namespace VizzyCode
 
             while (HasOuterParentheses(call))
                 call = call.Substring(1, call.Length - 2).Trim();
+
+            if (TryDecodePreservedCall(call, "Vz.RawConstant", "Constant", out var rawConstantExpr))
+                return rawConstantExpr;
+            if (TryDecodePreservedCall(call, "Vz.RawVariable", "Variable", out var rawVariableExpr))
+                return rawVariableExpr;
+            if (TryDecodePreservedCall(call, "Vz.RawCraftProperty", "CraftProperty", out var rawCraftPropertyExpr))
+                return rawCraftPropertyExpr;
 
             // Numeric literal
             if (double.TryParse(call, System.Globalization.NumberStyles.Float,
@@ -2281,6 +2465,9 @@ namespace VizzyCode
                 return rawVarExpr;
 
             // Named constants — must come BEFORE the generic dotted-name fallback below
+            if (TryDecodePreservedCall(call, "Vz.RawEval", "EvaluateExpression", out var rawEvalExpr))
+                return rawEvalExpr;
+
             if (call == "Vz.Pi")       return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "pi")));
             if (call == "Vz.E")        return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "e")));
             if (call == "Vz.Infinity") return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "inf")));
@@ -2313,6 +2500,10 @@ namespace VizzyCode
             if (TryConvertFunctionCall(call, "Vz.ListGet", args => CreateListExpression("get", args), 2, out var listGetExpr)) return listGetExpr;
             if (TryConvertFunctionCall(call, "Vz.ListLength", args => CreateListExpression("length", args), 1, out var listLengthExpr)) return listLengthExpr;
             if (TryConvertFunctionCall(call, "Vz.ListIndex", args => CreateListExpression("index", args), 2, out var listIndexExpr)) return listIndexExpr;
+            if (TryConvertFunctionCall(call, "Vz.CreateListRaw", args => new XElement("ListOp",
+                new XAttribute("op", "create"),
+                new XAttribute("style", "list-create"),
+                ConvertApiCallToXml(args[0]) ?? CreateConstant(Unescape(trimQuotes(args[0])), forceText: true)), 1, out var createListRawExpr)) return createListRawExpr;
             if (call == "Vz.CreateList()") return new XElement("ListOp", new XAttribute("op", "create"), new XAttribute("style", "list-create"));
 
             if (TryConvertFunctionCall(call, "Vz.Length", args => CreateVectorOp("length", args), 1, out var vecLenExpr)) return vecLenExpr;
@@ -2327,12 +2518,17 @@ namespace VizzyCode
             if (TryConvertFunctionCall(call, "Vz.VecMax", args => CreateVectorOp("max", args), 2, out var vecMaxExpr)) return vecMaxExpr;
             if (TryConvertFunctionCall(call, "Vz.Clamp", args => CreateVectorOp("clamp", args), 2, out var vecClampExpr)) return vecClampExpr;
 
+            if (TryConvertFunctionCall(call, "Vz.Craft.NameToID", args => new XElement("CraftProperty",
+                new XAttribute("property", "Craft.NameToID"),
+                new XAttribute("style", "craft-id"),
+                ConvertApiCallToXml(args[0]) ?? CreateVariableReference(args[0])), 1, out var craftNameToIdExpr)) return craftNameToIdExpr;
+
             if (TryConvertFunctionCall(call, "Vz.PartNameToID", args => new XElement("CraftProperty",
                 new XAttribute("property", "Part.NameToID"),
-                new XAttribute("style", "prop-name"),
+                new XAttribute("style", "part-id"),
                 ConvertApiCallToXml(args[0]) ?? CreateVariableReference(args[0])), 1, out var partNameToIdExpr)) return partNameToIdExpr;
             if (TryConvertFunctionCall(call, "Vz.PartPciToLocal", args => {
-                var cp = new XElement("CraftProperty", new XAttribute("property", "Part.PciToLocal"), new XAttribute("style", "prop-name"));
+                var cp = new XElement("CraftProperty", new XAttribute("property", "Part.PciToLocal"), new XAttribute("style", "part-transform"));
                 foreach (var a in args) cp.Add(ConvertApiCallToXml(a) ?? CreateVariableReference(a));
                 return cp;
             }, 1, out var partPciToLocalExpr)) return partPciToLocalExpr;
@@ -2370,6 +2566,13 @@ namespace VizzyCode
                     string craftIdStr = otherM.Groups[1].Value.Trim();
                     string propName   = otherM.Groups[2].Value;
                     var craftIdEl = ConvertApiCallToXml(craftIdStr) ?? CreateVariableReference(craftIdStr);
+                    if (propName.Equals("Planet", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new XElement("CraftProperty",
+                            new XAttribute("property", "Craft.Planet"),
+                            new XAttribute("style", "craft"),
+                            craftIdEl);
+                    }
                     return new XElement("CraftOtherProperty",
                         new XAttribute("property", propName),
                         new XAttribute("style", CraftPropertyStyle(propName)),
@@ -2474,18 +2677,33 @@ namespace VizzyCode
                 // ── Comment lines → <Comment> ──────────────────────────────────
                 if (line.StartsWith("//"))
                 {
+                    if (line.StartsWith("// VZEL ", StringComparison.Ordinal))
+                    {
+                        string payload = line.Substring("// VZEL ".Length).Trim();
+                        try
+                        {
+                            string xml = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+                            _pendingInstructionMetadata = XElement.Parse(xml);
+                        }
+                        catch
+                        {
+                            _pendingInstructionMetadata = null;
+                        }
+                        continue;
+                    }
+
                     // Skip system/metadata comments (separators, var declarations, TODOs)
                     if (!line.StartsWith("// ──") && !line.StartsWith("// var ") &&
                         !line.StartsWith("// [TODO]") && !line.StartsWith("// ═══") &&
                         !line.StartsWith("// Program ") && !line.StartsWith("// ── "))
                     {
                         string commentText = line.Length > 3 ? line.Substring(3) : line.Substring(2);
-                        target.Add(new XElement("Comment",
+                        target.Add(ApplyPendingInstructionMetadata(new XElement("Comment",
                             new XAttribute("style", "comment"),
                             new XElement("Constant",
                                 new XAttribute("style", "comment-text"),
                                 new XAttribute("canReplace", "false"),
-                                new XAttribute("text", commentText))));
+                                new XAttribute("text", commentText)))));
                     }
                     continue;
                 }
@@ -2502,9 +2720,9 @@ namespace VizzyCode
                             new XAttribute("local", _localVariables.Contains(cvName) ? "true" : "false"),
                             new XAttribute("variableName", cvName));
                         var cvValEl = ConvertApiCallToXml(cvVal) ?? CreateVariableReference(cvVal);
-                        target.Add(new XElement("ChangeVariable",
+                        target.Add(ApplyPendingInstructionMetadata(new XElement("ChangeVariable",
                             new XAttribute("style", "change-variable"),
-                            cvVarEl, cvValEl));
+                            cvVarEl, cvValEl)));
                         continue;
                     }
                 }
@@ -2535,7 +2753,7 @@ namespace VizzyCode
 
                 var instruction = ConvertInstructionToXml(line);
                 if (instruction != null)
-                    target.Add(instruction);
+                    target.Add(ApplyPendingInstructionMetadata(instruction));
             }
         }
 
@@ -2591,8 +2809,9 @@ namespace VizzyCode
         {
             string name  = variableName.Trim();
             bool isLocal = _localVariables.Contains(name);
+            bool isList = _listVariables.Contains(name);
             return new XElement("Variable",
-                new XAttribute("list",  "false"),
+                new XAttribute("list",  isList ? "true" : "false"),
                 new XAttribute("local", isLocal ? "true" : "false"),
                 new XAttribute("variableName", name));
         }
@@ -2787,6 +3006,53 @@ namespace VizzyCode
             return -1;
         }
 
+        private static string? TryExtractChainedCallArgument(string source, string methodName)
+        {
+            string token = "." + methodName + "(";
+            int start = source.IndexOf(token, StringComparison.Ordinal);
+            if (start < 0) return null;
+
+            int contentStart = start + token.Length;
+            int depth = 1;
+            bool inString = false;
+            bool escaped = false;
+
+            for (int i = contentStart; i < source.Length; i++)
+            {
+                char c = source[i];
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (c == '\\' && inString)
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inString = !inString;
+                    continue;
+                }
+
+                if (inString)
+                    continue;
+
+                if (c == '(') depth++;
+                else if (c == ')')
+                {
+                    depth--;
+                    if (depth == 0)
+                        return source.Substring(contentStart, i - contentStart).Trim();
+                }
+            }
+
+            return null;
+        }
+
         private static bool HasOuterParentheses(string expr)
         {
             expr = expr.Trim();
@@ -2882,6 +3148,12 @@ namespace VizzyCode
 
         private static string CraftPropertyStyle(string property)
         {
+            if (property.Equals("Craft.NameToID", StringComparison.OrdinalIgnoreCase)) return "craft-id";
+            if (property.Equals("Part.NameToID", StringComparison.OrdinalIgnoreCase)) return "part-id";
+            if (property.Equals("Part.PciToLocal", StringComparison.OrdinalIgnoreCase)) return "part-transform";
+            if (property.Equals("Target.Position", StringComparison.OrdinalIgnoreCase)) return "prop-nav";
+            if (property.Equals("Target.Velocity", StringComparison.OrdinalIgnoreCase)) return "prop-velocity";
+
             // Properties that return a name/string value use "prop-name"
             if (property.Equals("Orbit.Planet", StringComparison.OrdinalIgnoreCase)) return "prop-name";
             if (property.Equals("Target.Planet", StringComparison.OrdinalIgnoreCase)) return "prop-name";
@@ -2913,6 +3185,112 @@ namespace VizzyCode
                 return line.Substring(start, end - start);
             }
             return "";
+        }
+
+        private static bool NeedsRawConstantPreservation(XElement el)
+        {
+            var attrs = el.Attributes().ToDictionary(a => a.Name.LocalName, a => a.Value, StringComparer.Ordinal);
+            if (attrs.ContainsKey("number"))
+                return false;
+
+            if (attrs.TryGetValue("text", out string? textValue))
+            {
+                if (attrs.ContainsKey("style") || attrs.ContainsKey("canReplace"))
+                    return false;
+
+                return double.TryParse(textValue, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out _);
+            }
+
+            return attrs.ContainsKey("bool");
+        }
+
+        private static string EncodePreservedElement(XElement el)
+        {
+            string xml = el.ToString(SaveOptions.DisableFormatting);
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(xml));
+        }
+
+        private static bool ShouldPreserveInstructionMetadata(XElement el)
+        {
+            if (el.Name.LocalName == "CustomInstruction" && el.Attribute("pos") != null)
+                return false;
+
+            return el.Attribute("id") != null || el.Attribute("pos") != null || el.Attribute("mode") != null;
+        }
+
+        private XElement ApplyPendingInstructionMetadata(XElement element)
+        {
+            if (_pendingInstructionMetadata == null)
+                return element;
+
+            if (_pendingInstructionMetadata.Name != element.Name)
+                return element;
+
+            IEnumerable<object> mergedNodes = element.Nodes();
+            if (element.Name.LocalName is "SetVariable" or "ChangeVariable")
+            {
+                var preservedTarget = _pendingInstructionMetadata.Elements().FirstOrDefault(e => e.Name.LocalName == "Variable");
+                if (preservedTarget != null)
+                {
+                    mergedNodes = new object[] { new XElement(preservedTarget) }
+                        .Concat(element.Nodes().Skip(1))
+                        .ToArray();
+                }
+            }
+            else if (element.Name.LocalName == "For")
+            {
+                var preservedParts = _pendingInstructionMetadata.Elements().Where(e => e.Name.LocalName != "Instructions")
+                    .Select(e => new XElement(e))
+                    .Cast<object>()
+                    .ToList();
+                var body = element.Element("Instructions");
+                if (preservedParts.Count > 0)
+                {
+                    if (body != null) preservedParts.Add(body);
+                    mergedNodes = preservedParts;
+                }
+            }
+
+            var preserved = new XElement(_pendingInstructionMetadata.Name,
+                _pendingInstructionMetadata.Attributes(),
+                mergedNodes);
+            _pendingInstructionMetadata = null;
+            return preserved;
+        }
+
+        private bool TryDecodePreservedCall(string call, string functionName, string expectedName, out XElement? element)
+        {
+            string prefix = functionName + "(";
+            if (!call.StartsWith(prefix, StringComparison.Ordinal) || !call.EndsWith(")", StringComparison.Ordinal))
+            {
+                element = null;
+                return false;
+            }
+
+            if (!HasOuterParentheses(call.Substring(functionName.Length)))
+            {
+                element = null;
+                return false;
+            }
+
+            var args = SplitArgs(ExtractParenthesisContent(call));
+            if (args.Count != 1)
+            {
+                element = null;
+                return false;
+            }
+
+            element = DecodePreservedElement(args[0], expectedName);
+            return true;
+        }
+
+        private static XElement DecodePreservedElement(string encodedArg, string expectedName)
+        {
+            string encoded = Unescape(trimQuotes(encodedArg));
+            string xml = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+            var element = XElement.Parse(xml);
+            return element.Name.LocalName == expectedName ? element : new XElement(expectedName);
         }
     }
 }
