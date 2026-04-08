@@ -11,13 +11,13 @@ function activate(context) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('vizzycode.importXmlToCode', async (uri) => {
-      await runImport(uri);
+      await safeRun(() => runImport(uri));
     }),
     vscode.commands.registerCommand('vizzycode.exportCodeToXml', async (uri) => {
-      await runExport(uri);
+      await safeRun(() => runExport(uri));
     }),
     vscode.commands.registerCommand('vizzycode.roundTripXml', async (uri) => {
-      await runRoundTrip(uri);
+      await safeRun(() => runRoundTrip(uri));
     })
   );
 
@@ -69,12 +69,14 @@ async function runRoundTrip(uri) {
 }
 
 async function resolveInputUri(uri, kind) {
-  if (uri && uri.fsPath) return uri;
+  if (uri && uri.fsPath && fs.existsSync(uri.fsPath)) return uri;
 
   const active = vscode.window.activeTextEditor?.document?.uri;
   if (active) {
-    if (kind === 'xml' && active.fsPath.toLowerCase().endsWith('.xml')) return active;
-    if (kind === 'code' && active.fsPath.toLowerCase().endsWith('.cs')) return active;
+    if (fs.existsSync(active.fsPath)) {
+      if (kind === 'xml' && active.fsPath.toLowerCase().endsWith('.xml')) return active;
+      if (kind === 'code' && active.fsPath.toLowerCase().endsWith('.cs')) return active;
+    }
   }
 
   const filters = kind === 'xml'
@@ -107,6 +109,15 @@ async function runCli(args, cwd) {
 
   if (output) {
     vscode.window.showInformationMessage(String(output));
+  }
+}
+
+async function safeRun(action) {
+  try {
+    await action();
+  } catch (error) {
+    const message = String(error && error.message ? error.message : error);
+    vscode.window.showErrorMessage(message);
   }
 }
 

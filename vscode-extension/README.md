@@ -64,6 +64,7 @@ That package contains:
 - the extension files
 - the bundled CLI in `bin/win-x64`
 - the local installer script
+- the quick install guide in `INSTALL.md`
 
 ### Repository Install
 
@@ -93,7 +94,7 @@ The repository build pipeline is:
 1. publish `VizzyCode.Cli` as a standalone Windows binary
 2. copy the extension files into `vscode-extension-dist`
 3. place the CLI in `vscode-extension-dist\bin\win-x64`
-4. generate `vizzycode-tools-0.0.1.vsix`
+4. generate `vizzycode-tools-0.0.4.vsix`
 5. install that `.vsix` into VS Code
 
 Repository command:
@@ -105,7 +106,7 @@ Repository command:
 Outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.1.vsix`
+- `vizzycode-tools-0.0.4.vsix`
 
 ## Self-Contained Bundle Layout
 
@@ -114,6 +115,7 @@ The distributable extension folder is expected to contain:
 - `extension.js`
 - `package.json`
 - `README.md`
+- `INSTALL.md`
 - `install.ps1`
 - `bin\win-x64\VizzyCode.Cli.exe`
 
@@ -162,3 +164,5 @@ If the extension appears installed but the commands are not visible:
    - `VizzyCode Round-Trip`
 
 This extension explicitly declares support for Workspace Trust / Restricted Mode, so those commands should still be available in standard restricted workspaces.
+
+If VS Code passes a stale file path to a command, the extension now falls back to the active editor or prompts for a file again instead of failing with a raw `FileNotFoundException`.

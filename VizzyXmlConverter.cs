@@ -21,6 +21,7 @@ namespace VizzyCode
         private Dictionary<string, string> _ciNameMap = new(StringComparer.Ordinal);
         private XElement? _pendingTopLevelHeader;
         private XElement? _pendingInstructionMetadata;
+        private bool _preferTextConstantsForAuthoring;
         public IReadOnlyList<string> Warnings => _warnings;
 
         private static readonly Dictionary<string, string> CraftPropertyCallMap = new(StringComparer.OrdinalIgnoreCase)
@@ -367,7 +368,12 @@ namespace VizzyCode
                 case "ChangeVariable":  EmitChangeVariable(el, sb, ind); break;
                 case "While":           EmitBlock("While", el, sb, depth, ind); break;
                 case "If":              EmitBlock("If", el, sb, depth, ind); break;
-                case "ElseIf":          EmitBlock("ElseIf", el, sb, depth, ind); break;
+                case "ElseIf":
+                    if (string.Equals(el.Attribute("style")?.Value, "else", StringComparison.OrdinalIgnoreCase))
+                        EmitElse(el, sb, depth, ind);
+                    else
+                        EmitBlock("ElseIf", el, sb, depth, ind);
+                    break;
                 case "Else":            EmitElse(el, sb, depth, ind); break;
                 case "Repeat":          EmitBlockN("Repeat", el, sb, depth, ind); break;
                 case "For":
@@ -1381,6 +1387,12 @@ namespace VizzyCode
         {
             _pendingTopLevelHeader = null;
             _pendingInstructionMetadata = null;
+            _preferTextConstantsForAuthoring =
+                !code.Contains("VZEL", StringComparison.Ordinal) &&
+                !code.Contains("Vz.RawConstant(", StringComparison.Ordinal) &&
+                !code.Contains("Vz.RawVariable(", StringComparison.Ordinal) &&
+                !code.Contains("Vz.RawCraftProperty(", StringComparison.Ordinal) &&
+                !code.Contains("Vz.RawEval(", StringComparison.Ordinal);
             _listVariables.Clear();
             var lines = code.Split('\n').Select(l => l.TrimEnd()).ToList();
             string resolvedProgramName = programName;
@@ -1506,6 +1518,7 @@ namespace VizzyCode
                     if (!line.StartsWith("// var ", StringComparison.Ordinal) &&
                         !line.StartsWith("// [TODO]", StringComparison.Ordinal) &&
                         !line.StartsWith("// Program ", StringComparison.Ordinal) &&
+                        !line.Contains("Program:", StringComparison.Ordinal) &&
                         !line.StartsWith("// ──", StringComparison.Ordinal) &&
                         !line.StartsWith("// ═══", StringComparison.Ordinal))
                     {
@@ -1835,23 +1848,25 @@ namespace VizzyCode
         private static void AssignIdsAndPositions(XElement program)
         {
             int nextId = 0;
-            int blockPosX = 0;
+            int blockPosX = -10;
             const int BlockXSpacing = 300;
             const int InstrYSpacing = 60;
 
             foreach (var instrBlock in program.Elements("Instructions"))
             {
-                int posY = 0;
+                int posY = -20;
+                bool isFirstInBlock = true;
                 foreach (var instr in instrBlock.Elements())
                 {
-                    AssignNodeIdsRecursive(instr, ref nextId, blockPosX, posY);
+                    AssignNodeIdsRecursive(instr, ref nextId, blockPosX, posY, assignPos: isFirstInBlock);
+                    isFirstInBlock = false;
                     posY += InstrYSpacing;
                 }
                 blockPosX += BlockXSpacing;
             }
         }
 
-        private static void AssignNodeIdsRecursive(XElement el, ref int nextId, int posX, int posY)
+        private static void AssignNodeIdsRecursive(XElement el, ref int nextId, int posX, int posY, bool assignPos)
         {
             bool hadOriginalId = el.Attribute("id") != null;
             if (hadOriginalId)
@@ -1865,13 +1880,18 @@ namespace VizzyCode
                 nextId++;
             }
 
+            if (assignPos && el.Attribute("pos") == null)
+            {
+                el.Add(new XAttribute("pos", $"{posX},{posY}"));
+            }
+
             // Recurse into nested <Instructions> bodies (If/While/Repeat/For bodies)
             int nestedPosY = posY + InstrNestYOffset;
             foreach (var nested in el.Elements("Instructions"))
             {
                 foreach (var nestedInstr in nested.Elements())
                 {
-                    AssignNodeIdsRecursive(nestedInstr, ref nextId, posX + InstrNestXOffset, nestedPosY);
+                    AssignNodeIdsRecursive(nestedInstr, ref nextId, posX + InstrNestXOffset, nestedPosY, assignPos: false);
                     nestedPosY += NestedInstrYSpacing;
                 }
             }
@@ -1927,7 +1947,10 @@ namespace VizzyCode
                 // Control-flow blocks — these have a condition and a nested <Instructions> body
                 "if" => new XElement("If", new XAttribute("style", "if"), ConvertValueToXml(condArg), body),
                 "elseif" => new XElement("ElseIf", new XAttribute("style", "else-if"), ConvertValueToXml(condArg), body),
-                "else" => new XElement("Else", new XAttribute("style", "else"), body),
+                "else" => new XElement("ElseIf",
+                    new XAttribute("style", "else"),
+                    new XElement("Constant", new XAttribute("bool", "true")),
+                    body),
                 "while" => new XElement("While", new XAttribute("style", "while"), ConvertValueToXml(condArg), body),
                 // WaitUntil has ONLY a condition child — NO nested <Instructions>
                 "waituntil" => new XElement("WaitUntil", new XAttribute("style", "wait-until"), ConvertValueToXml(condArg)),
@@ -2022,9 +2045,11 @@ namespace VizzyCode
             if (l.StartsWith("Vz.Display(") || l.StartsWith("Vz.DisplayMessage("))
             {
                 var parts = SplitArgs(c1);
+                var messageArg = ConvertValueToXml(parts.Count > 0 ? parts[0] : "\"\"");
+                var durationArg = parts.Count > 1 ? parts[1] : "7";
                 return new XElement("DisplayMessage", new XAttribute("style", "display"),
-                    ConvertValueToXml(parts.Count > 0 ? parts[0] : "\"\""),
-                    ConvertValueToXml(parts.Count > 1 ? parts[1] : "7"));
+                    messageArg,
+                    CreateNumericConstant(durationArg));
             }
             if (l.StartsWith("Vz.FlightLog("))
             {
@@ -2749,6 +2774,9 @@ namespace VizzyCode
                 // ── Comment lines → <Comment> ──────────────────────────────────
                 if (line.StartsWith("//"))
                 {
+                    if (line.Contains("Program:", StringComparison.Ordinal))
+                        continue;
+
                     if (line.StartsWith("// VZEL ", StringComparison.Ordinal))
                     {
                         string payload = line.Substring("// VZEL ".Length).Trim();
@@ -2896,7 +2924,7 @@ namespace VizzyCode
             return ConvertApiCallToXml(value) ?? CreateVariableReference(value);
         }
 
-        private static XElement CreateConstant(string value, bool forceText = false, bool canReplace = true)
+        private XElement CreateConstant(string value, bool forceText = false, bool canReplace = true)
         {
             string trimmed = value.Trim();
             var attrs = new List<object>();
@@ -2912,6 +2940,12 @@ namespace VizzyCode
 
             if (!forceText && double.TryParse(trimmed, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double numVal))
             {
+                if (_preferTextConstantsForAuthoring)
+                {
+                    attrs.Add(new XAttribute("text", numVal.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                    return new XElement("Constant", attrs);
+                }
+
                 attrs.Add(new XAttribute("number", numVal.ToString(System.Globalization.CultureInfo.InvariantCulture)));
                 return new XElement("Constant", attrs);
             }
@@ -2919,6 +2953,15 @@ namespace VizzyCode
             string textValue = forceText ? StripOuterQuotesPreserveWhitespace(value) : trimQuotes(trimmed);
             attrs.Add(new XAttribute("text", textValue));
             return new XElement("Constant", attrs);
+        }
+
+        private XElement CreateNumericConstant(string value)
+        {
+            string trimmed = value.Trim();
+            if (trimmed.StartsWith("\"") && trimmed.EndsWith("\""))
+                trimmed = Unescape(trimQuotes(trimmed));
+
+            return new XElement("Constant", new XAttribute("number", trimmed));
         }
 
         private XElement CreateBinaryOpElement((string op, string left, string right) value)
