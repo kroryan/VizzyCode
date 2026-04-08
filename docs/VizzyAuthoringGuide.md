@@ -37,6 +37,34 @@ Mission-scale validated references:
 - `friendly` time and distance formatting
 - mission-scale control flow
 
+## VS Code Workflow
+
+If you prefer writing Vizzy scripts in VS Code instead of the WinForms editor, use the repository integration:
+
+- `VizzyCode.Cli`
+- `vscode-extension`
+- `scripts/install-vscode-integration.ps1`
+
+That workflow lets you:
+
+- import XML to `.vizzy.cs`
+- edit the code in VS Code
+- export the code back to XML
+- run round-trip checks without leaving VS Code
+
+Important implementation notes:
+
+- the VS Code extension is distributed as a self-contained bundle
+- the bundled CLI lives inside the extension folder
+- the supported install path is a generated `.vsix`, not an ad-hoc copied folder
+- the extension declares support for Workspace Trust / Restricted Mode so its commands remain available in normal restricted sessions
+
+Activation indicators in VS Code:
+
+- a `VizzyCode` status bar item when the extension is active
+- Command Palette entries containing `VizzyCode`
+- context menu actions on `.xml` and `.cs` files
+
 ## Authoring Rules
 
 Follow these rules when writing new Vizzy code:

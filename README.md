@@ -49,6 +49,62 @@ Useful reference examples:
 - [T.T. Mission Program.xml](Vizzy%20examples/T.T.%20Mission%20Program.xml)
 - [T.T.cs](Vizzy%20examples/T.T.cs)
 
+## VS Code Integration
+
+This repository now includes a complete VS Code workflow built on top of the same converter:
+
+- [VizzyCode.Cli](VizzyCode.Cli)
+- [vscode-extension](vscode-extension)
+- [install-vscode-integration.ps1](scripts/install-vscode-integration.ps1)
+
+The VS Code integration gives you:
+
+- `VizzyCode: Import XML to Code`
+- `VizzyCode: Export Code to XML`
+- `VizzyCode: Round-Trip XML`
+
+Recommended install:
+
+```powershell
+.\scripts\install-vscode-integration.ps1
+```
+
+That script:
+
+- publishes a bundled `VizzyCode.Cli`
+- builds a self-contained extension bundle in `vscode-extension-dist`
+- creates a local `.vsix` package
+- installs the extension into VS Code
+- installs the same self-contained bundle users can distribute separately
+
+Generated artifacts:
+
+- `vscode-extension-dist\`
+- `vizzycode-tools-0.0.1.vsix`
+
+After installation, restart VS Code or run `Developer: Reload Window`.
+
+The extension is configured to support VS Code Restricted Mode / Workspace Trust and uses the officially supported `contributes.commands` + VSIX install path.
+
+Visible activation signals:
+
+- `VizzyCode` status bar entry at the lower left when the extension is active
+- commands in the Command Palette
+- Explorer context menu entries for `.xml` and `.cs`
+- editor title actions for `.xml` and `.cs`
+
+If the commands do not appear:
+
+1. Confirm the extension is enabled.
+2. Reload the VS Code window.
+3. Check whether the `VizzyCode` status bar item is visible.
+4. Search the Command Palette for:
+   - `VizzyCode Import XML`
+   - `VizzyCode Export Code`
+   - `VizzyCode Round-Trip`
+
+The current app and the VS Code workflow live in the same repository. A separate repository is not required.
+
 ## Current Converter Capabilities
 
 The converter now handles several fidelity-sensitive cases that previously broke Juno loading or changed the XML structure:

@@ -1,0 +1,90 @@
+{
+  "name": "vizzycode-tools",
+  "displayName": "VizzyCode Tools",
+  "description": "Import Vizzy XML to code, export code back to Vizzy XML, and run round-trip tests from VS Code.",
+  "version": "0.0.1",
+  "publisher": "vizzycode",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:vizzycode.importXmlToCode",
+    "onCommand:vizzycode.exportCodeToXml",
+    "onCommand:vizzycode.roundTripXml"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vizzycode.importXmlToCode",
+        "category": "VizzyCode",
+        "title": "VizzyCode Import XML to Code"
+      },
+      {
+        "command": "vizzycode.exportCodeToXml",
+        "category": "VizzyCode",
+        "title": "VizzyCode Export Code to XML"
+      },
+      {
+        "command": "vizzycode.roundTripXml",
+        "category": "VizzyCode",
+        "title": "VizzyCode Round-Trip XML"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "vizzycode.importXmlToCode",
+          "when": "resourceExtname == .xml",
+          "group": "navigation"
+        },
+        {
+          "command": "vizzycode.exportCodeToXml",
+          "when": "resourceExtname == .cs",
+          "group": "navigation"
+        },
+        {
+          "command": "vizzycode.roundTripXml",
+          "when": "resourceExtname == .xml",
+          "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "vizzycode.importXmlToCode",
+          "when": "resourceExtname == .xml",
+          "group": "navigation"
+        },
+        {
+          "command": "vizzycode.exportCodeToXml",
+          "when": "resourceExtname == .cs",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "VizzyCode Tools",
+      "properties": {
+        "vizzycode.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to VizzyCode.Cli.exe or VizzyCode.Cli. If empty, the extension tries common workspace and published locations."
+        },
+        "vizzycode.autoOpenResults": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open generated code or XML files automatically after a command succeeds."
+        }
+      }
+    }
+  }
+}
