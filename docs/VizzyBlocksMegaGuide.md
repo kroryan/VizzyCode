@@ -2,12 +2,13 @@
 
 This document is the long-form reference for writing, reading, and maintaining Vizzy programs in this repository.
 
-It is intentionally written from the perspective of this project, not from an abstract game-design perspective. The goal is practical:
+It is written from the perspective of this project. The goal is practical:
 
-- explain what each supported block does
+- explain what each supported block family does
 - show how it appears in XML and in C#-style authoring code
 - document the safe authoring subset for `code -> XML`
 - document pitfalls that can make Juno reject a generated program
+- document fidelity-sensitive behavior that matters in real mission files
 
 If you are new to this project, read these files in this order:
 
@@ -17,14 +18,14 @@ If you are new to this project, read these files in this order:
 
 ## Scope
 
-This guide covers the block families that are currently supported by `VizzyXmlConverter.cs`, especially:
+This guide covers the block families currently supported by `VizzyXmlConverter.cs`, especially:
 
 - instruction blocks
 - expression blocks
 - custom instructions
 - custom expressions
 - MFD widgets and widget interaction
-- block authoring patterns that round-trip reliably
+- authoring patterns that round-trip reliably
 
 It does not claim to be an exhaustive reverse-engineered reference for every block Juno has ever shipped. It is the supported reference for this repository.
 
@@ -36,9 +37,9 @@ Vizzy programs in this project move between three forms:
 2. C#-style Vizzy authoring code
 3. round-tripped Vizzy XML
 
-There are two different success criteria:
+There are two different success criteria.
 
-### Existing program fidelity
+### Existing Program Fidelity
 
 For an existing Vizzy program exported from Juno:
 
@@ -46,7 +47,7 @@ For an existing Vizzy program exported from Juno:
 
 must preserve the exact structure that Juno expects, ideally byte-for-byte.
 
-### New script authoring
+### New Script Authoring
 
 For a new script written by hand:
 
@@ -54,7 +55,7 @@ For a new script written by hand:
 
 must generate XML that Juno recognizes as a valid Vizzy program.
 
-These goals overlap, but they are not the same. A nice-looking handwritten script is not automatically valid unless it uses supported authoring patterns.
+These goals overlap, but they are not the same.
 
 ## Program Structure
 
@@ -82,6 +83,12 @@ using (new OnStart())
 }
 
 Console.WriteLine(Vz.context.currentProgram.Serialize().ToString());
+```
+
+For fidelity work on existing XML, also use the round-trip harness:
+
+```powershell
+dotnet run --project TestRT -c Release -- "<input.xml>" "<output.xml>" "<code.txt>"
 ```
 
 ## Block Families
@@ -120,12 +127,6 @@ using (new OnStart())
 }
 ```
 
-Use it when:
-
-- you want the main control loop
-- you are writing startup logic
-- you are building a simple single-thread flight program
-
 ### Other Events
 
 This converter also supports several other event forms in existing XML:
@@ -136,12 +137,6 @@ This converter also supports several other event forms in existing XML:
 - change SOI
 - part collision
 - part explode
-
-Use cases:
-
-- message-driven coordination
-- craft lifecycle hooks
-- automation triggered by simulation events
 
 ## Comment Block
 
@@ -163,14 +158,7 @@ Typical authoring code:
 // This is a note
 ```
 
-Notes:
-
-- comments are preserved as real Vizzy comment blocks
-- comment text is documentation, so keep it in English in this repository
-
 ## Variable Blocks
-
-Variable-related blocks control program state.
 
 ### Set Variable
 
@@ -193,12 +181,6 @@ Typical authoring code:
 Pitch = 45;
 ```
 
-Use it for:
-
-- state initialization
-- sensor sampling into variables
-- intermediate calculations
-
 ### Change Variable
 
 Purpose:
@@ -210,12 +192,6 @@ Typical authoring code:
 ```csharp
 counter += 1;
 ```
-
-Use it for:
-
-- counters
-- timers
-- accumulators
 
 ### Variable References
 
@@ -231,8 +207,6 @@ For fidelity-sensitive cases, this converter can preserve raw variable metadata 
 
 ## Flow Control Blocks
 
-These blocks shape execution.
-
 ### While
 
 Purpose:
@@ -247,13 +221,6 @@ using (new While(condition))
     // repeated instructions
 }
 ```
-
-Use it for:
-
-- main loops
-- polling loops
-- burn loops
-- state machines
 
 ### If / ElseIf / Else
 
@@ -275,34 +242,11 @@ using (new Else())
 }
 ```
 
-Use it for:
-
-- phase transitions
-- safety checks
-- different throttle or pitch regimes
-
-### Repeat
-
-Purpose:
-
-- repeat a fixed number of times
-
-Use it for:
-
-- known iteration counts
-- finite retries
-
 ### For
 
 Purpose:
 
 - run a loop with an iterator variable and explicit start, end, and step
-
-Use it for:
-
-- list scans
-- countdowns
-- sampled sweeps
 
 Important note:
 
@@ -320,12 +264,6 @@ Typical code:
 Vz.WaitSeconds(0.1);
 ```
 
-Use it for:
-
-- throttling loops
-- spacing out state changes
-- avoiding per-frame spam
-
 ### Wait Until
 
 Purpose:
@@ -338,25 +276,7 @@ Typical code:
 using (new WaitUntil(condition)) { }
 ```
 
-This is one of the safest blocks for handwritten scripts because it maps cleanly and keeps logic easy to read.
-
-Use it for:
-
-- altitude milestones
-- apoapsis and periapsis milestones
-- time-to-apoapsis triggers
-- event-like conditions without writing a loop
-
-### Break
-
-Purpose:
-
-- exit the current loop
-
-Use it when:
-
-- a loop has an emergency termination condition
-- you want a simpler loop body than a giant negated condition
+This is one of the safest blocks for handwritten scripts.
 
 ## Output and Logging Blocks
 
@@ -372,13 +292,13 @@ Typical code:
 Vz.Display("Launching", 7);
 ```
 
-Use it for:
+Fidelity note:
 
-- mission status
-- debugging milestones
-- player feedback
+- real XML often uses `DisplayMessage`
+- code form may still appear as `Vz.Display(...)`
+- round-trip work must preserve the original XML instruction identity
 
-### Log
+### Log / LogMessage
 
 Purpose:
 
@@ -390,24 +310,13 @@ Typical code:
 Vz.Log("Entering coast phase");
 ```
 
-Use it for:
+Fidelity note:
 
-- debug traces
-- internal state breadcrumbs
-
-### FlightLog
-
-Purpose:
-
-- write to the flight log
-
-Use it when:
-
-- you want persistent mission logging instead of transient display text
+- real XML may use `LogMessage`
+- code form may still appear as `Vz.Log(...)`
+- the converter now preserves `LogMessage` correctly during round-trip
 
 ## Craft Control Blocks
-
-These are the core flight-automation actions.
 
 ### Activate Stage
 
@@ -421,38 +330,17 @@ Typical code:
 Vz.ActivateStage();
 ```
 
-Use it at:
-
-- launch
-- booster separation
-- upper-stage ignition
-
 ### Set Input
 
 Purpose:
 
 - write a raw craft input axis or toggle
 
-Common inputs:
-
-- `Throttle`
-- `Pitch`
-- `Yaw`
-- `Roll`
-- sliders
-- brake-like inputs depending on the model
-
 Typical code:
 
 ```csharp
 Vz.SetInput(CraftInput.Throttle, 1);
 ```
-
-Use it for:
-
-- throttle control
-- manual axis-driven control logic
-- cockpit-like automation
 
 ### Set Target Heading
 
@@ -467,26 +355,15 @@ Vz.SetTargetHeading(TargetHeadingProperty.Pitch, 45);
 Vz.SetTargetHeading(TargetHeadingProperty.Heading, 90);
 ```
 
-Use it for:
-
-- gravity turns
-- simple ascent pitch profiles
-- fixed heading control
-
 ### Lock Heading Alias
 
-This repository now supports the manual authoring alias:
+This repository supports the manual authoring alias:
 
 ```csharp
 Vz.LockHeading(90, 45);
 ```
 
-During `code -> XML`, it is expanded to:
-
-- heading target = `90`
-- pitch target = `45`
-
-This makes handwritten code more convenient, but the explicit `SetTargetHeading(...)` form is still the canonical emitted style.
+During `code -> XML`, it is expanded to heading and pitch target instructions.
 
 ### Lock Nav Sphere
 
@@ -501,75 +378,11 @@ Vz.LockNavSphere(LockNavSphereIndicatorType.Current, 0);
 Vz.LockNavSphere(LockNavSphereIndicatorType.Prograde, 0);
 ```
 
-Use it for:
-
-- holding current attitude at launch
-- switching to prograde for circularization
-- vector-following guidance when the vector form is used
-
-This block is strongly recommended for new handwritten orbital examples because it is simple and reliable.
-
 ### Set Activation Group
 
 Purpose:
 
 - toggle action groups
-
-Typical code:
-
-```csharp
-Vz.SetActivationGroup(1, true);
-```
-
-Use it for:
-
-- toggling systems
-- deploying mechanisms
-- coordinating script states with craft setup
-
-### Set Time Mode
-
-Purpose:
-
-- change time warp or time mode
-
-Use it with care:
-
-- this can be fidelity-sensitive in XML
-- preserve the original form if round-tripping an existing program
-
-### Switch Craft
-
-Purpose:
-
-- switch active craft
-
-Use it for:
-
-- multi-craft automation
-- docking workflows
-
-### Set Target / Target Node
-
-Purpose:
-
-- assign a target or node
-
-Use it for:
-
-- rendezvous logic
-- navigation workflows
-
-### Set Camera
-
-Purpose:
-
-- change a camera property such as zoom
-
-Use it for:
-
-- MFD or cinematic helpers
-- debug visualization
 
 ### Set Part Property
 
@@ -577,13 +390,7 @@ Purpose:
 
 - change a part-level property
 
-Typical use cases:
-
-- activate a named part
-- toggle mechanisms
-- drive animated assemblies
-
-This family is very important for craft automation and can be structurally sensitive. Existing XML often preserves exact raw craft-property nodes for safety.
+This family is important for craft automation and can be structurally sensitive.
 
 ## User Input Block
 
@@ -591,13 +398,7 @@ Purpose:
 
 - ask the player for a value
 
-Typical use:
-
-- entering mission parameters
-- selecting a mode
-- configuring altitudes or burn values
-
-Because this block has fidelity-sensitive attribute ordering in some real examples, the converter preserves it carefully.
+This block has fidelity-sensitive attribute ordering in some real examples, so the converter preserves it carefully.
 
 ## Broadcasting and Messaging Blocks
 
@@ -605,13 +406,7 @@ Because this block has fidelity-sensitive attribute ordering in some real exampl
 
 Purpose:
 
-- send data/messages locally or across craft scopes depending on flags
-
-Use it for:
-
-- decoupled event communication
-- widget click handling
-- multi-thread coordination
+- send data or messages locally or across craft scopes depending on flags
 
 ### ReceiveMessage Event
 
@@ -619,19 +414,13 @@ Purpose:
 
 - start a handler thread when a message arrives
 
-Use it for:
-
-- UI events
-- scripted protocol handling
-- asynchronous sub-behaviors
-
 ## List Blocks
 
 Lists are useful for sequences, lookup tables, and lightweight storage.
 
 ### Mutating List Blocks
 
-Supported list instruction family includes operations such as:
+Supported list instruction families include:
 
 - add
 - insert
@@ -641,26 +430,14 @@ Supported list instruction family includes operations such as:
 - sort
 - reverse
 
-Use them for:
-
-- waypoint lists
-- state history
-- lookup values
-
 ### List Expressions
 
-Supported read-oriented list expressions include things like:
+Supported read-oriented list expressions include:
 
 - get item
 - list length
 - index lookup
 - inline list creation
-
-Use them for:
-
-- fetching table values
-- reading a sampled sequence
-- processing mission data
 
 ## Custom Instruction Blocks
 
@@ -668,24 +445,11 @@ Purpose:
 
 - package reusable instruction sequences
 
-Typical structure:
-
-- top-level custom instruction declaration
-- one or more parameter names
-- body instructions
-- calls from other threads or blocks
-
-Use custom instructions for:
-
-- repeated craft actions
-- subsystem control
-- reusable mission actions
-
 Examples:
 
 - gear deployment
 - solar panel deployment
-- repeated docking routines
+- repeated mission actions
 
 ## Custom Expression Blocks
 
@@ -695,18 +459,16 @@ Purpose:
 
 Use them for:
 
-- vector math helpers
 - orbital calculations
+- vector helpers
 - utility math
 - string formatting helpers
 
 Important fidelity note:
 
-Custom expression headers may include formatting metadata and canvas position metadata that matter for exact reproduction. This project preserves those headers when round-tripping real XML.
+Custom expression headers may include formatting metadata and canvas position metadata that matter for exact reproduction.
 
 ## Expression Blocks
-
-Expressions are the value language of Vizzy. These are used inside conditions, assignments, action inputs, custom expressions, and custom instruction arguments.
 
 ### Constant
 
@@ -716,10 +478,10 @@ Represents:
 - text
 - bool
 
-Notes:
+Important fidelity note:
 
-- some values must be preserved exactly, including `-0`
-- some numeric-looking values are intentionally stored as text in real XML
+- some string constants intentionally contain leading or trailing spaces
+- those spaces must be preserved exactly
 
 ### BinaryOp
 
@@ -736,29 +498,12 @@ Typical operations:
 - random
 - atan2
 
-Use them for:
-
-- arithmetic
-- orbital formulas
-- control laws
-
 ### BoolOp
 
 Typical operations:
 
 - `and`
 - `or`
-
-Use them for:
-
-- multi-clause conditions
-- guard logic
-
-### Not
-
-Purpose:
-
-- negate a boolean condition
 
 ### Comparison
 
@@ -771,22 +516,11 @@ Typical operations:
 - greater-or-equal
 - less-or-equal
 
-Use them for:
-
-- milestone tests
-- range checks
-- boolean state transitions
-
 ### Conditional
 
 Purpose:
 
 - ternary-style conditional value
-
-Use it for:
-
-- expression-level branching
-- choosing values without a full block `If`
 
 ### MathFunction
 
@@ -808,15 +542,7 @@ Typical functions include:
 - deg2rad
 - rad2deg
 
-Use them for:
-
-- orbital math
-- geometry
-- UI formatting
-
 ### Vector and VectorOp
-
-Vectors are essential for navigation and orbital mechanics.
 
 Typical vector operations include:
 
@@ -827,12 +553,6 @@ Typical vector operations include:
 - cross
 - angle
 - projection
-
-Use them for:
-
-- velocity and position math
-- basis changes
-- orbital plane calculations
 
 ### CraftProperty
 
@@ -847,60 +567,36 @@ Typical groups:
 - velocity
 - performance
 - input
-- misc
 - time
 - target
 - navigation
-- fuel
-
-Use them for:
-
-- altitude checks
-- apoapsis/periapsis milestones
-- current mass and thrust calculations
-- control state inspection
-
-Important note:
-
-Some craft properties have style metadata that differs between real XML sources. When style mismatches are important, this converter preserves the original raw node.
 
 ### Planet
 
 Purpose:
 
-- read planet-scoped values or transform between position/planet frames
+- read planet-scoped values or transform between frames
 
 Use it for:
 
-- atmosphere height
 - radius
+- mass
 - parent body
+- atmosphere height
 - solar position
 - orbital data
+
+Important fidelity notes:
+
+- nested `Planet` expressions inside arithmetic are common in real mission code
+- examples such as `Vz.Planet(...).Mass() / Vz.Planet(...).Mass()` must stay as nested `Planet` children inside `BinaryOp`
+- if such expressions degrade into `Variable.variableName="Vz.Planet(...)"`, the XML is broken
 
 ### EvaluateExpression
 
 Purpose:
 
 - evaluate a raw expression string that does not fit a higher-level Vizzy block cleanly
-
-Use it carefully:
-
-- it is useful
-- but it is less structured than native block expressions
-- and exact style/metadata can matter during round-trip work
-
-### ActivationGroup Expression
-
-Purpose:
-
-- read whether an activation group is currently active
-
-### CraftInput Expression
-
-Purpose:
-
-- read a craft input value
 
 ### CallCustomExpression
 
@@ -916,13 +612,31 @@ Typical operations:
 - join
 - contains
 - length
-- substring-like operations depending on source XML
+- substring
+- friendly time or distance formatting
 
 Use them for:
 
 - display text
 - user input prompts
 - structured logs
+- formatted countdowns
+- formatted distances
+
+Important fidelity notes:
+
+- `friendly` is not just a generic string helper
+- real XML often requires `subOp="time"` or `subOp="distance"`
+- these nodes are used in encounter countdowns, landing readouts, and burn timing output
+- trailing or leading spaces in adjacent `Constant text="..."` nodes must be preserved exactly
+
+Common real examples:
+
+```csharp
+Vz.StringOp("friendly", Time, "")
+Vz.StringOp("friendly", Vz.Length(vector), "")
+Vz.Join("Launch Time: ", Vz.StringOp("friendly", Time, ""), "")
+```
 
 ### TerrainProperty
 
@@ -935,24 +649,13 @@ Purpose:
 Purpose:
 
 - inspect part-specific data
-- convert between part-local and PCI/world-like frames
-
-Use them for:
-
-- part sensors
-- transform math
-- advanced craft systems
+- convert between part-local and PCI-like frames
 
 ### Raycast
 
 Purpose:
 
-- probe geometry/environment intersections
-
-Use it for:
-
-- landing logic
-- obstacle sensing
+- probe geometry or environment intersections
 
 ### Coordinate Conversion Expressions
 
@@ -960,11 +663,6 @@ Supported families include:
 
 - lat/long/AGL to position
 - position to lat/long/AGL
-
-Use them for:
-
-- map conversion
-- terrain-relative navigation
 
 ### Widget Expressions
 
@@ -975,57 +673,18 @@ Supported MFD expression families include:
 - pixel reads
 - hex color conversion
 
-Use them for:
-
-- UI logic
-- interactive displays
-
 ## MFD Blocks
 
-This project supports a substantial MFD/widget block family.
+This project supports a substantial MFD and widget block family.
 
-### Widget Creation
+Supported concepts include:
 
-Supported widget creation concepts include:
-
-- label
-- sprite
-- gauge
-- line
-- navball
-- map
-- texture-like widgets
-
-Use them for:
-
-- cockpit displays
-- mission status screens
-- debugging UIs
-
-### Widget Mutation
-
-Supported block families include:
-
-- set widget property
-- set label
-- set sprite
-- set gauge
-- set line
-- set navball
-- set map
-- set widget anchor
-- set widget event
-- send widget to front
-- send widget to back
-- initialize texture
-- set pixel
-- set line points
-
-These are useful for:
-
-- dynamic UI layouts
-- interactive MFD tools
-- custom map/texture displays
+- widget creation
+- widget mutation
+- widget layering
+- texture initialization
+- pixel and line updates
+- map, navball, gauge, label, and sprite related flows
 
 ## Patterns For Reliable New Scripts
 
@@ -1036,56 +695,35 @@ If you are writing a fresh script by hand, prefer this style:
 - `SetInput` for throttle changes
 - `WaitUntil` for milestones
 - `SetTargetHeading(TargetHeadingProperty.Pitch, value)` for pitch programs
-- `Display` for user-visible phase changes
-
-Why:
-
-- this style is easy to read
-- this style has already been observed in safe authoring examples
-- this style avoids unsupported aliases and half-parsed constructs
+- `Display` for visible phase changes
 
 ## Patterns That Need Extra Care
 
 Use extra caution with:
 
 - handwritten aliases not already emitted by the converter
-- raw expression-like helper shortcuts
+- raw expression helper shortcuts
 - unusual widget code patterns
-- part/craft property blocks with style-sensitive metadata
+- part or craft property blocks with style-sensitive metadata
 - custom expressions when exact header fidelity matters
-
-If a generated XML contains `[TODO]` comments, treat it as broken until the unsupported syntax is fixed.
-
-## Example: Safe Orbital Script Shape
-
-The safest small orbital authoring pattern is:
-
-1. lock current orientation
-2. display launch status
-3. activate stage
-4. set throttle to 1
-5. wait until altitude threshold
-6. set pitch target
-7. wait until apoapsis target
-8. throttle off
-9. lock prograde
-10. wait until near apoapsis
-11. throttle on
-12. wait until periapsis target
-13. throttle off
-14. display success
-
-That is exactly why `orbiting maybe` and `Auto Orbit authoring-safe` are important reference files in this repository.
+- strings where spaces are semantically part of the original XML
+- `friendly` string formatting
+- message or log blocks whose XML names differ from their code aliases
+- large real mission programs such as `T.T. Mission Program`
 
 ## Validation Checklist
 
-Before calling a new authoring template “safe”, check all of the following:
+Before calling a new authoring template safe, check all of the following:
 
 1. The generated XML opens in Juno.
 2. The generated XML does not contain `[TODO]` comments.
 3. The program has a valid `Program -> Variables -> Instructions -> Expressions` structure.
 4. All key control blocks mapped to actual Vizzy XML, not fallback comments.
 5. If the example came from an existing Vizzy XML file, it round-trips cleanly.
+6. Strings with surrounding spaces are still identical.
+7. `friendly` string nodes still have the correct `subOp`.
+8. `LogMessage` and `DisplayMessage` nodes did not collapse into a different XML instruction family.
+9. Nested `Planet` expressions still appear as real expression nodes, not variable-name fallbacks.
 
 ## Final Rule For Future Agents
 
@@ -1096,10 +734,4 @@ When in doubt:
 - prefer canonical emitted syntax
 - verify support in `VizzyXmlConverter.cs` before documenting a pattern as safe
 
-If a block family is missing from this guide but is supported in the converter, extend this file in English and document:
-
-- purpose
-- XML shape
-- C#-style authoring shape
-- safe usage
-- pitfalls
+If a real mission file exposes a fidelity bug, document the exact pattern here after fixing it.

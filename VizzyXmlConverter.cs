@@ -2475,47 +2475,6 @@ namespace VizzyCode
                 return new XElement("Planet", new XAttribute("op", "toPosition"), new XAttribute("style", "planet-to-position"), pEl);
             }
 
-            // ── Vz.Planet(p).Property() ─────────────────────────────────────────
-            if (call.StartsWith("Vz.Planet("))
-            {
-                // Vz.Planet(p).DayLength() → <Planet planet="p" op="day" ...>
-                var planetM = System.Text.RegularExpressions.Regex.Match(call,
-                    @"^Vz\.Planet\((.+)\)\.(\w+)\(\)$");
-                if (planetM.Success)
-                {
-                    string pArg = planetM.Groups[1].Value.Trim();
-                    string prop = planetM.Groups[2].Value.ToLowerInvariant();
-                    string opStr = prop switch
-                    {
-                        "mass"             => "mass",
-                        "radius"           => "radius",
-                        "atmospheredepth"  => "atmosphereHeight",
-                        "soi"              => "soiradius",
-                        "solarposition"    => "solarPosition",
-                        "childplanets"     => "childPlanets",
-                        "crafts"           => "crafts",
-                        "craftids"         => "craftids",
-                        "parent"           => "parent",
-                        "daylength"        => "day",
-                        "yearlength"       => "year",
-                        "velocity"         => "velocity",
-                        "apoapsis"         => "apoapsis",
-                        "periapsis"        => "periapsis",
-                        "period"           => "period",
-                        "inclination"      => "inclination",
-                        "eccentricity"     => "eccentricity",
-                        "meananomaly"      => "meananomaly",
-                        "semimajoraxis"    => "semimajoraxis",
-                        _                  => prop
-                    };
-                    var pEl = ConvertApiCallToXml(pArg) ?? CreateVariableReference(pArg);
-                    return new XElement("Planet",
-                        new XAttribute("op",    opStr),
-                        new XAttribute("style", "planet"),
-                        pEl);
-                }
-            }
-
             if (TryConvertBinaryExpression(call, new[] { "||" }, tuple => CreateBoolOp("or", tuple.left, tuple.right), out var orExpr))
                 return orExpr;
             if (TryConvertBinaryExpression(call, new[] { "&&" }, tuple => CreateBoolOp("and", tuple.left, tuple.right), out var andExpr))
@@ -2535,6 +2494,10 @@ namespace VizzyCode
                 return minWExpr;
             if (TryConvertBinaryExpression(call, new[] { " rand " }, CreateBinaryOpElement, out var randWExpr))
                 return randWExpr;
+
+            // ── Vz.Planet(p).Property() ─────────────────────────────────────────
+            if (TryConvertPlanetPropertyCall(call, out var planetExpr))
+                return planetExpr;
 
             // Variable reference (plain identifier)
             if (System.Text.RegularExpressions.Regex.IsMatch(call, @"^[A-Za-z_]\w*$"))
@@ -2578,6 +2541,12 @@ namespace VizzyCode
             }
 
             if (TryConvertFunctionCall(call, "Vz.Join", args => CreateStringOp("join", args), 2, out var joinExpr)) return joinExpr;
+            if (TryConvertFunctionCall(call, "Vz.StringOp", args =>
+            {
+                if (args.Count < 2) return CreateVariableReference(call);
+                string op = trimQuotes(args[0]);
+                return CreateStringOp(op, args.Skip(1).ToList());
+            }, 2, out var stringOpExpr)) return stringOpExpr;
             if (TryConvertFunctionCall(call, "Vz.Concat", args => CreateStringOp("join", args), 2, out var concatExpr)) return concatExpr;
             if (TryConvertFunctionCall(call, "Vz.LengthOf", args => CreateStringOp("length", args), 1, out var lenExpr)) return lenExpr;
             if (TryConvertFunctionCall(call, "Vz.StringLength", args => CreateStringOp("length", args), 1, out var strLenExpr)) return strLenExpr;
@@ -2947,7 +2916,8 @@ namespace VizzyCode
                 return new XElement("Constant", attrs);
             }
 
-            attrs.Add(new XAttribute("text", trimQuotes(trimmed)));
+            string textValue = forceText ? StripOuterQuotesPreserveWhitespace(value) : trimQuotes(trimmed);
+            attrs.Add(new XAttribute("text", textValue));
             return new XElement("Constant", attrs);
         }
 
@@ -3054,10 +3024,42 @@ namespace VizzyCode
 
         private XElement CreateStringOp(string op, IReadOnlyList<string> args)
         {
+            if (op.Equals("friendly", StringComparison.OrdinalIgnoreCase))
+            {
+                string subOp = InferFriendlySubOp(args.Count > 0 ? args[0] : "");
+                var friendlyEl = new XElement("StringOp",
+                    new XAttribute("op", op),
+                    new XAttribute("subOp", subOp),
+                    new XAttribute("style", op));
+                if (args.Count > 0)
+                    friendlyEl.Add(CreateVariableOrExpression(args[0]));
+                return friendlyEl;
+            }
+
             var el = new XElement("StringOp", new XAttribute("op", op), new XAttribute("style", op));
             foreach (var arg in args)
                 el.Add(CreateVariableOrExpression(arg));
             return el;
+        }
+
+        private string InferFriendlySubOp(string arg)
+        {
+            string value = arg.Trim();
+            if (value.StartsWith("Vz.Length(", StringComparison.Ordinal) ||
+                value.StartsWith("Vz.Distance(", StringComparison.Ordinal))
+                return "distance";
+
+            var expr = ConvertApiCallToXml(value);
+            if (expr?.Name.LocalName == "VectorOp")
+            {
+                string op = expr.Attribute("op")?.Value ?? "";
+                if (op.Equals("length", StringComparison.OrdinalIgnoreCase) ||
+                    op.Equals("dist", StringComparison.OrdinalIgnoreCase) ||
+                    op.Equals("distance", StringComparison.OrdinalIgnoreCase))
+                    return "distance";
+            }
+
+            return "time";
         }
 
         private XElement CreateListExpression(string op, IReadOnlyList<string> args)
@@ -3079,6 +3081,78 @@ namespace VizzyCode
             foreach (var arg in args)
                 el.Add(CreateVariableOrExpression(arg));
             return el;
+        }
+
+        private bool TryConvertPlanetPropertyCall(string call, out XElement? element)
+        {
+            const string prefix = "Vz.Planet(";
+            if (!call.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                element = null;
+                return false;
+            }
+
+            int depth = 1;
+            int closeIndex = -1;
+            for (int i = prefix.Length; i < call.Length; i++)
+            {
+                char ch = call[i];
+                if (ch == '(') depth++;
+                else if (ch == ')')
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        closeIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (closeIndex < 0 || closeIndex + 4 > call.Length || call[closeIndex + 1] != '.' || !call.EndsWith("()", StringComparison.Ordinal))
+            {
+                element = null;
+                return false;
+            }
+
+            string pArg = call.Substring(prefix.Length, closeIndex - prefix.Length).Trim();
+            string prop = call.Substring(closeIndex + 2, call.Length - closeIndex - 4).Trim().ToLowerInvariant();
+            if (!System.Text.RegularExpressions.Regex.IsMatch(prop, @"^[a-z_]\w*$"))
+            {
+                element = null;
+                return false;
+            }
+
+            string opStr = prop switch
+            {
+                "mass"             => "mass",
+                "radius"           => "radius",
+                "atmospheredepth"  => "atmosphereHeight",
+                "soi"              => "soiradius",
+                "solarposition"    => "solarPosition",
+                "childplanets"     => "childPlanets",
+                "crafts"           => "crafts",
+                "craftids"         => "craftids",
+                "parent"           => "parent",
+                "daylength"        => "day",
+                "yearlength"       => "year",
+                "velocity"         => "velocity",
+                "apoapsis"         => "apoapsis",
+                "periapsis"        => "periapsis",
+                "period"           => "period",
+                "inclination"      => "inclination",
+                "eccentricity"     => "eccentricity",
+                "meananomaly"      => "meananomaly",
+                "semimajoraxis"    => "semimajoraxis",
+                _                  => prop
+            };
+
+            var pEl = ConvertApiCallToXml(pArg) ?? CreateVariableReference(pArg);
+            element = new XElement("Planet",
+                new XAttribute("op", opStr),
+                new XAttribute("style", "planet"),
+                pEl);
+            return true;
         }
 
         private bool TryConvertCraftProperty(string call, out XElement? element)
@@ -3256,6 +3330,13 @@ namespace VizzyCode
                 : trimmed;
         }
 
+        private static string StripOuterQuotesPreserveWhitespace(string value)
+        {
+            return value.Length >= 2 && value[0] == '"' && value[^1] == '"'
+                ? value.Substring(1, value.Length - 2)
+                : value;
+        }
+
         private static bool IsVizzyExpression(string value)
         {
             string trimmed = value.Trim();
@@ -3393,7 +3474,7 @@ namespace VizzyCode
             if (_pendingInstructionMetadata == null)
                 return element;
 
-            if (_pendingInstructionMetadata.Name != element.Name)
+            if (!InstructionMetadataMatches(_pendingInstructionMetadata.Name.LocalName, element.Name.LocalName))
                 return element;
 
             IEnumerable<object> mergedNodes = element.Nodes();
@@ -3426,6 +3507,21 @@ namespace VizzyCode
                 mergedNodes);
             _pendingInstructionMetadata = null;
             return preserved;
+        }
+
+        private static bool InstructionMetadataMatches(string preservedName, string actualName)
+        {
+            if (string.Equals(preservedName, actualName, StringComparison.Ordinal))
+                return true;
+
+            return (preservedName, actualName) switch
+            {
+                ("LogMessage", "Log") => true,
+                ("Log", "LogMessage") => true,
+                ("DisplayMessage", "Display") => true,
+                ("Display", "DisplayMessage") => true,
+                _ => false
+            };
         }
 
         private bool TryDecodePreservedCall(string call, string functionName, string expectedName, out XElement? element)
