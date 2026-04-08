@@ -2,6 +2,32 @@
 
 VizzyCode is a Windows Forms editor for opening Vizzy XML, converting it to C#-style VizzyBuilder code, editing it, and exporting back to Vizzy XML.
 
+## Documentation Language Policy
+
+All repository documentation must be written in English.
+
+This rule applies to:
+- `README` files
+- Markdown documentation
+- Text documentation and guides
+- User-facing developer notes
+- Documentation comments added for future maintenance
+
+If an agent updates or creates documentation, it must keep the documentation in English or translate it to English before finishing the task.
+
+## Documentation
+
+Start here if you want to write or maintain Vizzy scripts with this project:
+
+- [Vizzy Authoring Guide](docs/VizzyAuthoringGuide.md)
+- [Vizzy Blocks Mega Guide](docs/VizzyBlocksMegaGuide.md)
+
+Useful reference examples:
+
+- [orbiting maybe.xml](Vizzy%20examples/orbiting%20maybe.xml)
+- [orbiting maybe starter.cs](Vizzy%20examples/orbiting%20maybe%20starter.cs)
+- [Auto Orbit authoring-safe.cs](Vizzy%20examples/Auto%20Orbit%20authoring-safe.cs)
+
 ## AI Integration
 
 The app now supports two distinct ways to use Claude Code, Gemini CLI, Codex CLI, and OpenCode:
@@ -76,6 +102,23 @@ The app now persists provider, mode, model, and API settings between runs.
 Agent CLIs now run from the directory of the currently opened file when possible. If no file is open, they run from the app directory.
 
 That fixes a major integration bug in the previous implementation, where CLIs were launched without reliable project context.
+
+## Writing New Vizzy Scripts
+
+If you are writing new Vizzy programs by hand, do not assume that arbitrary C#-like helper syntax will import cleanly.
+
+Use these references first:
+
+- [Vizzy Authoring Guide](docs/VizzyAuthoringGuide.md)
+- [Vizzy Blocks Mega Guide](docs/VizzyBlocksMegaGuide.md)
+- `Vizzy examples/orbiting maybe.xml`
+- `Vizzy examples/orbiting maybe starter.cs`
+
+Those examples define the current safe authoring subset for `code -> XML` generation.
+
+Additional safe template:
+
+- `Vizzy examples/Auto Orbit authoring-safe.cs`
 
 ## Build
 

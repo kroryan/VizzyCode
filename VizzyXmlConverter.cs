@@ -1747,6 +1747,9 @@ namespace VizzyCode
                 if (line.StartsWith("Vz."))
                 {
                     if (line.StartsWith("Vz.Init(")) continue;
+                    if (TryAddInstructionAliases(line, preamble))
+                        continue;
+
                     var instruction = ConvertInstructionToXml(line);
                     if (instruction != null) preamble.Add(instruction);
                 }
@@ -2217,6 +2220,33 @@ namespace VizzyCode
                     CreateConstant($"[TODO] {l}", forceText: true)));
 
             return null;
+        }
+
+        private bool TryAddInstructionAliases(string line, XElement target)
+        {
+            string l = line.TrimEnd(';', ' ');
+
+            // Authoring alias:
+            // Vz.LockHeading(heading, pitch)
+            // Expand into the two instruction nodes Juno already understands.
+            if (l.StartsWith("Vz.LockHeading(", StringComparison.Ordinal))
+            {
+                var parts = SplitArgs(ExtractParenthesisContent(l));
+                if (parts.Count >= 2)
+                {
+                    target.Add(new XElement("SetTargetHeading",
+                        new XAttribute("property", "heading"),
+                        new XAttribute("style", "set-heading"),
+                        MakeConstantArg(parts[0])));
+                    target.Add(new XElement("SetTargetHeading",
+                        new XAttribute("property", "pitch"),
+                        new XAttribute("style", "set-heading"),
+                        MakeConstantArg(parts[1])));
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private XElement MakeConstantArg(string val)
@@ -2750,6 +2780,9 @@ namespace VizzyCode
                         continue;
                     }
                 }
+
+                if (TryAddInstructionAliases(line, target))
+                    continue;
 
                 var instruction = ConvertInstructionToXml(line);
                 if (instruction != null)

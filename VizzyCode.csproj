@@ -18,13 +18,16 @@
     <Compile Remove="bin\**\*.cs" />
     <Compile Remove="TestRT\**\*.cs" />
     <Compile Remove="VizzyBuilder\**\*.cs" />
+    <Compile Remove="Vizzy examples\**\*.cs" />
     <EmbeddedResource Remove="obj\**\*" />
     <EmbeddedResource Remove="bin\**\*" />
     <EmbeddedResource Remove="TestRT\**\*" />
     <EmbeddedResource Remove="VizzyBuilder\**\*" />
+    <EmbeddedResource Remove="Vizzy examples\**\*" />
     <None Remove="obj\**\*" />
     <None Remove="bin\**\*" />
     <None Remove="TestRT\**\*" />
     <None Remove="VizzyBuilder\**\*" />
+    <None Remove="Vizzy examples\**\*.cs" />
   </ItemGroup>
 </Project>
