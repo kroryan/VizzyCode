@@ -9,5 +9,6 @@ publish_debug3/
 *.suo
 .DS_Store
 VizzyBuilder/
+lizpy/
 *.xml
 !*.csproj

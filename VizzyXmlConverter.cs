@@ -2207,6 +2207,12 @@ namespace VizzyCode
             if (l.StartsWith("Vz.ListAdd("))    return MakeListOp("Add",    SplitArgs(c1));
             if (l.StartsWith("Vz.ListInsert(")) return MakeListOp("Insert", SplitArgs(c1));
             if (l.StartsWith("Vz.ListRemove(")) return MakeListOp("Remove", SplitArgs(c1));
+            if (l.StartsWith("Vz.ListRemoveValue("))
+            {
+                var parts = SplitArgs(c1);
+                if (parts.Count >= 2)
+                    return MakeListOp("Remove", new List<string> { parts[0], $"Vz.ListIndex({parts[0]}, {parts[1]})" });
+            }
             if (l.StartsWith("Vz.ListSet("))    return MakeListOp("Set",    SplitArgs(c1));
             if (l.StartsWith("Vz.ListClear("))  return MakeListOp("Clear",  SplitArgs(c1));
             if (l.StartsWith("Vz.ListSort("))   return MakeListOp("Sort",   SplitArgs(c1));
@@ -2225,6 +2231,50 @@ namespace VizzyCode
         private bool TryAddInstructionAliases(string line, XElement target)
         {
             string l = line.TrimEnd(';', ' ');
+
+            // Authoring alias:
+            // Vz.Wait(seconds)
+            if (l.StartsWith("Vz.Wait(", StringComparison.Ordinal))
+            {
+                target.Add(new XElement("WaitSeconds",
+                    new XAttribute("style", "wait-seconds"),
+                    MakeConstantArg(ExtractParenthesisContent(l))));
+                return true;
+            }
+
+            // Authoring alias:
+            // Vz.WaitUntil(condition);
+            if (l.StartsWith("Vz.WaitUntil(", StringComparison.Ordinal))
+            {
+                target.Add(new XElement("WaitUntil",
+                    new XAttribute("style", "wait-until"),
+                    MakeConstantArg(ExtractParenthesisContent(l))));
+                return true;
+            }
+
+            // Authoring alias inspired by lizpy:
+            // Vz.SetAutopilotMode(LockNavSphereIndicatorType.Prograde)
+            // Vz.SetAutopilotMode("Prograde")
+            if (l.StartsWith("Vz.SetAutopilotMode(", StringComparison.Ordinal))
+            {
+                string mode = ExtractParenthesisContent(l).Trim();
+                if (mode.StartsWith("LockNavSphereIndicatorType.", StringComparison.Ordinal))
+                    mode = mode.Substring("LockNavSphereIndicatorType.".Length);
+                else
+                    mode = trimQuotes(mode);
+
+                var el = new XElement("LockNavSphere",
+                    new XAttribute("indicatorType", mode),
+                    new XAttribute("style", mode.Equals("Vector", StringComparison.OrdinalIgnoreCase)
+                        ? "lock-nav-sphere-vector"
+                        : "lock-nav-sphere"));
+
+                if (mode.Equals("Vector", StringComparison.OrdinalIgnoreCase))
+                    el.Add(CreateConstant("0"));
+
+                target.Add(el);
+                return true;
+            }
 
             // Authoring alias:
             // Vz.LockHeading(heading, pitch)
@@ -2510,6 +2560,13 @@ namespace VizzyCode
             if (TryConvertFunctionCall(call, "Vz.Min", args => CreateBinaryOpElement(("min", args[0], args[1])), 2, out var minExpr)) return minExpr;
             if (TryConvertFunctionCall(call, "Vz.Max", args => CreateBinaryOpElement(("max", args[0], args[1])), 2, out var maxExpr)) return maxExpr;
             if (TryConvertFunctionCall(call, "Vz.Atan2", args => CreateBinaryOpElement(("atan2", args[0], args[1])), 2, out var atan2Expr)) return atan2Expr;
+            if (TryConvertFunctionCall(call, "Vz.Exp", args => CreateBinaryOpElement(("^", "Vz.E", args[0])), 1, out var expExpr)) return expExpr;
+            if (TryConvertFunctionCall(call, "Vz.Sinh", args => CreateAdvancedMathAlias("sinh", args[0]), 1, out var sinhExpr)) return sinhExpr;
+            if (TryConvertFunctionCall(call, "Vz.Cosh", args => CreateAdvancedMathAlias("cosh", args[0]), 1, out var coshExpr)) return coshExpr;
+            if (TryConvertFunctionCall(call, "Vz.Tanh", args => CreateAdvancedMathAlias("tanh", args[0]), 1, out var tanhExpr)) return tanhExpr;
+            if (TryConvertFunctionCall(call, "Vz.Asinh", args => CreateAdvancedMathAlias("asinh", args[0]), 1, out var asinhExpr)) return asinhExpr;
+            if (TryConvertFunctionCall(call, "Vz.Acosh", args => CreateAdvancedMathAlias("acosh", args[0]), 1, out var acoshExpr)) return acoshExpr;
+            if (TryConvertFunctionCall(call, "Vz.Atanh", args => CreateAdvancedMathAlias("atanh", args[0]), 1, out var atanhExpr)) return atanhExpr;
 
             // Vz.Vec(x, y, z)
             if (call.StartsWith("Vz.Vec("))
@@ -2521,15 +2578,22 @@ namespace VizzyCode
             }
 
             if (TryConvertFunctionCall(call, "Vz.Join", args => CreateStringOp("join", args), 2, out var joinExpr)) return joinExpr;
+            if (TryConvertFunctionCall(call, "Vz.Concat", args => CreateStringOp("join", args), 2, out var concatExpr)) return concatExpr;
             if (TryConvertFunctionCall(call, "Vz.LengthOf", args => CreateStringOp("length", args), 1, out var lenExpr)) return lenExpr;
+            if (TryConvertFunctionCall(call, "Vz.StringLength", args => CreateStringOp("length", args), 1, out var strLenExpr)) return strLenExpr;
             if (TryConvertFunctionCall(call, "Vz.LetterOf", args => CreateStringOp("letter", args), 2, out var letterExpr)) return letterExpr;
             if (TryConvertFunctionCall(call, "Vz.SubString", args => CreateStringOp("substring", args), 3, out var substringExpr)) return substringExpr;
+            if (TryConvertFunctionCall(call, "Vz.SubString", args => CreateStringOp("substring", new[] { args[0], args[1], $"Vz.LengthOf({args[0]})" }), 2, out var substring2Expr)) return substring2Expr;
             if (TryConvertFunctionCall(call, "Vz.Contains", args => CreateStringOp("contains", args), 2, out var containsExpr)) return containsExpr;
             if (TryConvertFunctionCall(call, "Vz.Format", args => CreateStringOp("format", args), 2, out var formatExpr)) return formatExpr;
 
             if (TryConvertFunctionCall(call, "Vz.ListGet", args => CreateListExpression("get", args), 2, out var listGetExpr)) return listGetExpr;
             if (TryConvertFunctionCall(call, "Vz.ListLength", args => CreateListExpression("length", args), 1, out var listLengthExpr)) return listLengthExpr;
             if (TryConvertFunctionCall(call, "Vz.ListIndex", args => CreateListExpression("index", args), 2, out var listIndexExpr)) return listIndexExpr;
+            if (TryConvertFunctionCall(call, "Vz.ListCreate", args => new XElement("ListOp",
+                new XAttribute("op", "create"),
+                new XAttribute("style", "list-create"),
+                ConvertApiCallToXml(args[0]) ?? CreateConstant(Unescape(trimQuotes(args[0])), forceText: true)), 1, out var listCreateExpr)) return listCreateExpr;
             if (TryConvertFunctionCall(call, "Vz.CreateListRaw", args => new XElement("ListOp",
                 new XAttribute("op", "create"),
                 new XAttribute("style", "list-create"),
@@ -2538,6 +2602,10 @@ namespace VizzyCode
 
             if (TryConvertFunctionCall(call, "Vz.Length", args => CreateVectorOp("length", args), 1, out var vecLenExpr)) return vecLenExpr;
             if (TryConvertFunctionCall(call, "Vz.Norm", args => CreateVectorOp("norm", args), 1, out var vecNormExpr)) return vecNormExpr;
+            if (TryConvertFunctionCall(call, "Vz.Normalize", args => CreateVectorOp("norm", args), 1, out var vecNormalizeExpr)) return vecNormalizeExpr;
+            if (TryConvertFunctionCall(call, "Vz.X", args => CreateVectorOp("x", args), 1, out var vecXExpr)) return vecXExpr;
+            if (TryConvertFunctionCall(call, "Vz.Y", args => CreateVectorOp("y", args), 1, out var vecYExpr)) return vecYExpr;
+            if (TryConvertFunctionCall(call, "Vz.Z", args => CreateVectorOp("z", args), 1, out var vecZExpr)) return vecZExpr;
             if (TryConvertFunctionCall(call, "Vz.Dot", args => CreateVectorOp("dot", args), 2, out var vecDotExpr)) return vecDotExpr;
             if (TryConvertFunctionCall(call, "Vz.Cross", args => CreateVectorOp("cross", args), 2, out var vecCrossExpr)) return vecCrossExpr;
             if (TryConvertFunctionCall(call, "Vz.Angle", args => CreateVectorOp("angle", args), 2, out var vecAngleExpr)) return vecAngleExpr;
@@ -2557,6 +2625,11 @@ namespace VizzyCode
                 new XAttribute("property", "Part.NameToID"),
                 new XAttribute("style", "part-id"),
                 ConvertApiCallToXml(args[0]) ?? CreateVariableReference(args[0])), 1, out var partNameToIdExpr)) return partNameToIdExpr;
+            if (TryConvertFunctionCall(call, "Vz.PartLocalToPci", args => {
+                var cp = new XElement("PartLocalToPci", new XAttribute("style", "part-transform"));
+                foreach (var a in args) cp.Add(ConvertApiCallToXml(a) ?? CreateVariableReference(a));
+                return cp;
+            }, 2, out var partLocalToPciExpr)) return partLocalToPciExpr;
             if (TryConvertFunctionCall(call, "Vz.PartPciToLocal", args => {
                 var cp = new XElement("CraftProperty", new XAttribute("property", "Part.PciToLocal"), new XAttribute("style", "part-transform"));
                 foreach (var a in args) cp.Add(ConvertApiCallToXml(a) ?? CreateVariableReference(a));
@@ -2886,6 +2959,69 @@ namespace VizzyCode
                 new XAttribute("style", BinaryStyle(op)),
                 CreateVariableOrExpression(value.left),
                 CreateVariableOrExpression(value.right));
+        }
+
+        private XElement CreateAdvancedMathAlias(string functionName, string arg)
+        {
+            var value = CreateVariableOrExpression(arg);
+
+            XElement Num(string n) => CreateConstant(n);
+            XElement E() => new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "e")));
+            XElement Bin(string op, XElement left, XElement right) => new XElement("BinaryOp",
+                new XAttribute("op", NormalizeBinaryOp(op)),
+                new XAttribute("style", BinaryStyle(NormalizeBinaryOp(op))),
+                left,
+                right);
+            XElement Math(string fn, XElement inner) => new XElement("MathFunction",
+                new XAttribute("function", fn),
+                new XAttribute("style", "op-math"),
+                inner);
+
+            return functionName switch
+            {
+                "sinh" => Bin("/",
+                    Bin("-",
+                        E(),
+                        Bin("^", E(), Bin("*", Num("-2"), value))),
+                    Bin("*",
+                        Num("2"),
+                        Bin("^", E(), Bin("*", Num("-1"), value)))),
+                "cosh" => Bin("/",
+                    Bin("+",
+                        Num("1"),
+                        Bin("^", E(), Bin("*", Num("-2"), value))),
+                    Bin("*",
+                        Num("2"),
+                        Bin("^", E(), Bin("*", Num("-1"), value)))),
+                "tanh" => Bin("/",
+                    Bin("-",
+                        Bin("^", E(), Bin("*", Num("2"), value)),
+                        Num("1")),
+                    Bin("+",
+                        Bin("^", E(), Bin("*", Num("2"), value)),
+                        Num("1"))),
+                "asinh" => Math("ln",
+                    Bin("+",
+                        value,
+                        Math("sqrt",
+                            Bin("+",
+                                Bin("^", value, Num("2")),
+                                Num("1"))))),
+                "acosh" => Math("ln",
+                    Bin("-",
+                        value,
+                        Math("sqrt",
+                            Bin("+",
+                                Bin("^", value, Num("2")),
+                                Num("1"))))),
+                "atanh" => Bin("/",
+                    Math("ln",
+                        Bin("/",
+                            Bin("+", Num("1"), value),
+                            Bin("-", Num("1"), value))),
+                    Num("2")),
+                _ => value
+            };
         }
 
         private XElement CreateComparison((string op, string left, string right) value)

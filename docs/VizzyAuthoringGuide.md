@@ -44,25 +44,58 @@ These patterns are known-good and are preferred for new code:
 - `Vz.SetInput(CraftInput.Throttle, value)`
 - `Vz.Display(message, duration)`
 - `Vz.WaitSeconds(value)`
+- `Vz.Wait(value)`
+- `Vz.WaitUntil(condition)`
 - `using (new WaitUntil(condition)) { }`
 - `Vz.LockNavSphere(LockNavSphereIndicatorType.Current, 0)`
 - `Vz.LockNavSphere(LockNavSphereIndicatorType.Prograde, 0)`
+- `Vz.SetAutopilotMode(LockNavSphereIndicatorType.Current)`
+- `Vz.SetAutopilotMode(LockNavSphereIndicatorType.Prograde)`
 - `Vz.SetTargetHeading(TargetHeadingProperty.Pitch, value)`
 - `Vz.SetHeading(value)`
 - `Vz.SetPitch(value)`
 
 ## Manual Aliases
 
-The converter now supports this manual alias:
+The converter now supports these manual aliases:
 
+- `Vz.Wait(seconds)`
+- `Vz.WaitUntil(condition)`
+- `Vz.SetAutopilotMode(mode)`
 - `Vz.LockHeading(heading, pitch)`
 
-It is expanded during `code -> XML` into:
+They are expanded during `code -> XML` into canonical Vizzy instructions:
 
+- `Vz.Wait(seconds)` -> `WaitSeconds(...)`
+- `Vz.WaitUntil(condition)` -> `WaitUntil(...)`
+- `Vz.SetAutopilotMode(mode)` -> `LockNavSphere(...)`
 - `SetTargetHeading(property="heading", ...)`
 - `SetTargetHeading(property="pitch", ...)`
 
-This is useful for hand-authored code, but the canonical emitted form is still the explicit one.
+The converter also supports these lizpy-inspired advanced math aliases in expressions:
+
+- `Vz.Exp(x)`
+- `Vz.Sinh(x)`
+- `Vz.Cosh(x)`
+- `Vz.Tanh(x)`
+- `Vz.Asinh(x)`
+- `Vz.Acosh(x)`
+- `Vz.Atanh(x)`
+
+These are expanded into standard Vizzy expression trees. The canonical emitted form is still the explicit low-level one.
+
+Additional lizpy-aligned authoring aliases now supported:
+
+- `Vz.Concat(a, b, ...)`
+- `Vz.StringLength(text)`
+- `Vz.SubString(text, start)`
+- `Vz.ListCreate(csvText)`
+- `Vz.ListRemoveValue(list, item)`
+- `Vz.Normalize(vector)`
+- `Vz.X(vector)`
+- `Vz.Y(vector)`
+- `Vz.Z(vector)`
+- `Vz.PartLocalToPci(partId, localVector)`
 
 ## Patterns To Avoid In New Hand-Written Scripts
 
