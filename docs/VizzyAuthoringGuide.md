@@ -65,6 +65,11 @@ Activation indicators in VS Code:
 - Command Palette entries containing `VizzyCode`
 - context menu actions on `.xml` and `.cs` files
 
+Build and packaging instructions for the desktop app, CLI, and VS Code extension are documented in:
+
+- `README.md`
+- `vscode-extension/README.md`
+
 ## Authoring Rules
 
 Follow these rules when writing new Vizzy code:

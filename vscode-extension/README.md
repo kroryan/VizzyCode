@@ -84,6 +84,57 @@ This is the recommended install path because it follows the official VS Code VSI
 
 After that, restart VS Code.
 
+## How The Extension Is Built
+
+The extension is not a standalone JavaScript-only package. It depends on the bundled `VizzyCode.Cli`.
+
+The repository build pipeline is:
+
+1. publish `VizzyCode.Cli` as a standalone Windows binary
+2. copy the extension files into `vscode-extension-dist`
+3. place the CLI in `vscode-extension-dist\bin\win-x64`
+4. generate `vizzycode-tools-0.0.1.vsix`
+5. install that `.vsix` into VS Code
+
+Repository command:
+
+```powershell
+.\scripts\install-vscode-integration.ps1
+```
+
+Outputs:
+
+- `vscode-extension-dist\`
+- `vizzycode-tools-0.0.1.vsix`
+
+## Self-Contained Bundle Layout
+
+The distributable extension folder is expected to contain:
+
+- `extension.js`
+- `package.json`
+- `README.md`
+- `install.ps1`
+- `bin\win-x64\VizzyCode.Cli.exe`
+
+This is why users can install the extension from the bundle folder alone without needing the whole repository.
+
+## Manual Build Notes
+
+If you only want the CLI binary for development, you can build it separately:
+
+```powershell
+dotnet build ..\VizzyCode.Cli\VizzyCode.Cli.csproj -c Release
+```
+
+or publish it standalone:
+
+```powershell
+dotnet publish ..\VizzyCode.Cli\VizzyCode.Cli.csproj -c Release -r win-x64 -p:PublishSingleFile=true --self-contained true -o ..\publish_cli_win64
+```
+
+The extension can also use a manually specified CLI path through the `vizzycode.cliPath` setting.
+
 ## Where The Commands Appear
 
 After installation and a VS Code restart, the commands are available in:

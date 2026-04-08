@@ -105,6 +105,153 @@ If the commands do not appear:
 
 The current app and the VS Code workflow live in the same repository. A separate repository is not required.
 
+## Build Matrix
+
+This repository now has three practical deliverables:
+
+1. `VizzyCode.exe`
+   The WinForms desktop editor.
+2. `VizzyCode.Cli`
+   The command-line converter used by automation and the VS Code extension.
+3. `VizzyCode Tools for VS Code`
+   The self-contained VS Code extension bundle and `.vsix`.
+
+## How To Build The Desktop App
+
+Build the Windows desktop editor:
+
+```powershell
+dotnet build VizzyCode.csproj -c Release
+```
+
+Publish a framework-dependent Windows executable:
+
+```powershell
+dotnet publish VizzyCode.csproj -c Release -r win-x64 -p:PublishSingleFile=true --self-contained false
+```
+
+Output:
+
+- `bin\Release\net9.0-windows\win-x64\publish\VizzyCode.exe`
+
+Publish a standalone Windows executable that includes .NET:
+
+```powershell
+dotnet publish VizzyCode.csproj -c Release -r win-x64 -p:PublishSingleFile=true --self-contained true -o publish_standalone_win64
+```
+
+Output:
+
+- `publish_standalone_win64\VizzyCode.exe`
+
+## How To Build The CLI
+
+Build the CLI:
+
+```powershell
+dotnet build VizzyCode.Cli\VizzyCode.Cli.csproj -c Release
+```
+
+Run the CLI directly from source:
+
+```powershell
+dotnet run --project VizzyCode.Cli\VizzyCode.Cli.csproj -- import "input.xml" -o "output.vizzy.cs"
+dotnet run --project VizzyCode.Cli\VizzyCode.Cli.csproj -- export "input.vizzy.cs" -o "output.xml"
+dotnet run --project VizzyCode.Cli\VizzyCode.Cli.csproj -- roundtrip "input.xml" -o "roundtrip.xml" -c "roundtrip.vizzy.cs"
+```
+
+Publish a standalone CLI for distribution:
+
+```powershell
+dotnet publish VizzyCode.Cli\VizzyCode.Cli.csproj -c Release -r win-x64 -p:PublishSingleFile=true --self-contained true -o publish_cli_win64
+```
+
+Typical output:
+
+- `publish_cli_win64\VizzyCode.Cli.exe`
+
+## CLI Commands
+
+`VizzyCode.Cli` currently supports:
+
+- `import <input.xml> [-o output.vizzy.cs]`
+- `export <input.vizzy.cs> [-o output.xml] [-n programName]`
+- `roundtrip <input.xml> [-o output.xml] [-c output.vizzy.cs]`
+
+Examples:
+
+```powershell
+VizzyCode.Cli.exe import "Vizzy examples\orbiting maybe.xml" -o "orbiting maybe.vizzy.cs"
+VizzyCode.Cli.exe export "Vizzy examples\Auto Orbit authoring-safe.cs" -o "autorbit.xml"
+VizzyCode.Cli.exe roundtrip "Vizzy examples\T.T. Mission Program.xml" -o "_tt_rt.xml" -c "_tt_rt.vizzy.cs"
+```
+
+## How To Build The VS Code Extension
+
+The repository script is the recommended path because it does the full pipeline:
+
+```powershell
+.\scripts\install-vscode-integration.ps1
+```
+
+That script performs all of these steps:
+
+1. publishes the bundled standalone CLI into `vscode-extension-dist\bin\win-x64`
+2. copies the extension files into `vscode-extension-dist`
+3. creates a `.vsix` package
+4. installs the extension into the local VS Code profile
+
+Generated outputs:
+
+- `vscode-extension-dist\`
+- `vizzycode-tools-0.0.1.vsix`
+
+## How To Create A Distributable Extension Bundle
+
+If you want to distribute only the extension without the whole repository:
+
+1. run the repository installer once:
+
+```powershell
+.\scripts\install-vscode-integration.ps1
+```
+
+2. take one of these outputs:
+
+- `vscode-extension-dist\`
+- `vizzycode-tools-0.0.1.vsix`
+
+The bundle in `vscode-extension-dist\` is self-contained and already includes:
+
+- `extension.js`
+- `package.json`
+- `README.md`
+- `install.ps1`
+- `bin\win-x64\VizzyCode.Cli.exe`
+
+An end user can take only that folder and run:
+
+```powershell
+.\install.ps1
+```
+
+inside the extension folder.
+
+## Manual VSIX Install
+
+If you already have the generated `.vsix`, you can install it manually with either:
+
+```powershell
+code --install-extension .\vizzycode-tools-0.0.1.vsix --force
+```
+
+or from inside VS Code:
+
+1. open Extensions
+2. open the `...` menu
+3. choose `Install from VSIX...`
+4. select `vizzycode-tools-0.0.1.vsix`
+
 ## Current Converter Capabilities
 
 The converter now handles several fidelity-sensitive cases that previously broke Juno loading or changed the XML structure:
