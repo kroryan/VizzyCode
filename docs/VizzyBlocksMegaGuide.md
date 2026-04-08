@@ -57,6 +57,80 @@ must generate XML that Juno recognizes as a valid Vizzy program.
 
 These goals overlap, but they are not the same.
 
+## Fidelity Boundary
+
+This repository has a hard boundary that future maintainers and AI agents must understand.
+
+### Preserved Imported Blocks
+
+When code came from real Vizzy XML and still retains metadata comments like:
+
+- `VZTOPBLOCK`
+- `VZBLOCK`
+- `VZEL`
+
+the converter can often preserve the original XML block identity and structure exactly.
+
+### Reauthored Blocks
+
+When a region is rewritten manually and those metadata comments no longer anchor the original nodes, the converter must build XML from authoring code patterns instead.
+
+That is not the same task.
+
+At that point, the block is no longer a strict round-trip block. It becomes a newly authored Vizzy graph.
+
+### Why This Matters
+
+A large mission may contain both kinds of regions at the same time:
+
+- preserved imported regions
+- manually rewritten authoring regions
+
+That mixed state is especially common in mission-scale files such as `T.T`.
+
+When such a mission fails to load in Juno, the correct question is not just:
+
+- "what differs from the original XML"
+
+It is also:
+
+- "which part of this mission is still preserved imported structure, and which part is now handwritten authoring code"
+
+## Top-Level Custom Blocks
+
+Top-level custom blocks are especially sensitive in Juno.
+
+### Custom Instruction Headers
+
+A top-level custom instruction is represented as:
+
+- one top-level `<Instructions>` block
+- first child is a self-closing `<CustomInstruction ... />`
+- body instructions follow in the same top-level `<Instructions>` block
+
+The header must match Juno's conventions exactly, including fields such as:
+
+- `callFormat`
+- `format`
+- `name`
+- `style`
+- `id`
+- `pos`
+
+For authoring-created custom instructions, spacing inside `callFormat` and `format` matters. Use the same shape emitted by working Juno XML.
+
+### Custom Expression Headers
+
+Top-level custom expressions live under `<Expressions>`.
+
+For authoring-created custom expressions, ensure:
+
+- they are direct children of `<Expressions>`
+- they carry a valid `pos`
+- their `callFormat`, `format`, `name`, and `style` match Juno's established pattern
+
+Missing `pos` on a new top-level custom expression is a real structural failure, not just a cosmetic difference.
+
 ## Program Structure
 
 A Vizzy program normally has:
@@ -90,6 +164,40 @@ For fidelity work on existing XML, also use the round-trip harness:
 ```powershell
 dotnet run --project TestRT -c Release -- "<input.xml>" "<output.xml>" "<code.txt>"
 ```
+
+## Diagnostic Method For Failing Mission Exports
+
+When a mission export does not appear in the Vizzy editor:
+
+1. compare the exported XML against working non-exported examples in `Vizzy examples`
+2. identify whether the failing region corresponds to preserved imported blocks or handwritten code
+3. compare repo CLI export and VS Code plugin export to rule out tool drift
+4. inspect top-level custom blocks first
+5. inspect control-flow structural encoding second
+
+Why this order:
+
+- top-level block shape can make Juno reject the whole program immediately
+- control-flow shape errors can make individual regions invalid
+- formatting differences in nested expressions usually matter after the top-level graph is already valid
+
+## T.T-Class Mission Warning
+
+`T.T` is a reference case for why mission-scale files need stricter handling.
+
+The current `T.T` work showed a real mixed-state scenario:
+
+- some regions still preserved imported Vizzy metadata
+- other regions had been manually rewritten into new authoring code
+- new top-level custom instruction and custom expression blocks were introduced
+
+That means a failure in `T.T` is not automatically "the exporter broke a round-trip".
+
+It may be:
+
+- a broken exporter for a handwritten authoring pattern
+- a structurally invalid handwritten block
+- or a mix of both
 
 ## Block Families
 

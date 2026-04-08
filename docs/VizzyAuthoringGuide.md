@@ -14,6 +14,64 @@ For existing Vizzy XML files, the stronger target remains:
 
 Those are related, but they are not the same problem.
 
+## Source Of Truth Rule
+
+When debugging a failing mission, the first question is:
+
+- is the source of truth the original XML
+- or is the source of truth the current `.cs`
+
+This distinction matters.
+
+### XML Is Source Of Truth
+
+If the mission began from a real Juno-exported Vizzy XML and the goal is exact fidelity, the safe target is:
+
+`original XML -> code -> XML`
+
+In that mode, the original XML structure is authoritative. The code is only an editable representation of that XML.
+
+### Code Is Source Of Truth
+
+If the `.cs` has been manually rewritten beyond the preserved imported structure, then the target changes to:
+
+`current code -> new Juno-compatible XML`
+
+In that mode, the exporter is no longer reproducing the original mission graph exactly. It is authoring a new graph from code.
+
+This is where most hard failures happen.
+
+## Preserved Metadata Rule
+
+Imported programs preserve exact XML structure through metadata comments such as:
+
+- `// VZTOPBLOCK`
+- `// VZBLOCK ...`
+- `// VZEL ...`
+
+These comments are not noise. They are fidelity anchors.
+
+If a block still has its preserved `VZEL` / `VZBLOCK` metadata, VizzyCode can often reconstruct the original XML exactly.
+
+If a block is manually rewritten and that metadata disappears, VizzyCode must rebuild the block from authoring code instead of preserving the imported node.
+
+That is the key line between:
+
+- exact round-trip preservation
+- best-effort code authoring export
+
+## What Breaks Exact Fidelity
+
+A mission is no longer a strict round-trip candidate when one or more of these happen:
+
+1. a preserved imported block is replaced by handwritten code without its `VZEL` metadata
+2. a new top-level `CustomInstruction` is added manually
+3. a new top-level `CustomExpression` is added manually
+4. large orbital math sections are rewritten from raw imported forms into cleaner handwritten helper code
+5. control-flow structure changes enough that the original imported block graph no longer exists
+
+At that point, the generated XML may still be valid, but it is no longer expected to match the original XML structure.
+
 ## Safe Starting Point
 
 Use a known-good starter instead of writing a program from scratch blind.
@@ -222,6 +280,85 @@ Then compare the original and generated XML:
 
 ```powershell
 git diff --no-index -- "<input.xml>" "<output.xml>"
+```
+
+## How To Decide Whether The Problem Is In The Code Or The Exporter
+
+Use this exact test:
+
+1. export the current `.cs` using the repo CLI
+2. export the same `.cs` using the VS Code plugin CLI
+3. compare the two XML outputs byte for byte
+4. compare the current `.cs` against the imported reference `.cs` from the original XML
+
+Interpretation:
+
+- if repo CLI and plugin CLI produce different XML, the problem is tool drift
+- if repo CLI and plugin CLI produce the same XML, the problem is not a plugin mismatch
+- if the current `.cs` still preserves the original `VZEL` blocks in the failing region, the bug is likely exporter-side
+- if the current `.cs` has handwritten replacements in the failing region, the bug may be in the code, the exporter, or both, but the mission is no longer pure round-trip work
+
+For large mission files such as `T.T`, this distinction is mandatory.
+
+## Special Warning For Large Missions
+
+Mission-scale files such as `T.T` are not good candidates for blind AI cleanup.
+
+Why:
+
+- they mix preserved imported blocks with handwritten edits
+- they often contain top-level custom instructions and custom expressions
+- they rely on exact Juno block formatting in places that simple starter scripts do not
+
+If an AI rewrites a large preserved region into cleaner-looking code, it may destroy the very metadata that allowed exact XML reconstruction.
+
+## Safe Repair Strategy For AI
+
+When asking an AI to repair a failing mission script, do not ask for a generic cleanup or rewrite.
+
+Ask for this instead:
+
+1. identify whether the failing region still has preserved `VZEL` metadata
+2. if it does, preserve that region and repair the exporter
+3. if it does not, treat that region as authoring-mode code and compare it against real working XML examples
+4. isolate the first exact XML discrepancy that is unsupported by Juno
+5. fix one discrepancy at a time and re-export
+
+## Prompt To Give The AI
+
+Use a prompt like this:
+
+```text
+Investigate this Vizzy mission without rewriting it blindly.
+
+Goal:
+- Determine whether the failure is caused by the current .cs source or by VizzyCode's exporter.
+- If the failing region still preserves VZEL/VZBLOCK metadata, preserve it and fix the exporter.
+- If the failing region was manually rewritten and no longer preserves metadata, treat it as authoring-mode code and compare the exported XML against real working XML examples from the repo.
+
+Rules:
+- Do not "clean up" or refactor the code unless that is proven necessary.
+- Do not replace preserved imported blocks with handwritten equivalents.
+- Compare the repo CLI export and the VS Code plugin export and confirm whether they are byte-identical.
+- Find the first exact XML discrepancy that Juno likely rejects.
+- Fix one exact structural problem at a time, then re-export and test again.
+
+Important context:
+- VZTOPBLOCK, VZBLOCK, and VZEL comments are fidelity metadata, not normal comments.
+- If those metadata comments disappear from a region, that region is no longer guaranteed round-trip exact.
+- Large mission files such as T.T must be handled region by region, not globally rewritten.
+```
+
+## What To Tell The AI About T.T-Like Cases
+
+For files similar to `T.T`, add this context:
+
+```text
+This mission contains a mix of preserved imported Vizzy blocks and handwritten modifications.
+Do not assume the original XML and the current .cs describe the same graph anymore.
+First determine whether the failing section still has preserved VZEL metadata.
+If it does not, do not describe the task as a pure round-trip failure.
+Describe it as authoring-mode export of a partially rewritten mission.
 ```
 
 ## Troubleshooting

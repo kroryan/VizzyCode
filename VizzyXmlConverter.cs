@@ -1549,9 +1549,11 @@ namespace VizzyCode
                         .Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
 
                     string callFormat = ciName + string.Concat(
-                        paramNames.Select((p, idx) => $" ({idx})"));
+                        paramNames.Select((p, idx) => $" ({idx})")) +
+                        (paramNames.Count > 0 ? " " : "");
                     string format = ciName + string.Concat(
-                        paramNames.Select(p => $" |{p}|"));
+                        paramNames.Select(p => $" |{p}|")) +
+                        (paramNames.Count > 0 ? " " : "");
 
                     var ciBlock = new XElement("Instructions");
                     XElement ciHeader;
@@ -1863,6 +1865,22 @@ namespace VizzyCode
                     posY += InstrYSpacing;
                 }
                 blockPosX += BlockXSpacing;
+            }
+
+            var expressions = program.Element("Expressions");
+            if (expressions != null)
+            {
+                int exprPosX = blockPosX;
+                int exprPosY = -20;
+                foreach (var expr in expressions.Elements("CustomExpression"))
+                {
+                    if (expr.Attribute("pos") == null)
+                    {
+                        expr.Add(new XAttribute("pos", $"{exprPosX},{exprPosY}"));
+                    }
+
+                    exprPosY += InstrYSpacing;
+                }
             }
         }
 

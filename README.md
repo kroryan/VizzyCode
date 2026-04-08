@@ -49,6 +49,12 @@ Useful reference examples:
 - [T.T. Mission Program.xml](Vizzy%20examples/T.T.%20Mission%20Program.xml)
 - [T.T.cs](Vizzy%20examples/T.T.cs)
 
+Important maintenance guidance:
+
+- [Vizzy Authoring Guide](docs/VizzyAuthoringGuide.md)
+- [Vizzy Blocks Mega Guide](docs/VizzyBlocksMegaGuide.md)
+- [AI Repair Context Guide](docs/AiRepairContextGuide.md)
+
 ## VS Code Integration
 
 This repository now includes a complete VS Code workflow built on top of the same converter:
