@@ -23,6 +23,7 @@ Minimum documentation context:
 - `docs/VizzyAuthoringGuide.md`
 - `docs/VizzyBlocksMegaGuide.md`
 - `docs/AiRepairContextGuide.md`
+- `docs/RawPreservationGuide.md`
 
 Recommended additional Vizzy language reference:
 
@@ -33,6 +34,11 @@ For fidelity-sensitive work, also provide:
 - the original working XML
 - the current `.cs`
 - the currently exported XML if one exists
+
+If the file contains preserved raw fragments, also provide whether they are:
+
+- readable `RawXml*`
+- or legacy base64 `Raw*`
 
 ## The First Question To Ask
 
@@ -53,6 +59,8 @@ Those comments are serialized anchors for the original Vizzy graph.
 
 If a region still has them, do not rewrite that region into cleaner code unless you are prepared to lose strict XML preservation there.
 
+The same rule applies to `RawXml*` and legacy `Raw*` fragments inside preserved regions.
+
 ## How To Recognize An Authoring Region
 
 A region has effectively become authoring-mode code when:
@@ -63,6 +71,11 @@ A region has effectively become authoring-mode code when:
 - control flow was replaced with a different but logically similar structure
 
 In that case, the exporter is no longer preserving an imported graph there. It is creating a new one.
+
+That does not automatically mean every `RawXml*` inside the file should be removed. A mixed mission can contain both:
+
+- handwritten authoring regions
+- preserved raw fragments that still need exact XML fidelity
 
 ## What Happened In T.T-Class Failures
 
@@ -96,6 +109,11 @@ When Juno does not show the exported XML in the Vizzy editor, follow this order:
 6. compare the failing XML structure against working non-exported XML examples from `Vizzy examples`
 7. fix one exact structural issue at a time
 
+If raw-preserved fragments are involved:
+
+8. decode or inspect the raw fragment instead of guessing what it contains
+9. only replace it if the replacement is proven Juno-safe
+
 Do not skip step 5.
 
 ## Things The AI Must Not Do
@@ -104,6 +122,7 @@ Do not:
 
 - globally refactor a mission-scale file
 - replace preserved raw calls with prettier code without proving the XML remains valid
+- replace `RawXml*` with cleaner high-level math just because it looks nicer
 - remove `VZTOPBLOCK`, `VZBLOCK`, or `VZEL` comments from imported regions
 - assume that logical equivalence is enough for Juno
 - assume that because the XML "looks reasonable" Juno will accept it
@@ -131,6 +150,12 @@ For fidelity-sensitive expressions, check:
 - nested `Planet(...).Property()` inside arithmetic
 - `DisplayMessage` / `LogMessage` argument shapes
 - text constants where whitespace matters
+- whether a `RawXml*` fragment is still the correct preservation boundary
+
+For imported readable raw fragments, also check:
+
+- whether the fragment is still exact XML from the source
+- whether an AI accidentally converted it into unsupported "clean" code
 
 ## Prompt Template For AI Repair
 
@@ -155,6 +180,7 @@ Rules:
 Important:
 - Logical equivalence is not enough. The exported XML must use the exact Juno-compatible structure.
 - In mixed missions such as T.T, do not assume the original XML and the current .cs still describe the same graph.
+- If the file contains `RawXml*`, treat those as explicit fidelity boundaries unless proven otherwise.
 ```
 
 ## Short Prompt For Fast Use
@@ -166,4 +192,15 @@ If yes, preserve it and fix the exporter.
 If no, treat it as authoring-mode code and compare its exported XML against working XML examples.
 Also compare repo CLI export and plugin CLI export byte for byte before making changes.
 Fix one exact structural XML discrepancy at a time.
+```
+
+## Prompt Add-On For Raw Fragments
+
+Use this add-on when the file contains `RawXml*` or legacy `Raw*`:
+
+```text
+This file contains preserved raw XML fragments.
+Do not rewrite them blindly.
+First determine what exact XML they encode, whether they came from imported XML, and whether they are still required as fidelity boundaries.
+Prefer converting legacy base64 Raw* into readable RawXml* only if the exported XML remains identical.
 ```

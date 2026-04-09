@@ -41,6 +41,7 @@ Start here if you want to write, maintain, or debug Vizzy scripts with this proj
 - [Vizzy Authoring Guide](docs/VizzyAuthoringGuide.md)
 - [Vizzy Blocks Mega Guide](docs/VizzyBlocksMegaGuide.md)
 - [AI Repair Context Guide](docs/AiRepairContextGuide.md)
+- [Raw Preservation Guide](docs/RawPreservationGuide.md)
 - [Mastering Vizzy - A Complete Guide](docs/Mastering%20Vizzy%20_%20A%20Complete%20Guide%20-%20Early%20Access%2008.07.25.md)
 
 Useful reference examples:
@@ -57,6 +58,51 @@ Important maintenance guidance:
 - [Vizzy Blocks Mega Guide](docs/VizzyBlocksMegaGuide.md)
 - [AI Repair Context Guide](docs/AiRepairContextGuide.md)
 
+## Required Reading By Use Case
+
+If you are using VizzyCode for a specific purpose, use this minimum documentation set.
+
+### For normal handwritten Vizzy authoring
+
+Read:
+
+- `README.md`
+- `docs/VizzyAuthoringGuide.md`
+- `docs/VizzyBlocksMegaGuide.md`
+
+### For round-trip fidelity work
+
+Read:
+
+- `README.md`
+- `docs/VizzyAuthoringGuide.md`
+- `docs/AiRepairContextGuide.md`
+- `docs/RawPreservationGuide.md`
+
+### For AI-assisted work
+
+Do not give the AI only the current `.cs` file.
+
+Minimum required context:
+
+- `README.md`
+- `docs/VizzyAuthoringGuide.md`
+- `docs/VizzyBlocksMegaGuide.md`
+- `docs/AiRepairContextGuide.md`
+- `docs/RawPreservationGuide.md`
+
+Strongly recommended additional language reference:
+
+- `docs/Mastering Vizzy _ A Complete Guide - Early Access 08.07.25.md`
+
+For fidelity-sensitive work, also include:
+
+- the original working XML
+- the current `.cs`
+- the current exported XML if one exists
+
+This is mandatory for large mixed missions such as `T.T`.
+
 ## VS Code Integration
 
 This repository now includes a complete VS Code workflow built on top of the same converter:
@@ -70,6 +116,38 @@ The VS Code integration gives you:
 - `VizzyCode: Import XML to Code`
 - `VizzyCode: Export Code to XML`
 - `VizzyCode: Round-Trip XML`
+
+### Clean View And Metadata Sidecar
+
+Imported `.vizzy.cs` files now use a clean-view workflow by default.
+
+What the user sees:
+
+- clean authoring code
+- no visible `VZTOPBLOCK`, `VZBLOCK`, or `VZEL` comment noise
+- simplified preserved fragments where safe, for example:
+  - `Vz.RawXmlVariable(...)` -> plain variable names
+  - `Vz.RawXmlConstant(...)` -> normal literals
+  - simple `Vz.RawXmlEval(...)` -> `Vz.ExactEval("...")`
+
+What VizzyCode stores next to the code file:
+
+- a sidecar file named `*.vizzy.meta.json`
+
+That sidecar stores the exact imported metadata needed to restore fidelity-sensitive lines during export.
+
+This means:
+
+- unchanged imported lines can still export back with their exact preserved structure
+- the visible code can stay much cleaner for normal editing
+- handwritten changes still export through the normal authoring parser
+
+Example:
+
+- code file: `mission.vizzy.cs`
+- sidecar: `mission.vizzy.meta.json`
+
+Do not delete the sidecar if you want maximum fidelity for an imported mission.
 
 Recommended install:
 
@@ -185,6 +263,8 @@ Typical output:
 - `import <input.xml> [-o output.vizzy.cs]`
 - `export <input.vizzy.cs> [-o output.xml] [-n programName]`
 - `roundtrip <input.xml> [-o output.xml] [-c output.vizzy.cs]`
+- `raw-encode <input.xml> [-o output.txt]`
+- `raw-decode <input.txt|payload|call> [-o output.xml]`
 
 Examples:
 
@@ -192,7 +272,33 @@ Examples:
 VizzyCode.Cli.exe import "Vizzy examples\orbiting maybe.xml" -o "orbiting maybe.vizzy.cs"
 VizzyCode.Cli.exe export "Vizzy examples\Auto Orbit authoring-safe.cs" -o "autorbit.xml"
 VizzyCode.Cli.exe roundtrip "Vizzy examples\T.T. Mission Program.xml" -o "_tt_rt.xml" -c "_tt_rt.vizzy.cs"
+VizzyCode.Cli.exe raw-encode "snippet.xml" -o "raw-snippet.txt"
+VizzyCode.Cli.exe raw-decode "Vz.RawEval(\"...\")" -o "decoded-snippet.xml"
 ```
+
+## Raw Preservation
+
+VizzyCode uses `Raw*` escape hatches when it needs exact XML preservation for fidelity-sensitive fragments.
+
+Examples:
+
+- `Vz.RawConstant("...base64...")`
+- `Vz.RawVariable("...base64...")`
+- `Vz.RawCraftProperty("...base64...")`
+- `Vz.RawEval("...base64...")`
+
+Readable XML equivalents are also supported now:
+
+- `Vz.RawXmlConstant(@"<Constant ... />")`
+- `Vz.RawXmlVariable(@"<Variable ... />")`
+- `Vz.RawXmlCraftProperty(@"<CraftProperty ...>...</CraftProperty>")`
+- `Vz.RawXmlEval(@"<EvaluateExpression ...>...</EvaluateExpression>")`
+
+Use these only when normal high-level authoring syntax is not enough or when exact round-trip preservation matters.
+
+If you need to reproduce or inspect these payloads formally, use the CLI `raw-encode` and `raw-decode` commands described above.
+
+For normal imported editing, you should now see clean-view output first, not the full raw preservation noise. The sidecar file carries the hidden metadata needed for exact export where possible.
 
 ## How To Build The VS Code Extension
 
@@ -272,6 +378,9 @@ The converter now handles several fidelity-sensitive cases that previously broke
 - correct reconstruction of `StringOp friendly` with the proper `subOp`
 - correct parsing of nested `Vz.Planet(...).Property()` expressions inside larger arithmetic expressions
 - support for handwritten aliases such as `Vz.LockHeading(heading, pitch)`
+- readable preserved raw XML forms such as `Vz.RawXmlEval(...)`
+- deterministic top-level layout metadata with `// VZPOS x=... y=...`
+- CLI raw payload tooling through `raw-encode` and `raw-decode`
 
 Important real-world patterns now covered:
 
@@ -298,6 +407,73 @@ Important real-world patterns now covered:
 3. Export to XML.
 4. Open the XML in Juno.
 5. Only then treat the script as a reusable template.
+
+### For Imported XML You Intend To Edit Deeply
+
+1. Import the original XML to `.vizzy.cs`.
+2. Check whether the region you want to change still contains `VZTOPBLOCK`, `VZBLOCK`, and `VZEL`.
+3. If it does, prefer preserving that region.
+4. If you rewrite the region manually, treat it as authoring-mode code from that point on.
+5. If fidelity-sensitive expressions remain, prefer `RawXml*` forms over opaque base64 `Raw*` blobs.
+
+## How To Read Imported Code
+
+Imported `.vizzy.cs` files can contain four different layers at once:
+
+1. normal handwritten-style code
+2. preserved metadata comments
+3. readable raw XML preservation calls
+4. deterministic layout hints
+
+### Metadata comments
+
+- `VZTOPBLOCK`
+- `VZBLOCK ...`
+- `VZEL ...`
+
+These are preservation anchors. Do not remove them casually in imported regions.
+
+### Readable raw XML preservation calls
+
+Examples:
+
+- `Vz.RawXmlConstant(...)`
+- `Vz.RawXmlVariable(...)`
+- `Vz.RawXmlCraftProperty(...)`
+- `Vz.RawXmlEval(...)`
+
+These now appear by default when VizzyCode imports fidelity-sensitive fragments from real XML.
+
+### Clean view versus exact metadata
+
+When you import XML through the current CLI, app, or VS Code extension:
+
+- the visible `.vizzy.cs` is a clean view
+- the exact imported fidelity metadata is stored in `*.vizzy.meta.json`
+
+That is the current compromise between:
+
+- readable code for humans and AI
+- exact export for untouched imported regions
+
+If a line remains unchanged and still matches the sidecar mapping, VizzyCode restores its exact imported form during export.
+
+If you rewrite the line, VizzyCode exports it through the normal authoring parser instead.
+
+They mean:
+
+- keep this exact XML fragment
+- but expose it in a readable and reproducible form
+
+### Manual layout hints
+
+Example:
+
+```csharp
+// VZPOS x=1200 y=-300
+```
+
+This carries top-level layout information into exported XML when the block does not already have preserved imported `pos`.
 
 ## Round-Trip Test Harness
 
@@ -341,12 +517,19 @@ Minimum recommended context for AI:
 - `docs/VizzyAuthoringGuide.md`
 - `docs/VizzyBlocksMegaGuide.md`
 - `docs/AiRepairContextGuide.md`
+- `docs/RawPreservationGuide.md`
 
 Strongly recommended when the task is about general Vizzy behavior, not only this converter:
 
 - `docs/Mastering Vizzy _ A Complete Guide - Early Access 08.07.25.md`
 
 If the task is fidelity-sensitive, also include the original working XML and the current `.cs`.
+
+If the task involves `RawXml*`, preserved metadata, or newly handwritten replacements inside an imported mission, also include:
+
+- which region is still preserved
+- which region was rewritten manually
+- whether repo CLI and VS Code plugin CLI currently export byte-identical XML
 
 The app supports two distinct ways to use Claude Code, Gemini CLI, Codex CLI, and OpenCode.
 
@@ -412,6 +595,7 @@ Use these references first:
 - [Vizzy Authoring Guide](docs/VizzyAuthoringGuide.md)
 - [Vizzy Blocks Mega Guide](docs/VizzyBlocksMegaGuide.md)
 - [AI Repair Context Guide](docs/AiRepairContextGuide.md)
+- [Raw Preservation Guide](docs/RawPreservationGuide.md)
 - [Mastering Vizzy - A Complete Guide](docs/Mastering%20Vizzy%20_%20A%20Complete%20Guide%20-%20Early%20Access%2008.07.25.md)
 - `Vizzy examples/orbiting maybe.xml`
 - `Vizzy examples/orbiting maybe starter.cs`
@@ -429,6 +613,12 @@ For handwritten top-level layout control, VizzyCode also supports:
 ```
 
 Place it before a top-level event, custom instruction, or custom expression to carry explicit positions into exported Vizzy XML.
+
+If high-level authoring syntax is not enough, prefer:
+
+1. normal authoring syntax
+2. `RawXml*` readable preservation
+3. old base64 `Raw*` only if you explicitly want compact opaque payloads
 
 ## Build
 

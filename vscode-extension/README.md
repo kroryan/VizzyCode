@@ -6,6 +6,14 @@ This extension adds a practical VS Code workflow for VizzyCode:
 - export code back to Vizzy XML
 - run round-trip tests directly from VS Code
 
+It is built on the same converter core as the desktop app, so the important concepts are the same:
+
+- normal authoring mode for new handwritten scripts
+- fidelity mode for existing imported Vizzy XML
+- clean-view imported code plus metadata sidecar
+- readable raw preservation through `RawXml*`
+- top-level layout hints through `// VZPOS x=... y=...`
+
 ## Commands
 
 - `VizzyCode: Import XML to Code`
@@ -38,6 +46,28 @@ You can also set `vizzycode.cliPath` in VS Code settings.
 4. Run `VizzyCode: Export Code to XML`.
 5. Test the resulting XML in Juno.
 
+The import command now writes:
+
+- a visible clean code file: `name.vizzy.cs`
+- a metadata sidecar: `name.vizzy.meta.json`
+
+The visible file is intentionally cleaner than the exact imported structure:
+
+- most `VZTOPBLOCK`, `VZBLOCK`, and `VZEL` comment noise is hidden
+- many preserved variables and constants are simplified for readability
+- fidelity-sensitive lines are restored from the sidecar during export when unchanged
+
+Keep the sidecar file next to the `.vizzy.cs` if you want maximum export fidelity for imported missions.
+
+If the imported code still contains:
+
+- `VZTOPBLOCK`
+- `VZBLOCK`
+- `VZEL`
+- `Vz.RawXml*`
+
+do not treat those as noise. They are part of how VizzyCode preserves exact XML structure.
+
 For fidelity-sensitive files, also run:
 
 - `VizzyCode: Round-Trip XML`
@@ -46,6 +76,14 @@ That generates:
 
 - a round-tripped XML file
 - a generated code file
+
+If you are using AI on imported mission files, also provide the AI with:
+
+- the repository `README.md`
+- `docs/VizzyAuthoringGuide.md`
+- `docs/VizzyBlocksMegaGuide.md`
+- `docs/AiRepairContextGuide.md`
+- `docs/RawPreservationGuide.md`
 
 ## Installation
 

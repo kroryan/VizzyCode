@@ -859,7 +859,7 @@ namespace VizzyCode
                 {
                     string variableName = el.Attribute("variableName")?.Value ?? "var";
                     if (el.Attribute("variableName") != null)
-                        return $"Vz.RawVariable(\"{Esc(EncodePreservedElement(el))}\")";
+                        return BuildReadablePreservedCall("RawXmlVariable", el);
                     return System.Text.RegularExpressions.Regex.IsMatch(variableName, @"^[A-Za-z_]\w*$")
                         ? San(variableName)
                         : $"Vz.RawVar(\"{Esc(variableName)}\")";
@@ -908,7 +908,7 @@ namespace VizzyCode
         private string ConvertConstant(XElement el)
         {
             if (NeedsRawConstantPreservation(el))
-                return $"Vz.RawConstant(\"{Esc(EncodePreservedElement(el))}\")";
+                return BuildReadablePreservedCall("RawXmlConstant", el);
 
             string? style = el.Attribute("style")?.Value;
             string? boolVal = el.Attribute("bool")?.Value;
@@ -919,7 +919,7 @@ namespace VizzyCode
             {
                 string nv = numAttr.Value;
                 if (nv == "-0")
-                    return $"Vz.RawConstant(\"{Esc(EncodePreservedElement(el))}\")";
+                    return BuildReadablePreservedCall("RawXmlConstant", el);
                 return nv;
             }
             var textAttr = el.Attribute("text");
@@ -1040,7 +1040,7 @@ namespace VizzyCode
             string prop = el.Attribute("property")?.Value ?? "";
             string? style = el.Attribute("style")?.Value;
             if (style != null && !string.Equals(style, CraftPropertyStyle(prop), StringComparison.Ordinal))
-                return $"Vz.RawCraftProperty(\"{Esc(EncodePreservedElement(el))}\")";
+                return BuildReadablePreservedCall("RawXmlCraftProperty", el);
             var ch = el.Elements().ToList();
             string arg = ch.Count > 0 ? ConvertExpression(ch[0]) : "";
             string arg2 = ch.Count > 1 ? ConvertExpression(ch[1]) : "";
@@ -1200,7 +1200,7 @@ namespace VizzyCode
             var child = el.Elements().FirstOrDefault();
             string expr = child?.Attribute("text")?.Value ?? child?.Attribute("number")?.Value ?? "";
             if (el.Attribute("style")?.Value == "evaluate-expression")
-                return $"Vz.RawEval(\"{Esc(EncodePreservedElement(el))}\")";
+                return BuildReadablePreservedCall("RawXmlEval", el);
             return expr.ToLower() switch { "pi" => "Vz.Pi", "e" => "Vz.E",
                 "inf" or "infinity" => "Vz.Infinity", "nan" => "Vz.NaN",
                 _ => $"Vz.Eval(\"{Esc(expr)}\")" };
@@ -2490,11 +2490,14 @@ namespace VizzyCode
             while (HasOuterParentheses(call))
                 call = call.Substring(1, call.Length - 2).Trim();
 
-            if (TryDecodePreservedCall(call, "Vz.RawConstant", "Constant", out var rawConstantExpr))
+            if (TryDecodePreservedCall(call, "Vz.RawConstant", "Constant", out var rawConstantExpr) ||
+                TryDecodePreservedCall(call, "Vz.RawXmlConstant", "Constant", out rawConstantExpr))
                 return rawConstantExpr;
-            if (TryDecodePreservedCall(call, "Vz.RawVariable", "Variable", out var rawVariableExpr))
+            if (TryDecodePreservedCall(call, "Vz.RawVariable", "Variable", out var rawVariableExpr) ||
+                TryDecodePreservedCall(call, "Vz.RawXmlVariable", "Variable", out rawVariableExpr))
                 return rawVariableExpr;
-            if (TryDecodePreservedCall(call, "Vz.RawCraftProperty", "CraftProperty", out var rawCraftPropertyExpr))
+            if (TryDecodePreservedCall(call, "Vz.RawCraftProperty", "CraftProperty", out var rawCraftPropertyExpr) ||
+                TryDecodePreservedCall(call, "Vz.RawXmlCraftProperty", "CraftProperty", out rawCraftPropertyExpr))
                 return rawCraftPropertyExpr;
 
             // Numeric literal
@@ -2618,8 +2621,18 @@ namespace VizzyCode
                 return rawVarExpr;
 
             // Named constants — must come BEFORE the generic dotted-name fallback below
-            if (TryDecodePreservedCall(call, "Vz.RawEval", "EvaluateExpression", out var rawEvalExpr))
+            if (TryDecodePreservedCall(call, "Vz.RawEval", "EvaluateExpression", out var rawEvalExpr) ||
+                TryDecodePreservedCall(call, "Vz.RawXmlEval", "EvaluateExpression", out rawEvalExpr))
                 return rawEvalExpr;
+
+            if (TryConvertFunctionCall(call, "Vz.ExactEval", args =>
+            {
+                string exactText = Unescape(trimQuotes(args[0]));
+                return new XElement("EvaluateExpression",
+                    new XAttribute("style", "evaluate-expression"),
+                    new XElement("Constant", new XAttribute("text", exactText)));
+            }, 1, out var exactEvalExpr))
+                return exactEvalExpr;
 
             if (call == "Vz.Pi")       return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "pi")));
             if (call == "Vz.E")        return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "e")));
@@ -3589,6 +3602,12 @@ namespace VizzyCode
             return Convert.ToBase64String(Encoding.UTF8.GetBytes(xml));
         }
 
+        private static string BuildReadablePreservedCall(string functionName, XElement el)
+        {
+            string xml = el.ToString(SaveOptions.DisableFormatting).Replace("\"", "\"\"");
+            return $"Vz.{functionName}(@\"{xml}\")";
+        }
+
         private static bool ShouldPreserveInstructionMetadata(XElement el)
         {
             if (el.Name.LocalName == "CustomInstruction" && el.Attribute("pos") != null)
@@ -3680,10 +3699,25 @@ namespace VizzyCode
 
         private static XElement DecodePreservedElement(string encodedArg, string expectedName)
         {
-            string encoded = Unescape(trimQuotes(encodedArg));
-            string xml = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+            string decodedArg = DecodeStringLiteral(encodedArg).Trim();
+            string xml = decodedArg.StartsWith("<", StringComparison.Ordinal)
+                ? decodedArg
+                : Encoding.UTF8.GetString(Convert.FromBase64String(decodedArg));
             var element = XElement.Parse(xml);
             return element.Name.LocalName == expectedName ? element : new XElement(expectedName);
+        }
+
+        private static string DecodeStringLiteral(string value)
+        {
+            string trimmed = value.Trim();
+            if (trimmed.StartsWith("@\"", StringComparison.Ordinal) &&
+                trimmed.EndsWith("\"", StringComparison.Ordinal) &&
+                trimmed.Length >= 3)
+            {
+                return trimmed.Substring(2, trimmed.Length - 3).Replace("\"\"", "\"");
+            }
+
+            return Unescape(trimQuotes(trimmed));
         }
     }
 }

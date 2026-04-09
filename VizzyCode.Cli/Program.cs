@@ -1,6 +1,7 @@
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+using System.Text.RegularExpressions;
 
 namespace VizzyCode;
 
@@ -21,6 +22,8 @@ internal static class Program
                 "import" => RunImport(args.Skip(1).ToArray()),
                 "export" => RunExport(args.Skip(1).ToArray()),
                 "roundtrip" => RunRoundTrip(args.Skip(1).ToArray()),
+                "raw-encode" => RunRawEncode(args.Skip(1).ToArray()),
+                "raw-decode" => RunRawDecode(args.Skip(1).ToArray()),
                 _ => Fail($"Unknown command: {args[0]}")
             };
         }
@@ -44,11 +47,14 @@ internal static class Program
         string xmlText = File.ReadAllText(inputPath, DetectEncodingWithBom(inputPath));
         var doc = XDocument.Parse(xmlText);
         bool isCraft = doc.Root?.Name.LocalName is "Craft" or "Assembly";
-        string code = isCraft ? converter.ConvertCraftToCode(doc) : converter.ConvertProgramToCode(doc);
+        string exactCode = isCraft ? converter.ConvertCraftToCode(doc) : converter.ConvertProgramToCode(doc);
+        var cleanView = CodeCleanView.CreateCleanCode(exactCode);
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
-        File.WriteAllText(outputPath, code, new UTF8Encoding(false));
+        File.WriteAllText(outputPath, cleanView.CleanCode, new UTF8Encoding(false));
+        CodeCleanView.SaveSidecar(outputPath, cleanView.Sidecar);
         Console.WriteLine($"Imported: {inputPath}");
         Console.WriteLine($"Code: {Path.GetFullPath(outputPath)}");
+        Console.WriteLine($"Metadata: {Path.GetFullPath(CodeCleanView.GetSidecarPath(outputPath))}");
         return 0;
     }
 
@@ -62,13 +68,14 @@ internal static class Program
             ?? Path.ChangeExtension(RemoveVizzyCodeSuffix(inputPath), ".xml");
         string? explicitName = GetOption(args, "-n", "--name");
 
-        string code = File.ReadAllText(inputPath, new UTF8Encoding(false));
+        string cleanCode = File.ReadAllText(inputPath, new UTF8Encoding(false));
         string programName = explicitName
-            ?? InferProgramNameFromCode(code)
+            ?? InferProgramNameFromCode(cleanCode)
             ?? Path.GetFileNameWithoutExtension(RemoveVizzyCodeSuffix(inputPath));
+        string exportCode = CodeCleanView.RestoreExactCode(cleanCode, CodeCleanView.LoadSidecar(inputPath));
 
         var converter = new VizzyXmlConverter();
-        var doc = converter.ConvertCodeToXml(code, programName);
+        var doc = converter.ConvertCodeToXml(exportCode, programName);
         SaveXml(outputPath, doc);
         Console.WriteLine($"Exported: {inputPath}");
         Console.WriteLine($"XML: {Path.GetFullPath(outputPath)}");
@@ -91,9 +98,12 @@ internal static class Program
         var converter = new VizzyXmlConverter();
         string xmlText = File.ReadAllText(inputPath, DetectEncodingWithBom(inputPath));
         var xdoc = XDocument.Parse(xmlText);
-        string code = converter.ConvertProgramToCode(xdoc);
-        File.WriteAllText(codePath, code, new UTF8Encoding(false));
-        var outputDoc = converter.ConvertCodeToXml(code);
+        string exactCode = converter.ConvertProgramToCode(xdoc);
+        var cleanView = CodeCleanView.CreateCleanCode(exactCode);
+        File.WriteAllText(codePath, cleanView.CleanCode, new UTF8Encoding(false));
+        CodeCleanView.SaveSidecar(codePath, cleanView.Sidecar);
+        string exportCode = CodeCleanView.RestoreExactCode(cleanView.CleanCode, cleanView.Sidecar);
+        var outputDoc = converter.ConvertCodeToXml(exportCode);
         SaveXml(outputPath, outputDoc);
 
         bool sameBytes = File.ReadAllBytes(inputPath).SequenceEqual(File.ReadAllBytes(outputPath));
@@ -102,6 +112,81 @@ internal static class Program
         Console.WriteLine($"Output XML: {Path.GetFullPath(outputPath)}");
         Console.WriteLine($"same_bytes={sameBytes}");
         return sameBytes ? 0 : 2;
+    }
+
+    private static int RunRawEncode(string[] args)
+    {
+        if (args.Length < 1)
+            return Fail("raw-encode requires <input.xml>");
+
+        string inputPath = Path.GetFullPath(args[0]);
+        string? outputPath = GetOption(args, "-o", "--output");
+        string xml = File.ReadAllText(inputPath, DetectEncodingWithBom(inputPath));
+        var element = XElement.Parse(xml);
+        string payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(element.ToString(SaveOptions.DisableFormatting)));
+        string kind = element.Name.LocalName switch
+        {
+            "Constant" => "RawConstant",
+            "Variable" => "RawVariable",
+            "CraftProperty" => "RawCraftProperty",
+            "EvaluateExpression" => "RawEval",
+            _ => "RawEval"
+        };
+
+        string verbatimXml = ToVerbatimStringLiteral(element.ToString(SaveOptions.DisableFormatting));
+        string rawXmlKind = kind switch
+        {
+            "RawConstant" => "RawXmlConstant",
+            "RawVariable" => "RawXmlVariable",
+            "RawCraftProperty" => "RawXmlCraftProperty",
+            _ => "RawXmlEval"
+        };
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"Element: {element.Name.LocalName}");
+        sb.AppendLine("Base64 payload:");
+        sb.AppendLine(payload);
+        sb.AppendLine();
+        sb.AppendLine("Base64 form:");
+        sb.AppendLine($"Vz.{kind}(\"{payload}\")");
+        sb.AppendLine();
+        sb.AppendLine("Readable XML form:");
+        sb.AppendLine($"Vz.{rawXmlKind}({verbatimXml})");
+
+        string output = sb.ToString();
+        if (!string.IsNullOrWhiteSpace(outputPath))
+        {
+            File.WriteAllText(Path.GetFullPath(outputPath), output, new UTF8Encoding(false));
+            Console.WriteLine($"Wrote: {Path.GetFullPath(outputPath)}");
+        }
+        else
+        {
+            Console.Write(output);
+        }
+
+        return 0;
+    }
+
+    private static int RunRawDecode(string[] args)
+    {
+        if (args.Length < 1)
+            return Fail("raw-decode requires <input.txt|payload|call>");
+
+        string source = ReadRawSource(args[0]);
+        string? outputPath = GetOption(args, "-o", "--output");
+        string xml = DecodeRawSourceToXml(source);
+
+        if (!string.IsNullOrWhiteSpace(outputPath))
+        {
+            File.WriteAllText(Path.GetFullPath(outputPath), xml, new UTF8Encoding(false));
+            Console.WriteLine($"Wrote: {Path.GetFullPath(outputPath)}");
+        }
+        else
+        {
+            Console.WriteLine(xml);
+        }
+
+        return 0;
     }
 
     private static void SaveXml(string path, XDocument doc)
@@ -184,5 +269,68 @@ internal static class Program
         Console.WriteLine("  import <input.xml> [-o output.vizzy.cs]");
         Console.WriteLine("  export <input.vizzy.cs> [-o output.xml] [-n programName]");
         Console.WriteLine("  roundtrip <input.xml> [-o output.xml] [-c output.vizzy.cs]");
+        Console.WriteLine("  raw-encode <input.xml> [-o output.txt]");
+        Console.WriteLine("  raw-decode <input.txt|payload|call> [-o output.xml]");
+    }
+
+    private static string ReadRawSource(string arg)
+    {
+        string candidatePath = Path.GetFullPath(arg);
+        if (File.Exists(candidatePath))
+            return File.ReadAllText(candidatePath, DetectEncodingWithBom(candidatePath)).Trim();
+
+        return arg.Trim();
+    }
+
+    private static string DecodeRawSourceToXml(string source)
+    {
+        string trimmed = source.Trim();
+
+        var rawCallMatch = Regex.Match(trimmed,
+            @"^Vz\.(Raw(?:Xml)?(?:Eval|Constant|Variable|CraftProperty))\((.*)\)$",
+            RegexOptions.Singleline);
+        if (rawCallMatch.Success)
+        {
+            string fn = rawCallMatch.Groups[1].Value;
+            string arg = rawCallMatch.Groups[2].Value.Trim();
+            return fn.StartsWith("RawXml", StringComparison.Ordinal)
+                ? DecodeStringLiteral(arg)
+                : Encoding.UTF8.GetString(Convert.FromBase64String(DecodeStringLiteral(arg)));
+        }
+
+        if (trimmed.StartsWith("<", StringComparison.Ordinal))
+            return trimmed;
+
+        return Encoding.UTF8.GetString(Convert.FromBase64String(DecodeStringLiteral(trimmed)));
+    }
+
+    private static string ToVerbatimStringLiteral(string value)
+    {
+        return "@\"" + value.Replace("\"", "\"\"") + "\"";
+    }
+
+    private static string DecodeStringLiteral(string value)
+    {
+        string trimmed = value.Trim();
+        if (trimmed.StartsWith("@\"", StringComparison.Ordinal) &&
+            trimmed.EndsWith("\"", StringComparison.Ordinal) &&
+            trimmed.Length >= 3)
+        {
+            return trimmed.Substring(2, trimmed.Length - 3).Replace("\"\"", "\"");
+        }
+
+        if (trimmed.StartsWith("\"", StringComparison.Ordinal) &&
+            trimmed.EndsWith("\"", StringComparison.Ordinal) &&
+            trimmed.Length >= 2)
+        {
+            return trimmed.Substring(1, trimmed.Length - 2)
+                .Replace("\\\"", "\"")
+                .Replace("\\\\", "\\")
+                .Replace("\\n", "\n")
+                .Replace("\\r", "\r")
+                .Replace("\\t", "\t");
+        }
+
+        return trimmed;
     }
 }

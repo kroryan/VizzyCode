@@ -14,6 +14,20 @@ For existing Vizzy XML files, the stronger target remains:
 
 Those are related, but they are not the same problem.
 
+## What The Generated Code Can Contain
+
+A `.vizzy.cs` file produced by VizzyCode is not always "just normal authoring code".
+
+It can contain:
+
+- standard C#-like Vizzy authoring syntax
+- preserved metadata comments such as `VZTOPBLOCK`, `VZBLOCK`, and `VZEL`
+- readable raw XML preservation calls such as `Vz.RawXmlEval(...)`
+- manual layout hints such as `// VZPOS x=... y=...`
+- a sidecar file `*.vizzy.meta.json` that stores exact imported metadata for clean-view export
+
+You must understand which layer you are editing before changing a mission-scale file.
+
 ## Source Of Truth Rule
 
 When debugging a failing mission, the first question is:
@@ -60,6 +74,15 @@ That is the key line between:
 - exact round-trip preservation
 - best-effort code authoring export
 
+## What To Preserve And What To Rewrite
+
+Use this rule:
+
+- preserve imported regions when the original XML structure still matters
+- rewrite only the exact region you intend to turn into authoring-mode code
+
+Do not half-rewrite a preserved region casually. Mixed regions are the main source of hard-to-debug Juno loading failures.
+
 ## What Breaks Exact Fidelity
 
 A mission is no longer a strict round-trip candidate when one or more of these happen:
@@ -94,6 +117,58 @@ Mission-scale validated references:
 - formatted string output
 - `friendly` time and distance formatting
 - mission-scale control flow
+
+## Source Layers In Practice
+
+### Normal authoring syntax
+
+This is the preferred layer for new code:
+
+```csharp
+Vz.Display("Hello", 3);
+Vz.SetInput(CraftInput.Throttle, 1);
+using (new WaitUntil(Vz.Craft.Orbit.Apoapsis() > 100000)) { }
+```
+
+### Preserved metadata
+
+This keeps imported block identity:
+
+- `VZTOPBLOCK`
+- `VZBLOCK`
+- `VZEL`
+
+### Readable raw XML preservation
+
+This preserves fidelity-sensitive XML in a human-readable form:
+
+```csharp
+Vz.RawXmlEval(@"<EvaluateExpression style=""evaluate-expression""><Constant text=""E"" /></EvaluateExpression>")
+```
+
+### Manual layout metadata
+
+This controls top-level in-game layout for authored blocks:
+
+```csharp
+// VZPOS x=1200 y=-300
+```
+
+### Clean view sidecar
+
+Current VizzyCode imports now default to a clean visible `.vizzy.cs` plus a metadata sidecar:
+
+- visible file: `name.vizzy.cs`
+- sidecar: `name.vizzy.meta.json`
+
+The visible file is cleaned up for editing:
+
+- `VZTOPBLOCK`, `VZBLOCK`, and `VZEL` are hidden from the visible code
+- obvious `RawXmlVariable(...)` calls are simplified to plain variable names
+- obvious `RawXmlConstant(...)` calls are simplified to literals
+- simple `RawXmlEval(...)` fragments are simplified to `Vz.ExactEval("...")`
+
+The sidecar stores the exact original metadata so unchanged imported lines can still export with their exact preserved structure.
 
 ## VS Code Workflow
 
@@ -140,6 +215,8 @@ Follow these rules when writing new Vizzy code:
 6. When strings intentionally include leading or trailing spaces, preserve them exactly.
 7. Prefer converter-emitted string formatting patterns over inventing new ones.
 8. If a mission uses deep orbital math or nested planet expressions, verify it through `TestRT`.
+9. If you imported a mission and want fidelity, keep the matching `*.vizzy.meta.json` file with the `.vizzy.cs`.
+10. If you intentionally want to abandon fidelity for a region, rewrite that region knowingly and treat it as authoring-mode code.
 
 ## Safe Instruction Patterns
 
@@ -200,6 +277,65 @@ Additional lizpy-aligned aliases supported in authoring code:
 - `Vz.Y(vector)`
 - `Vz.Z(vector)`
 - `Vz.PartLocalToPci(partId, localVector)`
+
+## Raw Preservation And Reproducibility
+
+VizzyCode has two raw-preservation layers:
+
+- compact base64 forms such as `Vz.RawEval("...")`
+- readable XML forms such as `Vz.RawXmlEval(@"<EvaluateExpression ...>...</EvaluateExpression>")`
+
+Important current behavior:
+
+- imported XML now emits readable `RawXml*` forms by default for preserved raw fragments
+- old base64 `Raw*` forms are still accepted by the exporter
+- both forms export correctly
+
+Supported readable raw forms:
+
+- `Vz.RawXmlConstant(...)`
+- `Vz.RawXmlVariable(...)`
+- `Vz.RawXmlCraftProperty(...)`
+- `Vz.RawXmlEval(...)`
+
+Use them only when:
+
+- you must preserve an exact XML fragment
+- the high-level authoring syntax does not yet cover that case
+- you are intentionally carrying fidelity-sensitive XML through code
+
+For handwritten authoring, prefer:
+
+1. high-level VizzyCode syntax
+2. readable `RawXml*`
+3. base64 `Raw*` only as the last fallback
+
+If you are editing imported code and encounter `RawXml*`, do not automatically rewrite it into cleaner math or helper calls. First decide whether the exact XML shape is still required.
+
+You can reproduce and inspect these payloads with the CLI:
+
+```powershell
+dotnet run --project VizzyCode.Cli\VizzyCode.Cli.csproj -- raw-encode "snippet.xml"
+dotnet run --project VizzyCode.Cli\VizzyCode.Cli.csproj -- raw-decode "Vz.RawXmlEval(@\""<EvaluateExpression style=\"\"evaluate-expression\"\"><Constant text=\"\"E\"\" /></EvaluateExpression>\"")" -o "decoded.xml"
+```
+
+For a full explanation, see:
+
+- [Raw Preservation Guide](RawPreservationGuide.md)
+
+## How To Decide If `RawXml*` Should Stay
+
+Keep `RawXml*` when:
+
+- the fragment came from imported XML
+- the exact XML form is fidelity-sensitive
+- there is no proven high-level authoring equivalent yet
+
+Consider replacing `RawXml*` with high-level code only when:
+
+- the region is now authoring-mode code
+- the resulting exported XML has been verified in Juno
+- you are simplifying a case that is already known-safe in this repository
 
 ## Manual Layout Metadata
 
@@ -334,6 +470,21 @@ Interpretation:
 - if the current `.cs` has handwritten replacements in the failing region, the bug may be in the code, the exporter, or both, but the mission is no longer pure round-trip work
 
 For large mission files such as `T.T`, this distinction is mandatory.
+
+## Fast Decision Table
+
+When you see this in code, treat it like this:
+
+- normal `Vz.*` authoring syntax
+  - preferred for new handwritten scripts
+- `VZTOPBLOCK` / `VZBLOCK` / `VZEL`
+  - preserved imported fidelity metadata
+- `Vz.RawXml*`
+  - readable exact XML preservation
+- `Vz.Raw*("...base64...")`
+  - legacy compact exact XML preservation
+- `// VZPOS x=... y=...`
+  - top-level layout hint for authored blocks
 
 ## Special Warning For Large Missions
 
@@ -475,3 +626,4 @@ When adding new authoring examples:
 - keep the documentation in English
 - document unsupported syntax explicitly in this guide
 - when fixing a real mission file, add the discovered pattern here if it changes what users should safely write
+- prefer readable `RawXml*` in imported output over opaque base64 payloads when exact preservation is still required

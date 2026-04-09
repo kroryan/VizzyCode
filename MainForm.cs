@@ -13,6 +13,7 @@ namespace VizzyCode
     public partial class MainForm : Form
     {
         private string? _currentFile;
+        private CleanViewSidecar? _currentSidecar;
         private bool _isDark = true;
 
         public MainForm(string? fileToOpen = null)
@@ -69,12 +70,14 @@ namespace VizzyCode
                 var doc = XDocument.Load(path);
                 var conv = new VizzyXmlConverter();
                 bool isCraft = doc.Root?.Name.LocalName is "Craft" or "Assembly";
-                string code = isCraft
+                string exactCode = isCraft
                     ? conv.ConvertCraftToCode(doc)
                     : conv.ConvertProgramToCode(doc);
+                var cleanView = CodeCleanView.CreateCleanCode(exactCode);
 
                 _currentFile = path;
-                codeEditor.Text = code.Replace("\r\n", "\n").Replace("\n", "\r\n");
+                _currentSidecar = cleanView.Sidecar;
+                codeEditor.Text = cleanView.CleanCode.Replace("\r\n", "\n").Replace("\n", "\r\n");
                 Highlight();
                 UpdateTree(doc, conv);
                 SetTitle(path);
@@ -286,18 +289,20 @@ namespace VizzyCode
         {
             if (string.IsNullOrWhiteSpace(codeEditor.Text)) return;
             string defaultName = _currentFile != null
-                ? Path.GetFileNameWithoutExtension(_currentFile) + ".cs"
-                : "VizzyProgram.cs";
+                ? Path.GetFileNameWithoutExtension(_currentFile) + ".vizzy.cs"
+                : "VizzyProgram.vizzy.cs";
             string initDir = Path.Combine(AppBaseDir(), "Scripts");
             if (!Directory.Exists(initDir)) initDir = AppBaseDir();
 
             using var dlg = new SaveFileDialog
             {
-                Title = "Save C# Code", Filter = "C# Files (*.cs)|*.cs|All Files (*.*)|*.*",
+                Title = "Save Vizzy Code", Filter = "Vizzy Code (*.vizzy.cs)|*.vizzy.cs|C# Files (*.cs)|*.cs|All Files (*.*)|*.*",
                 DefaultExt = "cs", FileName = defaultName, InitialDirectory = initDir
             };
             if (dlg.ShowDialog() != DialogResult.OK) return;
             File.WriteAllText(dlg.FileName, codeEditor.Text, Encoding.UTF8);
+            if (_currentSidecar != null)
+                CodeCleanView.SaveSidecar(dlg.FileName, _currentSidecar);
             statusLabel.Text = $"Saved: {Path.GetFileName(dlg.FileName)}";
         }
 
@@ -312,7 +317,9 @@ namespace VizzyCode
             try
             {
                 var conv = new VizzyXmlConverter();
-                var xmlDoc = conv.ConvertCodeToXml(codeEditor.Text, programName);
+                string cleanCode = codeEditor.Text.Replace("\r\n", "\n");
+                string exportCode = CodeCleanView.RestoreExactCode(cleanCode, _currentSidecar);
+                var xmlDoc = conv.ConvertCodeToXml(exportCode, programName);
 
                 string defaultName = programName + ".xml";
                 string initDir = Path.Combine(AppBaseDir(), "Programs");

@@ -21,6 +21,7 @@
     <Compile Remove="VizzyBuilder\**\*.cs" />
     <Compile Remove="Vizzy examples\**\*.cs" />
     <Compile Remove="lizpy\**\*.cs" />
+    <Compile Remove="**\*.vizzy.cs" />
     <EmbeddedResource Remove="obj\**\*" />
     <EmbeddedResource Remove="bin\**\*" />
     <EmbeddedResource Remove="TestRT\**\*" />
@@ -35,5 +36,6 @@
     <None Remove="VizzyBuilder\**\*" />
     <None Remove="Vizzy examples\**\*.cs" />
     <None Remove="lizpy\**\*" />
+    <None Remove="**\*.vizzy.meta.json" />
   </ItemGroup>
 </Project>

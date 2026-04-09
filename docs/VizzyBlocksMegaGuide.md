@@ -14,7 +14,8 @@ If you are new to this project, read these files in this order:
 
 1. `README.md`
 2. `docs/VizzyAuthoringGuide.md`
-3. this file
+3. `docs/RawPreservationGuide.md`
+4. this file
 
 ## Scope
 
@@ -28,6 +29,50 @@ This guide covers the block families currently supported by `VizzyXmlConverter.c
 - authoring patterns that round-trip reliably
 
 It does not claim to be an exhaustive reverse-engineered reference for every block Juno has ever shipped. It is the supported reference for this repository.
+
+## Four Layers You Can See In Code
+
+When reading generated `.vizzy.cs`, you may see four different layers mixed together:
+
+1. high-level authoring syntax
+2. preserved metadata comments
+3. readable raw XML preservation
+4. manual layout hints
+
+They are not the same thing.
+
+### High-level authoring syntax
+
+This is the preferred layer for normal handwritten scripts.
+
+### Preserved metadata comments
+
+- `VZTOPBLOCK`
+- `VZBLOCK`
+- `VZEL`
+
+These preserve imported graph identity.
+
+### Readable raw XML preservation
+
+Examples:
+
+- `Vz.RawXmlConstant(...)`
+- `Vz.RawXmlVariable(...)`
+- `Vz.RawXmlCraftProperty(...)`
+- `Vz.RawXmlEval(...)`
+
+These preserve exact XML fragments while remaining readable.
+
+### Manual layout hints
+
+Example:
+
+```csharp
+// VZPOS x=1200 y=-300
+```
+
+These affect top-level layout in exported XML for authored blocks.
 
 ## Mental Model
 
@@ -79,6 +124,8 @@ That is not the same task.
 
 At that point, the block is no longer a strict round-trip block. It becomes a newly authored Vizzy graph.
 
+Readable `RawXml*` does not automatically mean a block is fully reauthored. It may still mark an exact imported fidelity fragment inside an otherwise readable code region.
+
 ### Why This Matters
 
 A large mission may contain both kinds of regions at the same time:
@@ -95,6 +142,10 @@ When such a mission fails to load in Juno, the correct question is not just:
 It is also:
 
 - "which part of this mission is still preserved imported structure, and which part is now handwritten authoring code"
+
+and sometimes:
+
+- "which exact expressions must remain raw-preserved even inside an edited region"
 
 ## Top-Level Custom Blocks
 
@@ -130,6 +181,12 @@ For authoring-created custom expressions, ensure:
 - their `callFormat`, `format`, `name`, and `style` match Juno's established pattern
 
 Missing `pos` on a new top-level custom expression is a real structural failure, not just a cosmetic difference.
+
+Top-level layout can now be guided manually with the compact form actually supported by VizzyCode:
+
+```csharp
+// VZPOS x=1200 y=-300
+```
 
 ## Program Structure
 
@@ -174,12 +231,15 @@ When a mission export does not appear in the Vizzy editor:
 3. compare repo CLI export and VS Code plugin export to rule out tool drift
 4. inspect top-level custom blocks first
 5. inspect control-flow structural encoding second
+6. inspect raw-preserved fragments third
 
 Why this order:
 
 - top-level block shape can make Juno reject the whole program immediately
 - control-flow shape errors can make individual regions invalid
 - formatting differences in nested expressions usually matter after the top-level graph is already valid
+
+When raw-preserved fragments are present, prefer understanding them first instead of rewriting them from appearance alone.
 
 ## T.T-Class Mission Warning
 

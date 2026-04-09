@@ -27,6 +27,14 @@ After installation:
 
 If the extension is active, a `VizzyCode` status bar item appears in the lower-left corner.
 
+Important:
+
+- imported XML now produces:
+  - a clean visible `*.vizzy.cs`
+  - a matching `*.vizzy.meta.json` sidecar
+- keep both files together if you want the best export fidelity
+- the sidecar stores the exact imported metadata while the visible code stays cleaner for editing
+
 ## Option 2: Install from the VSIX File
 
 If the release includes `vizzycode-tools-0.0.55.vsix`, install it with either:
