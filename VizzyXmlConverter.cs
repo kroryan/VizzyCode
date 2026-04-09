@@ -21,6 +21,7 @@ namespace VizzyCode
         private Dictionary<string, string> _ciNameMap = new(StringComparer.Ordinal);
         private XElement? _pendingTopLevelHeader;
         private XElement? _pendingInstructionMetadata;
+        private (int X, int Y)? _pendingTopLevelPosition;
         private bool _preferTextConstantsForAuthoring;
         public IReadOnlyList<string> Warnings => _warnings;
 
@@ -281,6 +282,12 @@ namespace VizzyCode
         {
             if (firstEl.Name.LocalName is not ("CustomInstruction" or "Event" or "CustomExpression"))
                 return;
+
+            if (firstEl.Attribute("pos") != null &&
+                TryParsePositionAttribute(firstEl.Attribute("pos")!.Value, out int posX, out int posY))
+            {
+                sb.AppendLine($"// VZPOS x={posX} y={posY}");
+            }
 
             string xml = firstEl.ToString(SaveOptions.DisableFormatting);
             string payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(xml));
@@ -1387,6 +1394,7 @@ namespace VizzyCode
         {
             _pendingTopLevelHeader = null;
             _pendingInstructionMetadata = null;
+            _pendingTopLevelPosition = null;
             _preferTextConstantsForAuthoring =
                 !code.Contains("VZEL", StringComparison.Ordinal) &&
                 !code.Contains("Vz.RawConstant(", StringComparison.Ordinal) &&
@@ -1512,6 +1520,12 @@ namespace VizzyCode
                     continue;
                 }
 
+                if (TryParseTopLevelPositionComment(line, out var topLevelPos))
+                {
+                    _pendingTopLevelPosition = topLevelPos;
+                    continue;
+                }
+
                 // Preserve top-level comment blocks; only skip system/meta comments.
                 if (line.StartsWith("//", StringComparison.Ordinal))
                 {
@@ -1523,7 +1537,7 @@ namespace VizzyCode
                         !line.StartsWith("// ═══", StringComparison.Ordinal))
                     {
                         string commentText = line.Length > 3 ? line.Substring(3) : line.Substring(2);
-                        preamble.Add(ApplyPendingInstructionMetadata(new XElement("Comment",
+                        AddPreambleInstruction(preamble, ApplyPendingInstructionMetadata(new XElement("Comment",
                             new XAttribute("style", "comment"),
                             new XElement("Constant",
                                 new XAttribute("style", "comment-text"),
@@ -1570,6 +1584,7 @@ namespace VizzyCode
                             new XAttribute("name",       ciName),
                             new XAttribute("style",      "custom-instruction"));
                     }
+                    ciHeader = ApplyPendingTopLevelPosition(ciHeader);
                     _pendingTopLevelHeader = null;
                     ciBlock.Add(ciHeader);
 
@@ -1675,6 +1690,7 @@ namespace VizzyCode
                             new XAttribute("style",      "custom-expression"));
                         if (returnXml != null) ceEl.Add(returnXml);
                     }
+                    ceEl = ApplyPendingTopLevelPosition(ceEl);
                     _pendingTopLevelHeader = null;
                     ceElements.Add(ceEl);
                     i = j2;
@@ -1707,6 +1723,8 @@ namespace VizzyCode
                                 eventHeader = new XElement(_pendingTopLevelHeader);
                             else
                                 eventHeader = BuildEventHeaderElement(blockType, blockArgs);
+                            if (eventHeader != null)
+                                eventHeader = ApplyPendingTopLevelPosition(eventHeader);
                             _pendingTopLevelHeader = null;
                             if (eventHeader != null) instrBlock.Add(eventHeader);
 
@@ -1722,7 +1740,7 @@ namespace VizzyCode
                         else
                         {
                             var block = ConvertBlockToXml(blockType, blockArgs, lines, ref i);
-                            if (block != null) preamble.Add(block);
+                            AddPreambleInstruction(preamble, block);
                         }
                     }
                     continue;
@@ -1746,7 +1764,7 @@ namespace VizzyCode
                         if (alreadyDeclared || isExpr)
                         {
                             var setVar = ConvertSetVariableToXml(varName, varValue);
-                            if (setVar != null) preamble.Add(setVar);
+                            AddPreambleInstruction(preamble, setVar);
                         }
                         else
                         {
@@ -1766,7 +1784,7 @@ namespace VizzyCode
                         continue;
 
                     var instruction = ConvertInstructionToXml(line);
-                    if (instruction != null) preamble.Add(instruction);
+                    AddPreambleInstruction(preamble, instruction);
                 }
             }
 
@@ -1918,6 +1936,55 @@ namespace VizzyCode
         private const int InstrNestYOffset = 30;
         private const int InstrNestXOffset = 20;
         private const int NestedInstrYSpacing = 50;
+
+        private static bool TryParseTopLevelPositionComment(string line, out (int X, int Y) position)
+        {
+            position = default;
+            var match = System.Text.RegularExpressions.Regex.Match(
+                line,
+                @"^//\s*VZPOS\s+x\s*=\s*(-?\d+)\s+y\s*=\s*(-?\d+)\s*$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!match.Success)
+                return false;
+
+            if (!int.TryParse(match.Groups[1].Value, out int x) ||
+                !int.TryParse(match.Groups[2].Value, out int y))
+                return false;
+
+            position = (x, y);
+            return true;
+        }
+
+        private static bool TryParsePositionAttribute(string value, out int x, out int y)
+        {
+            x = 0;
+            y = 0;
+            var parts = value.Split(',');
+            if (parts.Length != 2)
+                return false;
+
+            return int.TryParse(parts[0], out x) && int.TryParse(parts[1], out y);
+        }
+
+        private XElement ApplyPendingTopLevelPosition(XElement element)
+        {
+            if (_pendingTopLevelPosition is { } pos && element.Attribute("pos") == null)
+                element.Add(new XAttribute("pos", $"{pos.X},{pos.Y}"));
+
+            _pendingTopLevelPosition = null;
+            return element;
+        }
+
+        private void AddPreambleInstruction(XElement preamble, XElement? element)
+        {
+            if (element == null)
+                return;
+
+            if (!preamble.HasElements)
+                element = ApplyPendingTopLevelPosition(element);
+
+            preamble.Add(element);
+        }
 
         private XElement? ConvertBlockToXml(string blockType, string blockArgs, List<string> lines, ref int index)
         {

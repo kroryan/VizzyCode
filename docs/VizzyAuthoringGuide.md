@@ -201,6 +201,41 @@ Additional lizpy-aligned aliases supported in authoring code:
 - `Vz.Z(vector)`
 - `Vz.PartLocalToPci(partId, localVector)`
 
+## Manual Layout Metadata
+
+For top-level authoring blocks, you can now provide explicit layout hints in code with:
+
+```csharp
+// VZPOS x=1200 y=-300
+```
+
+Current intended use:
+
+- before `using (new OnStart())`
+- before other top-level events
+- before `Vz.DeclareCustomInstruction(...)`
+- before `Vz.DeclareCustomExpression(...)`
+- before the first instruction of a top-level standalone preamble block
+
+Example:
+
+```csharp
+// VZTOPBLOCK
+// VZPOS x=-10 y=-20
+using (new OnStart())
+{
+    Vz.Display("Hello", 3);
+}
+```
+
+Behavior:
+
+- if the next top-level block has no preserved `pos`, the exporter applies the `VZPOS` values
+- if the block already has preserved imported `pos`, that original value wins
+- if no `VZPOS` is provided, VizzyCode uses deterministic auto-layout
+
+This is intended to make handwritten Vizzy code more usable in the in-game editor, not just load correctly.
+
 ## Fidelity-Sensitive Patterns Now Supported
 
 These patterns matter because they already appeared in real mission files:

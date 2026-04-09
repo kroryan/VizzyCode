@@ -29,10 +29,10 @@ If the extension is active, a `VizzyCode` status bar item appears in the lower-l
 
 ## Option 2: Install from the VSIX File
 
-If the release includes `vizzycode-tools-0.0.5.vsix`, install it with either:
+If the release includes `vizzycode-tools-0.0.55.vsix`, install it with either:
 
 ```powershell
-code --install-extension .\vizzycode-tools-0.0.5.vsix --force
+code --install-extension .\vizzycode-tools-0.0.55.vsix --force
 ```
 
 or inside VS Code:
@@ -40,7 +40,7 @@ or inside VS Code:
 1. Open Extensions.
 2. Open the `...` menu.
 3. Choose `Install from VSIX...`
-4. Select `vizzycode-tools-0.0.5.vsix`
+4. Select `vizzycode-tools-0.0.55.vsix`
 
 ## What This Package Contains
 
