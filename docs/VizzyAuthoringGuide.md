@@ -229,14 +229,53 @@ Follow these rules when writing new Vizzy code:
 9. If you imported a mission and want fidelity, keep the matching `*.vizzy.meta.json` file with the `.vizzy.cs`.
 10. If you intentionally want to abandon fidelity for a region, rewrite that region knowingly and treat it as authoring-mode code.
 
+## Event Handler Syntax
+
+Event handler blocks can be written either with or without the `Vz.` prefix:
+
+```csharp
+using (new OnStart()) { ... }
+using (new Vz.OnStart()) { ... }
+```
+
+Both forms are accepted. The `Vz.` prefix is optional and works in any `using (new ...)` block.
+
+Supported event types:
+
+| Code form | Juno event |
+|-----------|-----------|
+| `OnStart()` / `Vz.OnStart()` | FlightStart |
+| `OnEnd()` / `Vz.OnEnd()` | FlightEnd |
+| `OnReceiveMessage("name")` | ReceiveMessage |
+| `OnDocked()` | Docked |
+| `OnChangeSoi()` | ChangeSoi |
+| `OnPartCollision("partName")` | PartCollision |
+| `OnPartExplode("partName")` | PartExplode |
+| `On("eventName")` | Custom event by name |
+
+## Compound Assignment Operators
+
+All six compound assignment operators are supported for variables:
+
+```csharp
+x += 5;    // ChangeVariable (add)
+x -= 3;    // SetVariable (x = x - 3)
+x *= 2;    // SetVariable (x = x * 2)
+x /= 4;    // SetVariable (x = x / 4)
+x %= 10;   // SetVariable (x = x % 10)
+x ^= 2;    // SetVariable (x = x ^ 2)
+```
+
+`+=` maps to `<ChangeVariable>` directly. The others expand to `<SetVariable>` with the appropriate `<BinaryOp>`.
+
 ## Safe Instruction Patterns
 
 These patterns are known-good and are preferred for new code:
 
-- `using (new OnStart())`
+- `using (new OnStart())` or `using (new Vz.OnStart())`
 - `Vz.ActivateStage()`
 - `Vz.SetInput(CraftInput.Throttle, value)`
-- `Vz.Display(message, duration)`
+- `Vz.Display(message, duration)` - duration can be a literal number, variable, or expression
 - `Vz.WaitSeconds(value)`
 - `Vz.Wait(value)`
 - `Vz.WaitUntil(condition)`
@@ -269,12 +308,14 @@ They are expanded during `code -> XML` into canonical Vizzy instructions:
 The converter also supports these lizpy-inspired advanced math aliases in expressions:
 
 - `Vz.Exp(x)`
-- `Vz.Sinh(x)`
-- `Vz.Cosh(x)`
-- `Vz.Tanh(x)`
-- `Vz.Asinh(x)`
-- `Vz.Acosh(x)`
-- `Vz.Atanh(x)`
+- `Vz.Sinh(x)` - `(e^x - e^(-x)) / 2`
+- `Vz.Cosh(x)` - `(e^x + e^(-x)) / 2`
+- `Vz.Tanh(x)` - `(e^(2x) - 1) / (e^(2x) + 1)`
+- `Vz.Asinh(x)` - `ln(x + sqrt(x^2 + 1))`
+- `Vz.Acosh(x)` - `ln(x + sqrt(x^2 - 1))`
+- `Vz.Atanh(x)` - `ln((1 + x) / (1 - x)) / 2`
+
+All six hyperbolic functions expand to pure Vizzy expression trees since Vizzy does not have native hyperbolic math blocks. The formulas are mathematically correct and produce Juno-compatible XML.
 
 Additional lizpy-aligned aliases supported in authoring code:
 

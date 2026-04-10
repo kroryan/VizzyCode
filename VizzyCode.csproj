@@ -16,6 +16,7 @@
   <ItemGroup>
     <Compile Remove="obj\**\*.cs" />
     <Compile Remove="bin\**\*.cs" />
+    <Compile Remove="release\**\*.cs" />
     <Compile Remove="TestRT\**\*.cs" />
     <Compile Remove="VizzyCode.Cli\**\*.cs" />
     <Compile Remove="VizzyBuilder\**\*.cs" />

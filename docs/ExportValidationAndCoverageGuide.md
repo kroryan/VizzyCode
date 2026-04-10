@@ -193,6 +193,27 @@ If export validation passes, it means:
 
 This is a strong quality gate, but it is not the same as a mathematical proof that every possible Vizzy construct is supported.
 
+## Known Converter Fixes (v0.0.58+)
+
+The following bugs were fixed in the converter and are now covered by export:
+
+| Area | What changed |
+|------|-------------|
+| `Vz.Sinh(x)` | Formula corrected to `(e^x - e^(-x)) / 2` |
+| `Vz.Cosh(x)` | Formula corrected to `(e^x + e^(-x)) / 2` |
+| `Vz.Acosh(x)` | Formula corrected to `ln(x + sqrt(x^2 - 1))` |
+| `Vz.Display(msg, dur)` | Duration argument now accepts variables and expressions, not just literals |
+| `Vz.FlightLog(msg, show)` | Second bool argument now correctly emitted on import |
+| `Vz.LockNavSphere(type, vec)` | Child value now exported for all indicator types, not just Vector |
+| Compound assignments | `x -= n`, `x *= n`, `x /= n`, `x %= n`, `x ^= n` now expand to `SetVariable` |
+| Event handler prefix | `using (new Vz.OnStart())` now accepted in addition to `using (new OnStart())` |
+| `SplitArgs` | Verbatim `@"..."` string literals no longer break argument splitting |
+| `ExtractParenthesisContent` | Now correctly tracks balanced parentheses instead of using `LastIndexOf(')')` |
+| Comment filter | Separator comments identified by em-dash/double-bar line shape, not by `Contains("Program:")` |
+| `NeedsRawConstantPreservation` | Bool constants (`bool="true"/"false"`) no longer preserved unnecessarily |
+| `_ceNameMap` variable | Unused variable removed |
+| CE format strings | No-parameter CE blocks no longer produce trailing whitespace |
+
 ## What A Passing Validation Does Not Guarantee
 
 A passing validator does **not** automatically guarantee:

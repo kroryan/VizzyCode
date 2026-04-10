@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $extensionRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $publisher = "vizzycode"
 $name = "vizzycode-tools"
-$version = "0.0.57"
+$version = "0.0.58"
 $displayName = "VizzyCode Tools"
 $description = "Import Vizzy XML to code, export code back to Vizzy XML, and run round-trip tests from VS Code."
 $engine = "^1.85.0"
@@ -78,6 +78,17 @@ if (Test-Path $zipPath) {
 
 Compress-Archive -Path (Join-Path $vsixStageRoot "*") -DestinationPath $zipPath -Force
 Move-Item -Force $zipPath $vsixPath
+
+$extensionsRoot = Join-Path $env:USERPROFILE ".vscode\extensions"
+if (Test-Path $extensionsRoot) {
+    Get-ChildItem $extensionsRoot -Directory |
+        Where-Object {
+            ($_.Name -like "$extensionId-*" -or $_.Name -like "$name-*") -and
+            $_.Name -ne "$extensionId-$version" -and
+            $_.Name -ne "$name-$version"
+        } |
+        Remove-Item -Recurse -Force
+}
 
 code --install-extension $vsixPath --force
 

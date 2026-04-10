@@ -11,7 +11,7 @@ $publisher = "vizzycode"
 $name = "vizzycode-tools"
 $displayName = "VizzyCode Tools"
 $description = "Import Vizzy XML to code, export code back to Vizzy XML, and run round-trip tests from VS Code."
-$version = "0.0.57"
+$version = "0.0.58"
 $engine = "^1.85.0"
 $extensionId = "$publisher.$name"
 $vsixPath = Join-Path $repoRoot "$name-$version.vsix"
@@ -96,6 +96,16 @@ if (Test-Path $extensionTarget) {
 
 if (Test-Path $legacyExtensionTarget) {
     Remove-Item -Recurse -Force $legacyExtensionTarget
+}
+
+if (Test-Path $extensionsRoot) {
+    Get-ChildItem $extensionsRoot -Directory |
+        Where-Object {
+            ($_.Name -like "$extensionId-*" -or $_.Name -like "$name-*") -and
+            $_.FullName -ne $extensionTarget -and
+            $_.FullName -ne $legacyExtensionTarget
+        } |
+        Remove-Item -Recurse -Force
 }
 
 New-Item -ItemType Directory -Force -Path $extensionsRoot | Out-Null

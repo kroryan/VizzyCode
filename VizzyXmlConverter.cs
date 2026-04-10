@@ -399,7 +399,14 @@ namespace VizzyCode
                     break;
                 }
                 case "LogFlight":
-                case "FlightLog":       sb.AppendLine($"{ind}Vz.FlightLog({E1(el)});"); break;
+                case "FlightLog":
+                {
+                    var _flCh = el.Elements().ToList();
+                    string _flMsg = _flCh.Count > 0 ? ConvertExpression(_flCh[0]) : "\"\"";
+                    string _flShow = _flCh.Count > 1 ? ", " + ConvertExpression(_flCh[1]) : "";
+                    sb.AppendLine($"{ind}Vz.FlightLog({_flMsg}{_flShow});");
+                    break;
+                }
                 case "Break":           sb.AppendLine($"{ind}Vz.Break();"); break;
                 case "Beep":            sb.AppendLine($"{ind}Vz.Beep();"); break;
                 case "ActivateStage":   sb.AppendLine($"{ind}Vz.ActivateStage();"); break;
@@ -684,7 +691,11 @@ namespace VizzyCode
         private void EmitLockNavSphere(XElement el, StringBuilder sb, string ind)
         {
             string type = el.Attribute("indicatorType")?.Value ?? "Prograde";
-            sb.AppendLine($"{ind}Vz.LockNavSphere(LockNavSphereIndicatorType.{Cap(type)}, {E1(el)});");
+            var ch = el.Elements().ToList();
+            if (ch.Count > 0)
+                sb.AppendLine($"{ind}Vz.LockNavSphere(LockNavSphereIndicatorType.{Cap(type)}, {ConvertExpression(ch[0])});");
+            else
+                sb.AppendLine($"{ind}Vz.LockNavSphere(LockNavSphereIndicatorType.{Cap(type)});");
         }
 
         private void EmitLegacySetCraftProperty(XElement el, StringBuilder sb, string ind)
@@ -857,12 +868,13 @@ namespace VizzyCode
                 case "Constant":           return ConvertConstant(el);
                 case "Variable":
                 {
-                    string variableName = el.Attribute("variableName")?.Value ?? "var";
-                    if (el.Attribute("variableName") != null)
-                        return BuildReadablePreservedCall("RawXmlVariable", el);
-                    return System.Text.RegularExpressions.Regex.IsMatch(variableName, @"^[A-Za-z_]\w*$")
-                        ? San(variableName)
-                        : $"Vz.RawVar(\"{Esc(variableName)}\")";
+                    string variableName = el.Attribute("variableName")?.Value ?? "";
+                    if (variableName.Length == 0)
+                        return "0";
+                    // Preserve all attributes (list, local, variableName) via RawXmlVariable so the
+                    // sidecar mechanism can restore them on export. CodeCleanView.SimplifyVisibleLine
+                    // will strip this down to the plain identifier for the clean-view .vizzy.cs file.
+                    return BuildReadablePreservedCall("RawXmlVariable", el);
                 }
                 case "BinaryOp":           return ConvertBinaryOp(el);
                 case "BoolOp":             return ConvertBoolOp(el);
@@ -1428,7 +1440,6 @@ namespace VizzyCode
             // This lets us recognise calls like "Universal_Anomaly(a, b, c);" as
             // <CallCustomInstruction call="Universal Anomaly">.
             _ciNameMap = new Dictionary<string, string>(StringComparer.Ordinal);
-            var _ceNameMap = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var rawLine in lines)
             {
                 var preCI = System.Text.RegularExpressions.Regex.Match(rawLine.Trim(),
@@ -1438,10 +1449,7 @@ namespace VizzyCode
                 var preCE = System.Text.RegularExpressions.Regex.Match(rawLine.Trim(),
                     @"^var\s+(\w+)\s*=\s*Vz\.DeclareCustomExpression\(""([^""]+)""");
                 if (preCE.Success)
-                {
                     _ciNameMap[preCE.Groups[1].Value] = preCE.Groups[2].Value; // CE calls look identical to CI calls
-                    _ceNameMap[preCE.Groups[1].Value] = preCE.Groups[2].Value;
-                }
             }
 
             // Pre-scan 2: extract variable declarations from "// var X = N;" comment lines.
@@ -1529,12 +1537,12 @@ namespace VizzyCode
                 // Preserve top-level comment blocks; only skip system/meta comments.
                 if (line.StartsWith("//", StringComparison.Ordinal))
                 {
-                    if (!line.StartsWith("// var ", StringComparison.Ordinal) &&
-                        !line.StartsWith("// [TODO]", StringComparison.Ordinal) &&
-                        !line.StartsWith("// Program ", StringComparison.Ordinal) &&
-                        !line.Contains("Program:", StringComparison.Ordinal) &&
-                        !line.StartsWith("// ──", StringComparison.Ordinal) &&
-                        !line.StartsWith("// ═══", StringComparison.Ordinal))
+                    bool isTopLevelSeparator =
+                        line.StartsWith("// var ", StringComparison.Ordinal) ||
+                        line.StartsWith("// [TODO]", StringComparison.Ordinal) ||
+                        line.StartsWith("// Program ", StringComparison.Ordinal) ||
+                        System.Text.RegularExpressions.Regex.IsMatch(line, @"^// [─═].*[─═]\s*$");
+                    if (!isTopLevelSeparator)
                     {
                         string commentText = line.Length > 3 ? line.Substring(3) : line.Substring(2);
                         AddPreambleInstruction(preamble, ApplyPendingInstructionMetadata(new XElement("Comment",
@@ -1638,8 +1646,10 @@ namespace VizzyCode
                     var ceParams = ceParamStr.Split(',').Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
 
                     // Build callFormat and format attributes
-                    string ceCallFmt = ceName + string.Concat(ceParams.Select((_, idx) => $" ({idx})")) + " ";
-                    string ceFmt     = ceName + string.Concat(ceParams.Select(p => $" |{p}|")) + "  return (0)";
+                    string ceCallFmt = ceName + string.Concat(ceParams.Select((_, idx) => $" ({idx})")) +
+                        (ceParams.Count > 0 ? " " : "");
+                    string ceFmt     = ceName + string.Concat(ceParams.Select(p => $" |{p}|")) +
+                        (ceParams.Count > 0 ? "  return (0)" : " return (0)");
 
                     // Extract body lines between { and });
                     int ceBodyStart = i + 1;
@@ -1701,11 +1711,12 @@ namespace VizzyCode
                 if (line.StartsWith("using (new "))
                 {
                     var blockMatch = System.Text.RegularExpressions.Regex.Match(
-                        line, @"using\s+\(new\s+(\w+)\((.*)\)\)");
+                        line, @"using\s+\(new\s+((?:\w+\.)?(\w+))\((.*)\)\)");
                     if (blockMatch.Success)
                     {
-                        string blockType = blockMatch.Groups[1].Value;
-                        string blockArgs = blockMatch.Groups[2].Value;
+                        // Group 2 is the unqualified type name (after optional "Vz." prefix)
+                        string blockType = blockMatch.Groups[2].Value;
+                        string blockArgs = blockMatch.Groups[3].Value;
 
                         if (IsEventType(blockType))
                         {
@@ -2134,7 +2145,7 @@ namespace VizzyCode
                 var durationArg = parts.Count > 1 ? parts[1] : "7";
                 return new XElement("DisplayMessage", new XAttribute("style", "display"),
                     messageArg,
-                    CreateNumericConstant(durationArg));
+                    ConvertValueToXml(durationArg));
             }
             if (l.StartsWith("Vz.FlightLog("))
             {
@@ -2174,11 +2185,12 @@ namespace VizzyCode
             {
                 var parts = SplitArgs(c1);
                 string indicator = parts.Count > 0 ? parts[0].Replace("LockNavSphereIndicatorType.", "").Trim() : "Current";
+                bool isVector = indicator.Equals("Vector", StringComparison.OrdinalIgnoreCase);
                 var el = new XElement("LockNavSphere",
                     new XAttribute("indicatorType", indicator),
-                    new XAttribute("style", indicator.Equals("Vector", StringComparison.OrdinalIgnoreCase) ? "lock-nav-sphere-vector" : "lock-nav-sphere"));
-                if (indicator.Equals("Vector", StringComparison.OrdinalIgnoreCase) && parts.Count > 1)
-                    el.Add(MakeConstantArg(parts[1]));
+                    new XAttribute("style", isVector ? "lock-nav-sphere-vector" : "lock-nav-sphere"));
+                if (parts.Count > 1)
+                    el.Add(ConvertValueToXml(parts[1]));
                 return el;
             }
             if (l.StartsWith("Vz.CMT("))
@@ -2440,14 +2452,39 @@ namespace VizzyCode
             var result = new List<string>();
             int depth = 0;
             bool inString = false;
+            bool inVerbatim = false; // inside @"..." verbatim string
             bool escaped = false;
             var cur = new StringBuilder();
-            foreach (char c in argsStr)
+            int i = 0;
+            while (i < argsStr.Length)
             {
+                char c = argsStr[i];
+
+                if (inVerbatim)
+                {
+                    cur.Append(c);
+                    if (c == '"')
+                    {
+                        // doubled quote inside verbatim is an escaped quote
+                        if (i + 1 < argsStr.Length && argsStr[i + 1] == '"')
+                        {
+                            i++;
+                            cur.Append(argsStr[i]);
+                        }
+                        else
+                        {
+                            inVerbatim = false;
+                        }
+                    }
+                    i++;
+                    continue;
+                }
+
                 if (escaped)
                 {
                     cur.Append(c);
                     escaped = false;
+                    i++;
                     continue;
                 }
 
@@ -2455,6 +2492,18 @@ namespace VizzyCode
                 {
                     cur.Append(c);
                     escaped = true;
+                    i++;
+                    continue;
+                }
+
+                // Detect start of verbatim string: @"
+                if (c == '@' && i + 1 < argsStr.Length && argsStr[i + 1] == '"' && !inString)
+                {
+                    cur.Append(c);
+                    i++;
+                    cur.Append(argsStr[i]); // the '"'
+                    inVerbatim = true;
+                    i++;
                     continue;
                 }
 
@@ -2462,6 +2511,7 @@ namespace VizzyCode
                 {
                     inString = !inString;
                     cur.Append(c);
+                    i++;
                     continue;
                 }
 
@@ -2475,9 +2525,11 @@ namespace VizzyCode
                 {
                     result.Add(cur.ToString().Trim());
                     cur.Clear();
+                    i++;
                     continue;
                 }
                 cur.Append(c);
+                i++;
             }
             if (cur.Length > 0) result.Add(cur.ToString().Trim());
             return result;
@@ -2873,7 +2925,7 @@ namespace VizzyCode
                 // ── Comment lines → <Comment> ──────────────────────────────────
                 if (line.StartsWith("//"))
                 {
-                    if (line.Contains("Program:", StringComparison.Ordinal))
+                    if (System.Text.RegularExpressions.Regex.IsMatch(line, @"^// ──+\s*Program\s*:"))
                         continue;
 
                     if (line.StartsWith("// VZEL ", StringComparison.Ordinal))
@@ -2891,10 +2943,14 @@ namespace VizzyCode
                         continue;
                     }
 
-                    // Skip system/metadata comments (separators, var declarations, TODOs)
-                    if (!line.StartsWith("// ──") && !line.StartsWith("// var ") &&
-                        !line.StartsWith("// [TODO]") && !line.StartsWith("// ═══") &&
-                        !line.StartsWith("// Program ") && !line.StartsWith("// ── "))
+                    // Skip system/metadata comments (separators, var declarations, TODOs).
+                    // Separator lines are generated with ─ or ═ characters and end in ─/═.
+                    bool isSeparatorComment =
+                        line.StartsWith("// var ", StringComparison.Ordinal) ||
+                        line.StartsWith("// [TODO]", StringComparison.Ordinal) ||
+                        line.StartsWith("// Program ", StringComparison.Ordinal) ||
+                        System.Text.RegularExpressions.Regex.IsMatch(line, @"^// [─═].*[─═]\s*$");
+                    if (!isSeparatorComment)
                     {
                         string commentText = line.Length > 3 ? line.Substring(3) : line.Substring(2);
                         target.Add(ApplyPendingInstructionMetadata(new XElement("Comment",
@@ -2907,31 +2963,54 @@ namespace VizzyCode
                     continue;
                 }
 
-                // ── ChangeVariable: varName += expr; ───────────────────────────
+                // ── ChangeVariable: varName += expr; (and -=, *=, /=, %=, ^=) ──
                 {
-                    var chgM = System.Text.RegularExpressions.Regex.Match(line, @"^(\w+)\s*\+=\s*(.+);$");
+                    var chgM = System.Text.RegularExpressions.Regex.Match(line, @"^(\w+)\s*(\+|-|\*|/|%|\^)=\s*(.+);$");
                     if (chgM.Success)
                     {
                         string cvName = chgM.Groups[1].Value;
-                        string cvVal  = chgM.Groups[2].Value.Trim();
+                        string cvOp   = chgM.Groups[2].Value;
+                        string cvVal  = chgM.Groups[3].Value.Trim();
                         var cvVarEl = new XElement("Variable",
                             new XAttribute("list",  "false"),
                             new XAttribute("local", _localVariables.Contains(cvName) ? "true" : "false"),
                             new XAttribute("variableName", cvName));
-                        var cvValEl = ConvertApiCallToXml(cvVal) ?? CreateVariableReference(cvVal);
-                        target.Add(ApplyPendingInstructionMetadata(new XElement("ChangeVariable",
-                            new XAttribute("style", "change-variable"),
-                            cvVarEl, cvValEl)));
+                        // For +=, use ChangeVariable directly. For others, expand to set varName = varName op expr.
+                        if (cvOp == "+")
+                        {
+                            var cvValEl = ConvertApiCallToXml(cvVal) ?? CreateVariableReference(cvVal);
+                            target.Add(ApplyPendingInstructionMetadata(new XElement("ChangeVariable",
+                                new XAttribute("style", "change-variable"),
+                                cvVarEl, cvValEl)));
+                        }
+                        else
+                        {
+                            // Expand: varName op= expr → varName = varName op expr
+                            string normalizedOp = NormalizeBinaryOp(cvOp);
+                            var varRefEl = new XElement("Variable",
+                                new XAttribute("list",  "false"),
+                                new XAttribute("local", _localVariables.Contains(cvName) ? "true" : "false"),
+                                new XAttribute("variableName", cvName));
+                            var rhsEl = ConvertApiCallToXml(cvVal) ?? CreateVariableReference(cvVal);
+                            var binEl = new XElement("BinaryOp",
+                                new XAttribute("op", normalizedOp),
+                                new XAttribute("style", BinaryStyle(normalizedOp)),
+                                varRefEl, rhsEl);
+                            var setEl = new XElement("SetVariable",
+                                new XAttribute("style", "set-variable"),
+                                cvVarEl, binEl);
+                            target.Add(ApplyPendingInstructionMetadata(setEl));
+                        }
                         continue;
                     }
                 }
 
                 if (line.StartsWith("using (new "))
                 {
-                    var match = System.Text.RegularExpressions.Regex.Match(line, @"using\s+\(new\s+(\w+)\((.*)\)\)");
+                    var match = System.Text.RegularExpressions.Regex.Match(line, @"using\s+\(new\s+((?:\w+\.)?(\w+))\((.*)\)\)");
                     if (match.Success)
                     {
-                        var block = ConvertBlockToXml(match.Groups[1].Value, match.Groups[2].Value, lines, ref index);
+                        var block = ConvertBlockToXml(match.Groups[2].Value, match.Groups[3].Value, lines, ref index);
                         if (block != null)
                             target.Add(block);
                     }
@@ -3093,18 +3172,14 @@ namespace VizzyCode
             {
                 "sinh" => Bin("/",
                     Bin("-",
-                        E(),
-                        Bin("^", E(), Bin("*", Num("-2"), value))),
-                    Bin("*",
-                        Num("2"),
-                        Bin("^", E(), Bin("*", Num("-1"), value)))),
+                        Bin("^", E(), value),
+                        Bin("^", E(), Bin("*", Num("-1"), value))),
+                    Num("2")),
                 "cosh" => Bin("/",
                     Bin("+",
-                        Num("1"),
-                        Bin("^", E(), Bin("*", Num("-2"), value))),
-                    Bin("*",
-                        Num("2"),
-                        Bin("^", E(), Bin("*", Num("-1"), value)))),
+                        Bin("^", E(), value),
+                        Bin("^", E(), Bin("*", Num("-1"), value))),
+                    Num("2")),
                 "tanh" => Bin("/",
                     Bin("-",
                         Bin("^", E(), Bin("*", Num("2"), value)),
@@ -3120,10 +3195,10 @@ namespace VizzyCode
                                 Bin("^", value, Num("2")),
                                 Num("1"))))),
                 "acosh" => Math("ln",
-                    Bin("-",
+                    Bin("+",
                         value,
                         Math("sqrt",
-                            Bin("+",
+                            Bin("-",
                                 Bin("^", value, Num("2")),
                                 Num("1"))))),
                 "atanh" => Bin("/",
@@ -3570,12 +3645,35 @@ namespace VizzyCode
 
         private string ExtractParenthesisContent(string line)
         {
-            int start = line.IndexOf('(') + 1;
-            int end = line.LastIndexOf(')');
-            if (start > 0 && end > start)
+            // Find the opening paren that belongs to the outermost function call —
+            // i.e. skip past the function-name prefix and find the first '(' that
+            // opens a balanced region extending to a matching ')'.
+            int openIdx = line.IndexOf('(');
+            if (openIdx < 0) return "";
+            int depth = 0;
+            bool inStr = false;
+            bool inVerbatim = false;
+            int closeIdx = -1;
+            for (int i = openIdx; i < line.Length; i++)
             {
-                return line.Substring(start, end - start);
+                char c = line[i];
+                if (inVerbatim)
+                {
+                    if (c == '"')
+                    {
+                        if (i + 1 < line.Length && line[i + 1] == '"') i++;
+                        else inVerbatim = false;
+                    }
+                    continue;
+                }
+                if (!inStr && c == '@' && i + 1 < line.Length && line[i + 1] == '"') { inVerbatim = true; i++; continue; }
+                if (c == '"') { inStr = !inStr; continue; }
+                if (inStr) continue;
+                if (c == '(') depth++;
+                else if (c == ')') { depth--; if (depth == 0) { closeIdx = i; break; } }
             }
+            if (closeIdx > openIdx)
+                return line.Substring(openIdx + 1, closeIdx - openIdx - 1);
             return "";
         }
 
@@ -3585,16 +3683,23 @@ namespace VizzyCode
             if (attrs.ContainsKey("number"))
                 return false;
 
+            // bool constants are represented cleanly as true/false — no preservation needed
+            if (attrs.ContainsKey("bool"))
+                return false;
+
             if (attrs.TryGetValue("text", out string? textValue))
             {
+                // text constants with style/canReplace are special (comment-text, etc.) — no preservation needed
                 if (attrs.ContainsKey("style") || attrs.ContainsKey("canReplace"))
                     return false;
 
+                // A text-attribute constant whose value parses as a number needs preservation
+                // because it must round-trip as text=, not number=
                 return double.TryParse(textValue, System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out _);
             }
 
-            return attrs.ContainsKey("bool");
+            return false;
         }
 
         private static string EncodePreservedElement(XElement el)
