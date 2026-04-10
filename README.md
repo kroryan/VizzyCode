@@ -166,7 +166,7 @@ That script:
 Generated artifacts:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.55.vsix`
+- `vizzycode-tools-0.0.56.vsix`
 
 After installation, restart VS Code or run `Developer: Reload Window`.
 
@@ -318,7 +318,7 @@ That script performs all of these steps:
 Generated outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.55.vsix`
+- `vizzycode-tools-0.0.56.vsix`
 
 ## How To Create A Distributable Extension Bundle
 
@@ -333,7 +333,7 @@ If you want to distribute only the extension without the whole repository:
 2. take one of these outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.55.vsix`
+- `vizzycode-tools-0.0.56.vsix`
 
 The bundle in `vscode-extension-dist\` is self-contained and already includes:
 
@@ -356,7 +356,7 @@ inside the extension folder.
 If you already have the generated `.vsix`, you can install it manually with either:
 
 ```powershell
-code --install-extension .\vizzycode-tools-0.0.55.vsix --force
+code --install-extension .\vizzycode-tools-0.0.56.vsix --force
 ```
 
 or from inside VS Code:
@@ -364,7 +364,7 @@ or from inside VS Code:
 1. open Extensions
 2. open the `...` menu
 3. choose `Install from VSIX...`
-4. select `vizzycode-tools-0.0.55.vsix`
+4. select `vizzycode-tools-0.0.56.vsix`
 
 ## Current Converter Capabilities
 

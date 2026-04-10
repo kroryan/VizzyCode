@@ -2634,10 +2634,10 @@ namespace VizzyCode
             }, 1, out var exactEvalExpr))
                 return exactEvalExpr;
 
-            if (call == "Vz.Pi")       return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "pi")));
-            if (call == "Vz.E")        return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "e")));
-            if (call == "Vz.Infinity") return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "inf")));
-            if (call == "Vz.NaN")      return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "nan")));
+            if (call == "Vz.Pi")       return new XElement("EvaluateExpression", new XAttribute("style", "evaluate-expression"), new XElement("Constant", new XAttribute("text", "pi")));
+            if (call == "Vz.E")        return new XElement("EvaluateExpression", new XAttribute("style", "evaluate-expression"), new XElement("Constant", new XAttribute("text", "e")));
+            if (call == "Vz.Infinity") return new XElement("EvaluateExpression", new XAttribute("style", "evaluate-expression"), new XElement("Constant", new XAttribute("text", "inf")));
+            if (call == "Vz.NaN")      return new XElement("EvaluateExpression", new XAttribute("style", "evaluate-expression"), new XElement("Constant", new XAttribute("text", "nan")));
 
             if (System.Text.RegularExpressions.Regex.IsMatch(call, @"^[A-Za-z_]\w*(\.[A-Za-z_]\w*)+$"))
                 return CreateConstant(call, forceText: true);
@@ -2820,13 +2820,14 @@ namespace VizzyCode
                 if (evalContent.StartsWith("\"") && evalContent.EndsWith("\"") && evalContent.Length >= 2)
                     evalContent = evalContent.Substring(1, evalContent.Length - 2);
                 return new XElement("EvaluateExpression",
+                    new XAttribute("style", "evaluate-expression"),
                     new XElement("Constant", new XAttribute("text", Unescape(evalContent))));
             }
             // Named constants: Vz.Pi, Vz.E, Vz.Infinity, Vz.NaN
-            if (call == "Vz.Pi")       return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "pi")));
-            if (call == "Vz.E")        return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "e")));
-            if (call == "Vz.Infinity") return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "inf")));
-            if (call == "Vz.NaN")      return new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "nan")));
+            if (call == "Vz.Pi")       return new XElement("EvaluateExpression", new XAttribute("style", "evaluate-expression"), new XElement("Constant", new XAttribute("text", "pi")));
+            if (call == "Vz.E")        return new XElement("EvaluateExpression", new XAttribute("style", "evaluate-expression"), new XElement("Constant", new XAttribute("text", "e")));
+            if (call == "Vz.Infinity") return new XElement("EvaluateExpression", new XAttribute("style", "evaluate-expression"), new XElement("Constant", new XAttribute("text", "inf")));
+            if (call == "Vz.NaN")      return new XElement("EvaluateExpression", new XAttribute("style", "evaluate-expression"), new XElement("Constant", new XAttribute("text", "nan")));
 
             // Custom instruction CALL as an expression (when used as a value).
             // e.g. CallCustomExpression calls: Stump_C(z) where Stump_C is a CI expression.
@@ -3077,7 +3078,7 @@ namespace VizzyCode
             var value = CreateVariableOrExpression(arg);
 
             XElement Num(string n) => CreateConstant(n);
-            XElement E() => new XElement("EvaluateExpression", new XElement("Constant", new XAttribute("text", "e")));
+            XElement E() => new XElement("EvaluateExpression", new XAttribute("style", "evaluate-expression"), new XElement("Constant", new XAttribute("text", "e")));
             XElement Bin(string op, XElement left, XElement right) => new XElement("BinaryOp",
                 new XAttribute("op", NormalizeBinaryOp(op)),
                 new XAttribute("style", BinaryStyle(NormalizeBinaryOp(op))),
