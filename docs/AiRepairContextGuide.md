@@ -24,6 +24,7 @@ Minimum documentation context:
 - `docs/VizzyBlocksMegaGuide.md`
 - `docs/AiRepairContextGuide.md`
 - `docs/RawPreservationGuide.md`
+- `docs/ExportValidationAndCoverageGuide.md`
 
 Recommended additional Vizzy language reference:
 
@@ -34,11 +35,18 @@ For fidelity-sensitive work, also provide:
 - the original working XML
 - the current `.cs`
 - the currently exported XML if one exists
+- the matching `*.vizzy.meta.json` sidecar if the `.cs` came from imported XML
 
 If the file contains preserved raw fragments, also provide whether they are:
 
 - readable `RawXml*`
 - or legacy base64 `Raw*`
+
+If the task is exporter debugging, also provide:
+
+- whether repo CLI export and installed VS Code plugin export are byte-identical
+- whether export validation passes or fails
+- the exact validator error text if validation fails
 
 ## The First Question To Ask
 
@@ -116,6 +124,8 @@ If raw-preserved fragments are involved:
 
 Do not skip step 5.
 
+If export validation already fails, do not skip that either. The validator is now part of the required diagnostic sequence, not an optional extra.
+
 ## Things The AI Must Not Do
 
 Do not:
@@ -143,6 +153,7 @@ For control flow, check:
 - `Else` encoded in the Juno-compatible form used by this project
 - top-level block starts with `Event` or `CustomInstruction`
 - no stray top-level instruction block begins with a normal instruction
+- whether the current export validator is already flagging the same issue
 
 For fidelity-sensitive expressions, check:
 
@@ -204,3 +215,26 @@ Do not rewrite them blindly.
 First determine what exact XML they encode, whether they came from imported XML, and whether they are still required as fidelity boundaries.
 Prefer converting legacy base64 Raw* into readable RawXml* only if the exported XML remains identical.
 ```
+
+## AI Context Bundle For Mixed Missions
+
+For files like `T.T`, the safe AI context bundle is:
+
+- `README.md`
+- `docs/VizzyAuthoringGuide.md`
+- `docs/VizzyBlocksMegaGuide.md`
+- `docs/AiRepairContextGuide.md`
+- `docs/RawPreservationGuide.md`
+- `docs/ExportValidationAndCoverageGuide.md`
+- original XML
+- current `.vizzy.cs`
+- current exported XML
+- matching sidecar file if present
+- current export validation result
+
+This is the minimum context that lets an AI separate:
+
+- exporter bugs
+- handwritten authoring bugs
+- mixed preserved/rewritten mission bugs
+- packaging drift between the repo CLI and the installed extension

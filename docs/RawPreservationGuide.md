@@ -2,6 +2,12 @@
 
 This guide explains the `Raw*` and `RawXml*` escape hatches used by VizzyCode when exact Vizzy XML preservation matters more than ordinary high-level readability.
 
+Related references:
+
+- [Vizzy Authoring Guide](VizzyAuthoringGuide.md)
+- [AI Repair Context Guide](AiRepairContextGuide.md)
+- [Export Validation And Coverage Guide](ExportValidationAndCoverageGuide.md)
+
 ## What Raw Preservation Is
 
 VizzyCode sometimes emits calls such as:
@@ -80,6 +86,8 @@ When possible, the visible code is simplified further:
 - `Vz.RawXmlVariable(...)` -> plain variable names
 - `Vz.RawXmlConstant(...)` -> normal literals
 - simple `Vz.RawXmlEval(...)` -> `Vz.ExactEval("...")`
+
+That simplification is only a view-level improvement. The sidecar still carries the exact imported fidelity metadata for unchanged lines.
 
 The sidecar keeps the exact imported form so unchanged lines can still export with fidelity.
 
@@ -176,6 +184,19 @@ Vz.ExactEval("E")
 
 That is a cleaner authoring surface for the same concept.
 
+## Relationship To Export Validation
+
+Raw preservation does not bypass export validation.
+
+If a preserved fragment or a rewritten replacement still produces XML that violates the current validator rules, VizzyCode should stop the export rather than silently writing a broken file.
+
+That means:
+
+- `RawXml*` is a fidelity tool
+- it is not a license to skip structural correctness checks
+
+When debugging a raw-preserved region, use the validator result together with the decoded fragment. Do not guess from the visible code alone.
+
 ## Practical Rule For AI And Maintainers
 
 When you show raw-preserved code to an AI or another maintainer:
@@ -189,9 +210,14 @@ If you receive legacy base64 `Raw*` code:
 2. inspect the XML
 3. if needed, regenerate the readable `RawXml*` form with `raw-encode`
 
+If the file also has a sidecar:
+
+4. check whether the line is still fidelity-restored from the sidecar or has already become handwritten authoring code
+
 ## Safety Notes
 
 - Do not replace a preserved raw fragment with cleaner high-level code unless you have re-verified the exported XML in Juno.
 - Raw preservation exists because some XML shapes are fidelity-sensitive.
 - Logical equivalence is not enough for those cases.
 - If imported code still preserves fidelity-sensitive XML, readability improvements should prefer `RawXml*`, not structural rewriting.
+- If a fragment still needs exact preservation, document that fact when handing the file to another maintainer or to an AI.

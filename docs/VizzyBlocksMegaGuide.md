@@ -15,7 +15,8 @@ If you are new to this project, read these files in this order:
 1. `README.md`
 2. `docs/VizzyAuthoringGuide.md`
 3. `docs/RawPreservationGuide.md`
-4. this file
+4. `docs/ExportValidationAndCoverageGuide.md`
+5. this file
 
 ## Scope
 
@@ -29,6 +30,12 @@ This guide covers the block families currently supported by `VizzyXmlConverter.c
 - authoring patterns that round-trip reliably
 
 It does not claim to be an exhaustive reverse-engineered reference for every block Juno has ever shipped. It is the supported reference for this repository.
+
+That repository support now also includes:
+
+- export-time structural validation
+- repository-wide example verification
+- clean-view imports plus metadata sidecars
 
 ## Four Layers You Can See In Code
 
@@ -222,6 +229,12 @@ For fidelity work on existing XML, also use the round-trip harness:
 dotnet run --project TestRT -c Release -- "<input.xml>" "<output.xml>" "<code.txt>"
 ```
 
+For broader repository export coverage, also use:
+
+```powershell
+dotnet run --project VizzyCode.csproj -c Release -- --verify-vizzy
+```
+
 ## Diagnostic Method For Failing Mission Exports
 
 When a mission export does not appear in the Vizzy editor:
@@ -232,12 +245,15 @@ When a mission export does not appear in the Vizzy editor:
 4. inspect top-level custom blocks first
 5. inspect control-flow structural encoding second
 6. inspect raw-preserved fragments third
+7. inspect the export validator result before inventing a new theory
 
 Why this order:
 
 - top-level block shape can make Juno reject the whole program immediately
 - control-flow shape errors can make individual regions invalid
 - formatting differences in nested expressions usually matter after the top-level graph is already valid
+
+The validator currently catches some of these problems automatically, but not every future bad XML shape will already be encoded there. That is why comparison against working examples still matters.
 
 When raw-preserved fragments are present, prefer understanding them first instead of rewriting them from appearance alone.
 
@@ -892,6 +908,57 @@ Before calling a new authoring template safe, check all of the following:
 7. `friendly` string nodes still have the correct `subOp`.
 8. `LogMessage` and `DisplayMessage` nodes did not collapse into a different XML instruction family.
 9. Nested `Planet` expressions still appear as real expression nodes, not variable-name fallbacks.
+10. Export validation reports zero errors.
+
+## Export Validator Rules That Matter To Block Authors
+
+The current validator already enforces some block-family rules directly.
+
+### EvaluateExpression
+
+Every `<EvaluateExpression>` must include:
+
+- `style="evaluate-expression"`
+
+This matters for:
+
+- `Vz.E`
+- `Vz.Pi`
+- `Vz.Infinity`
+- `Vz.NaN`
+- `Vz.Eval(...)`
+- helper-generated evaluate-expression fragments inside higher-level syntax
+
+### Else encoding
+
+VizzyCode must export the Juno-safe `else` shape:
+
+- `ElseIf style="else"`
+- leading `<Constant bool="true" />`
+- then `<Instructions>`
+
+Raw `<Else>` nodes are treated as invalid.
+
+### Top-level block metadata
+
+These top-level roots must include `pos`:
+
+- `Event`
+- `CustomInstruction`
+- `CustomExpression`
+- `Comment`
+
+Top-level `CustomInstruction` and `CustomExpression` also need:
+
+- `callFormat`
+- `format`
+- `name`
+
+Top-level `Event` also needs:
+
+- `event`
+
+These are not style preferences. Missing metadata here has already produced real editor-loading failures.
 
 ## Final Rule For Future Agents
 
@@ -903,3 +970,11 @@ When in doubt:
 - verify support in `VizzyXmlConverter.cs` before documenting a pattern as safe
 
 If a real mission file exposes a fidelity bug, document the exact pattern here after fixing it.
+
+When a new Juno rejection is diagnosed, also decide whether it should become:
+
+- a new parser/export fix
+- a new export validator rule
+- a new example in this guide
+
+That is how this document should keep growing.

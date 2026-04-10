@@ -2,6 +2,12 @@
 
 This guide defines how to write new Vizzy programs in code form so that `ConvertCodeToXml()` produces XML that Juno recognizes reliably.
 
+Related references:
+
+- [Raw Preservation Guide](RawPreservationGuide.md)
+- [AI Repair Context Guide](AiRepairContextGuide.md)
+- [Export Validation And Coverage Guide](ExportValidationAndCoverageGuide.md)
+
 ## Goal
 
 For new scripts written by hand, the target is:
@@ -109,6 +115,11 @@ Mission-scale validated references:
 
 - `Vizzy examples/T.T.cs`
 - `Vizzy examples/T.T. Mission Program.xml`
+
+You should also treat these as current repository safety tools, not optional extras:
+
+- `VizzyExportValidator.cs`
+- `dotnet run --project VizzyCode.csproj -c Release -- --verify-vizzy`
 
 `T.T` is important because it exercises real-world patterns that simple starter scripts do not:
 
@@ -432,8 +443,26 @@ When creating a new script template:
 
 1. Write the code using the safe subset.
 2. Export to XML.
-3. Open the XML in Juno and confirm it is recognized as a Vizzy program.
-4. If the script came from an XML template, run the round-trip harness too.
+3. Confirm export validation passes.
+4. Open the XML in Juno and confirm it is recognized as a Vizzy program.
+5. If the script came from an XML template, run the round-trip harness too.
+
+### Export Validation Gate
+
+VizzyCode now validates generated XML before accepting an export.
+
+This validation runs in:
+
+- the desktop app save path
+- `VizzyCode.Cli export`
+- `VizzyCode.Cli roundtrip`
+- the VS Code extension through the same CLI
+
+If validation fails, stop there. Do not treat the XML as a likely-good intermediate file.
+
+The full rule set is documented in:
+
+- [Export Validation And Coverage Guide](ExportValidationAndCoverageGuide.md)
 
 Recommended repository command:
 
@@ -451,6 +480,12 @@ Then compare the original and generated XML:
 
 ```powershell
 git diff --no-index -- "<input.xml>" "<output.xml>"
+```
+
+For broader repository verification, use:
+
+```powershell
+dotnet run --project VizzyCode.csproj -c Release -- --verify-vizzy
 ```
 
 ## How To Decide Whether The Problem Is In The Code Or The Exporter
@@ -547,14 +582,37 @@ If it does not, do not describe the task as a pure round-trip failure.
 Describe it as authoring-mode export of a partially rewritten mission.
 ```
 
+## AI Context Checklist For Authoring And Repair
+
+If you ask an AI to write or repair Vizzy code, give it at minimum:
+
+- `README.md`
+- `docs/VizzyAuthoringGuide.md`
+- `docs/VizzyBlocksMegaGuide.md`
+- `docs/AiRepairContextGuide.md`
+- `docs/RawPreservationGuide.md`
+- `docs/ExportValidationAndCoverageGuide.md`
+
+Also include when relevant:
+
+- the original XML
+- the current `.vizzy.cs`
+- the current exported XML
+- the `*.vizzy.meta.json` sidecar
+- whether repo CLI and VS Code plugin export the same bytes
+- whether export validation currently passes or fails
+
+Without that context, the AI is much more likely to rewrite a preserved region, remove a raw-preserved fidelity boundary, or diagnose an exporter bug as a code bug.
+
 ## Troubleshooting
 
 If Juno does not recognize the generated XML:
 
 1. Search the XML for `[TODO]` comments.
-2. Compare the generated code with converter-emitted code from a known-good Vizzy example.
-3. Replace unsupported instruction aliases with the canonical emitted form.
-4. Re-export and test again.
+2. Check whether export validation already failed and read its exact error list.
+3. Compare the generated code with converter-emitted code from a known-good Vizzy example.
+4. Replace unsupported instruction aliases with the canonical emitted form.
+5. Re-export and test again.
 
 If the XML looks structurally correct but Juno still rejects it:
 
@@ -564,6 +622,7 @@ If the XML looks structurally correct but Juno still rejects it:
 4. Check message blocks such as `LogMessage` and `DisplayMessage`.
 5. Check nested `Planet` or `CraftProperty` expressions inside arithmetic expressions.
 6. Check whether a raw variable or raw craft property was replaced by a normal variable reference.
+7. Run the repository-wide verifier to see whether the same pattern fails elsewhere too.
 
 If the generated XML contains comments like:
 

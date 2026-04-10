@@ -34,13 +34,15 @@ Important:
   - a matching `*.vizzy.meta.json` sidecar
 - keep both files together if you want the best export fidelity
 - the sidecar stores the exact imported metadata while the visible code stays cleaner for editing
+- exports now pass through the same XML validation gate as the desktop app and CLI
+- if export fails with a validation error, treat that as a real structural XML problem, not just a warning
 
 ## Option 2: Install from the VSIX File
 
-If the release includes `vizzycode-tools-0.0.56.vsix`, install it with either:
+If the release includes `vizzycode-tools-0.0.57.vsix`, install it with either:
 
 ```powershell
-code --install-extension .\vizzycode-tools-0.0.56.vsix --force
+code --install-extension .\vizzycode-tools-0.0.57.vsix --force
 ```
 
 or inside VS Code:
@@ -48,7 +50,7 @@ or inside VS Code:
 1. Open Extensions.
 2. Open the `...` menu.
 3. Choose `Install from VSIX...`
-4. Select `vizzycode-tools-0.0.56.vsix`
+4. Select `vizzycode-tools-0.0.57.vsix`
 
 ## What This Package Contains
 

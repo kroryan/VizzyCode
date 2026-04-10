@@ -10,5 +10,6 @@
   <ItemGroup>
     <Compile Include="..\VizzyXmlConverter.cs" Link="VizzyXmlConverter.cs" />
     <Compile Include="..\CodeCleanView.cs" Link="CodeCleanView.cs" />
+    <Compile Include="..\VizzyExportValidator.cs" Link="VizzyExportValidator.cs" />
   </ItemGroup>
 </Project>

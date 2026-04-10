@@ -42,6 +42,7 @@ Start here if you want to write, maintain, or debug Vizzy scripts with this proj
 - [Vizzy Blocks Mega Guide](docs/VizzyBlocksMegaGuide.md)
 - [AI Repair Context Guide](docs/AiRepairContextGuide.md)
 - [Raw Preservation Guide](docs/RawPreservationGuide.md)
+- [Export Validation And Coverage Guide](docs/ExportValidationAndCoverageGuide.md)
 - [Mastering Vizzy - A Complete Guide](docs/Mastering%20Vizzy%20_%20A%20Complete%20Guide%20-%20Early%20Access%2008.07.25.md)
 
 Useful reference examples:
@@ -57,6 +58,7 @@ Important maintenance guidance:
 - [Vizzy Authoring Guide](docs/VizzyAuthoringGuide.md)
 - [Vizzy Blocks Mega Guide](docs/VizzyBlocksMegaGuide.md)
 - [AI Repair Context Guide](docs/AiRepairContextGuide.md)
+- [Export Validation And Coverage Guide](docs/ExportValidationAndCoverageGuide.md)
 
 ## Required Reading By Use Case
 
@@ -69,6 +71,7 @@ Read:
 - `README.md`
 - `docs/VizzyAuthoringGuide.md`
 - `docs/VizzyBlocksMegaGuide.md`
+- `docs/ExportValidationAndCoverageGuide.md`
 
 ### For round-trip fidelity work
 
@@ -78,6 +81,7 @@ Read:
 - `docs/VizzyAuthoringGuide.md`
 - `docs/AiRepairContextGuide.md`
 - `docs/RawPreservationGuide.md`
+- `docs/ExportValidationAndCoverageGuide.md`
 
 ### For AI-assisted work
 
@@ -90,6 +94,7 @@ Minimum required context:
 - `docs/VizzyBlocksMegaGuide.md`
 - `docs/AiRepairContextGuide.md`
 - `docs/RawPreservationGuide.md`
+- `docs/ExportValidationAndCoverageGuide.md`
 
 Strongly recommended additional language reference:
 
@@ -102,6 +107,34 @@ For fidelity-sensitive work, also include:
 - the current exported XML if one exists
 
 This is mandatory for large mixed missions such as `T.T`.
+
+## Complete AI Context Bundle
+
+If you want reliable AI help with VizzyCode, the documentation is part of the input, not optional background.
+
+### Minimum bundle
+
+- `README.md`
+- `docs/VizzyAuthoringGuide.md`
+- `docs/VizzyBlocksMegaGuide.md`
+- `docs/AiRepairContextGuide.md`
+- `docs/RawPreservationGuide.md`
+- `docs/ExportValidationAndCoverageGuide.md`
+
+### Strongly recommended additional Vizzy language reference
+
+- `docs/Mastering Vizzy _ A Complete Guide - Early Access 08.07.25.md`
+
+### Also include for fidelity-sensitive or exporter work
+
+- the original working XML
+- the current `.vizzy.cs`
+- the current exported XML
+- the matching `*.vizzy.meta.json` sidecar if the `.vizzy.cs` came from imported XML
+- whether repo CLI export and VS Code plugin export are byte-identical
+- whether export validation currently passes or fails
+
+If you skip this context, the AI is much more likely to rewrite the wrong region, remove a fidelity boundary, or diagnose the wrong failure class.
 
 ## VS Code Integration
 
@@ -116,6 +149,24 @@ The VS Code integration gives you:
 - `VizzyCode: Import XML to Code`
 - `VizzyCode: Export Code to XML`
 - `VizzyCode: Round-Trip XML`
+
+### Export Validation In The App, CLI, And Extension
+
+VizzyCode no longer treats "XML was generated" as the same thing as "XML is safe to save".
+
+Before a `code -> XML` result is accepted, VizzyCode validates the output against known Juno-breaking structural patterns.
+
+This validation runs in:
+
+- the WinForms app before `Save as Vizzy XML`
+- `VizzyCode.Cli export`
+- `VizzyCode.Cli roundtrip`
+- the VS Code extension, because it uses the same CLI
+
+If validation fails:
+
+- the desktop app blocks the save and shows the validation errors
+- the CLI exits with an error instead of silently writing likely-broken XML
 
 ### Clean View And Metadata Sidecar
 
@@ -166,7 +217,7 @@ That script:
 Generated artifacts:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.56.vsix`
+- `vizzycode-tools-0.0.57.vsix`
 
 After installation, restart VS Code or run `Developer: Reload Window`.
 
@@ -266,6 +317,10 @@ Typical output:
 - `raw-encode <input.xml> [-o output.txt]`
 - `raw-decode <input.txt|payload|call> [-o output.xml]`
 
+Export and round-trip commands now validate the generated XML before saving it.
+
+That means a command can fail even if XML generation technically succeeded, because the validator found a shape that is already known to break Juno loading.
+
 Examples:
 
 ```powershell
@@ -275,6 +330,55 @@ VizzyCode.Cli.exe roundtrip "Vizzy examples\T.T. Mission Program.xml" -o "_tt_rt
 VizzyCode.Cli.exe raw-encode "snippet.xml" -o "raw-snippet.txt"
 VizzyCode.Cli.exe raw-decode "Vz.RawEval(\"...\")" -o "decoded-snippet.xml"
 ```
+
+## Export Validation
+
+Export validation is now a first-class part of the `code -> XML` workflow.
+
+Validator source:
+
+- `VizzyExportValidator.cs`
+
+Current validation rules include:
+
+- root must be `<Program>`
+- there must be at least one top-level `<Instructions>` block
+- every `<EvaluateExpression>` must include `style="evaluate-expression"`
+- raw `<Else>` nodes are not allowed
+- `ElseIf style="else"` must carry a leading `<Constant bool="true" />`
+- top-level `Event`, `CustomInstruction`, `CustomExpression`, and `Comment` roots must include `pos`
+- top-level `CustomInstruction` and `CustomExpression` roots must include `callFormat`, `format`, and `name`
+- top-level `Event` roots must include `event`
+
+Why this matters:
+
+- these are not cosmetic checks
+- each of these patterns has already been involved in real Juno loading failures in this repository
+
+Read the full explanation here:
+
+- [Export Validation And Coverage Guide](docs/ExportValidationAndCoverageGuide.md)
+
+## Coverage Verification
+
+The repository now also includes a broader verification pass for current examples and mission files.
+
+Run:
+
+```powershell
+dotnet run --project VizzyCode.csproj -c Release -- --verify-vizzy
+```
+
+Output:
+
+- `vizzy_coverage_report.txt`
+
+The report checks both:
+
+- round-trip samples from XML
+- direct `code -> XML` export samples from `.cs` / `.vizzy.cs` files
+
+This does not prove support for every Vizzy construct ever shipped, but it does create a practical regression net over the real examples in this repository.
 
 ## Raw Preservation
 
@@ -318,7 +422,7 @@ That script performs all of these steps:
 Generated outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.56.vsix`
+- `vizzycode-tools-0.0.57.vsix`
 
 ## How To Create A Distributable Extension Bundle
 
@@ -333,7 +437,7 @@ If you want to distribute only the extension without the whole repository:
 2. take one of these outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.56.vsix`
+- `vizzycode-tools-0.0.57.vsix`
 
 The bundle in `vscode-extension-dist\` is self-contained and already includes:
 
@@ -356,7 +460,7 @@ inside the extension folder.
 If you already have the generated `.vsix`, you can install it manually with either:
 
 ```powershell
-code --install-extension .\vizzycode-tools-0.0.56.vsix --force
+code --install-extension .\vizzycode-tools-0.0.57.vsix --force
 ```
 
 or from inside VS Code:
@@ -364,7 +468,7 @@ or from inside VS Code:
 1. open Extensions
 2. open the `...` menu
 3. choose `Install from VSIX...`
-4. select `vizzycode-tools-0.0.56.vsix`
+4. select `vizzycode-tools-0.0.57.vsix`
 
 ## Current Converter Capabilities
 
@@ -499,6 +603,14 @@ git diff --no-index -- "<input.xml>" "<output.xml>"
 
 If the diff is empty, the current round-trip output is identical.
 
+For broader repository verification instead of a single file, use:
+
+```powershell
+dotnet run --project VizzyCode.csproj -c Release -- --verify-vizzy
+```
+
+That command writes `vizzy_coverage_report.txt` and checks current round-trip and direct export samples under the repository.
+
 ## AI Integration
 
 For AI-assisted work, giving the model only the current `.cs` file is not enough.
@@ -518,6 +630,7 @@ Minimum recommended context for AI:
 - `docs/VizzyBlocksMegaGuide.md`
 - `docs/AiRepairContextGuide.md`
 - `docs/RawPreservationGuide.md`
+- `docs/ExportValidationAndCoverageGuide.md`
 
 Strongly recommended when the task is about general Vizzy behavior, not only this converter:
 
@@ -530,6 +643,8 @@ If the task involves `RawXml*`, preserved metadata, or newly handwritten replace
 - which region is still preserved
 - which region was rewritten manually
 - whether repo CLI and VS Code plugin CLI currently export byte-identical XML
+- whether export validation currently passes or fails
+- the current validator error text if validation fails
 
 The app supports two distinct ways to use Claude Code, Gemini CLI, Codex CLI, and OpenCode.
 
@@ -603,6 +718,27 @@ Use these references first:
 - `Vizzy examples/T.T.cs`
 
 Those files define the current safe and tested authoring subset.
+
+## What The Current Safety Net Really Means
+
+VizzyCode is now in a much better place than “export and hope”.
+
+The practical safety net is:
+
+1. importer and authoring parser
+2. clean-view plus metadata sidecar restoration
+3. export validation
+4. repository-wide coverage verification
+
+That means current failures are much easier to localize.
+
+It does **not** honestly mean that every possible Vizzy construct in existence is guaranteed forever.
+
+The correct statement is:
+
+- current real examples and current known failure classes are covered much more strongly than before
+- the app and CLI now fail early on several known Juno-breaking XML shapes
+- future newly discovered failure patterns should be added to the validator and the docs instead of being silently tolerated
 
 For AI-generated Vizzy code, do not ask the AI to work from code alone. Give it the documentation above as context first.
 

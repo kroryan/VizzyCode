@@ -320,6 +320,16 @@ namespace VizzyCode
                 string cleanCode = codeEditor.Text.Replace("\r\n", "\n");
                 string exportCode = CodeCleanView.RestoreExactCode(cleanCode, _currentSidecar);
                 var xmlDoc = conv.ConvertCodeToXml(exportCode, programName);
+                var validationErrors = VizzyExportValidator.Validate(xmlDoc);
+                if (validationErrors.Count > 0)
+                {
+                    string message =
+                        "Export validation failed. VizzyCode detected XML patterns that are likely to break Juno loading." +
+                        "\n\n" + VizzyExportValidator.Format(validationErrors);
+                    MessageBox.Show(message, "Export Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    statusLabel.Text = "Export validation failed.";
+                    return;
+                }
 
                 string defaultName = programName + ".xml";
                 string initDir = Path.Combine(AppBaseDir(), "Programs");

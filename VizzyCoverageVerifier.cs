@@ -66,16 +66,59 @@ namespace VizzyCode
                     var xml2 = conv.ConvertCodeToXml(code, programName);
                     bool hasInstructions = xml2.Descendants("Instructions").Any();
                     bool hasProgram = xml2.Root?.Name.LocalName == "Program";
+                    var exportValidationErrors = VizzyExportValidator.Validate(xml2);
 
                     sb.AppendLine($"{Path.GetFileName(xmlPath)}");
                     sb.AppendLine($"  import warnings: {warningCount}");
                     sb.AppendLine($"  code contains TODO: {hasTodo}");
                     sb.AppendLine($"  export root program: {hasProgram}");
                     sb.AppendLine($"  export has instructions: {hasInstructions}");
+                    sb.AppendLine($"  export validation errors: {exportValidationErrors.Count}");
                 }
                 catch (Exception ex)
                 {
                     sb.AppendLine($"{Path.GetFileName(xmlPath)}");
+                    sb.AppendLine($"  ERROR: {ex.GetType().Name}: {ex.Message}");
+                }
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("Code export samples:");
+            var codeDirs = new[]
+            {
+                Path.Combine(rootDir, "Vizzy examples"),
+                Path.Combine(rootDir, "Vizzy examples", "exported examples")
+            };
+
+            var codeFiles = codeDirs
+                .Where(Directory.Exists)
+                .SelectMany(dir => Directory.GetFiles(dir, "*.cs", SearchOption.TopDirectoryOnly))
+                .Where(path =>
+                {
+                    string name = Path.GetFileName(path);
+                    return name.EndsWith(".vizzy.cs", StringComparison.OrdinalIgnoreCase) ||
+                           name.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
+                })
+                .OrderBy(Path.GetFileName)
+                .ToList();
+
+            foreach (var codePath in codeFiles)
+            {
+                try
+                {
+                    var conv = new VizzyXmlConverter();
+                    string code = File.ReadAllText(codePath);
+                    string exportCode = CodeCleanView.RestoreExactCode(code, CodeCleanView.LoadSidecar(codePath));
+                    var xml = conv.ConvertCodeToXml(exportCode, Path.GetFileNameWithoutExtension(codePath));
+                    var errors = VizzyExportValidator.Validate(xml);
+                    sb.AppendLine($"{Path.GetFileName(codePath)}");
+                    sb.AppendLine($"  export validation errors: {errors.Count}");
+                    if (errors.Count > 0)
+                        sb.AppendLine($"  first error: {errors[0]}");
+                }
+                catch (Exception ex)
+                {
+                    sb.AppendLine($"{Path.GetFileName(codePath)}");
                     sb.AppendLine($"  ERROR: {ex.GetType().Name}: {ex.Message}");
                 }
             }

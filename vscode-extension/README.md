@@ -13,6 +13,7 @@ It is built on the same converter core as the desktop app, so the important conc
 - clean-view imported code plus metadata sidecar
 - readable raw preservation through `RawXml*`
 - top-level layout hints through `// VZPOS x=... y=...`
+- export-time XML validation before save
 
 ## Commands
 
@@ -45,6 +46,12 @@ You can also set `vizzycode.cliPath` in VS Code settings.
 3. Edit the generated `.vizzy.cs` file in VS Code.
 4. Run `VizzyCode: Export Code to XML`.
 5. Test the resulting XML in Juno.
+
+Important:
+
+- export now runs the same XML validation gate used by the desktop app and CLI
+- if the extension reports an export validation failure, do not ignore it and try the XML anyway
+- that means VizzyCode already detected a structural pattern known to break Juno loading
 
 The import command now writes:
 
@@ -84,6 +91,7 @@ If you are using AI on imported mission files, also provide the AI with:
 - `docs/VizzyBlocksMegaGuide.md`
 - `docs/AiRepairContextGuide.md`
 - `docs/RawPreservationGuide.md`
+- `docs/ExportValidationAndCoverageGuide.md`
 
 ## Installation
 
@@ -132,7 +140,7 @@ The repository build pipeline is:
 1. publish `VizzyCode.Cli` as a standalone Windows binary
 2. copy the extension files into `vscode-extension-dist`
 3. place the CLI in `vscode-extension-dist\bin\win-x64`
-4. generate `vizzycode-tools-0.0.56.vsix`
+4. generate `vizzycode-tools-0.0.57.vsix`
 5. install that `.vsix` into VS Code
 
 Repository command:
@@ -144,7 +152,7 @@ Repository command:
 Outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.56.vsix`
+- `vizzycode-tools-0.0.57.vsix`
 
 ## Self-Contained Bundle Layout
 

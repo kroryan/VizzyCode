@@ -76,6 +76,9 @@ internal static class Program
 
         var converter = new VizzyXmlConverter();
         var doc = converter.ConvertCodeToXml(exportCode, programName);
+        var validationErrors = VizzyExportValidator.Validate(doc);
+        if (validationErrors.Count > 0)
+            return Fail("Export validation failed:" + Environment.NewLine + VizzyExportValidator.Format(validationErrors));
         SaveXml(outputPath, doc);
         Console.WriteLine($"Exported: {inputPath}");
         Console.WriteLine($"XML: {Path.GetFullPath(outputPath)}");
@@ -104,6 +107,9 @@ internal static class Program
         CodeCleanView.SaveSidecar(codePath, cleanView.Sidecar);
         string exportCode = CodeCleanView.RestoreExactCode(cleanView.CleanCode, cleanView.Sidecar);
         var outputDoc = converter.ConvertCodeToXml(exportCode);
+        var validationErrors = VizzyExportValidator.Validate(outputDoc);
+        if (validationErrors.Count > 0)
+            return Fail("Round-trip export validation failed:" + Environment.NewLine + VizzyExportValidator.Format(validationErrors));
         SaveXml(outputPath, outputDoc);
 
         bool sameBytes = File.ReadAllBytes(inputPath).SequenceEqual(File.ReadAllBytes(outputPath));
