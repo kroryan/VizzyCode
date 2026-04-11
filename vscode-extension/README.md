@@ -25,10 +25,18 @@ It is built on the same converter core as the desktop app, so the important conc
 - `VizzyCode: Export Vizzy to Running Game`
 - `VizzyCode: Browse Craft Parts in Juno`
 - `VizzyCode: View Stages in Juno`
+- `VizzyCode: Save Juno Telemetry JSON`
+- `VizzyCode: Save Full Juno Craft Snapshot JSON`
+- `VizzyCode: Save Juno Telemetry Report for Humans/AI`
+- `VizzyCode: Save Full Juno Craft Report for Humans/AI`
 
 When the extension is active, it also shows a `VizzyCode` item in the VS Code status bar.
 
 If the optional VizzyCode Juno mod is running, the extension also shows a Juno status item and can import/export Vizzy directly through the local bridge at `http://127.0.0.1:7842/`.
+
+The telemetry and snapshot JSON commands save exact raw data from the running game.
+
+The telemetry and snapshot report commands save Markdown summaries designed to be readable by humans and AI agents. These reports are the recommended first context files for craft-specific Vizzy work. Keep the JSON beside them when exact raw fields are needed.
 
 ## CLI Requirement
 
@@ -85,6 +93,17 @@ do not treat those as noise. They are part of how VizzyCode preserves exact XML 
 For fidelity-sensitive files, also run:
 
 - `VizzyCode: Round-Trip XML`
+
+For craft-aware AI work, also run:
+
+- `VizzyCode: Save Full Juno Craft Report for Humans/AI` before writing or repairing the script
+- `VizzyCode: Save Juno Telemetry Report for Humans/AI` at the point where the mission fails or behaves incorrectly
+- `VizzyCode: Save Full Juno Craft Snapshot JSON` when exact raw fields are needed
+- `VizzyCode: Save Juno Telemetry JSON` when exact raw runtime values are needed
+
+Give the Markdown report files to the AI together with the repository docs and the `.vizzy.cs` file. Add the JSON files only when the AI needs exact raw fields, vectors, or data not shown in the readable report.
+
+If the AI agent cannot trigger VS Code commands directly, generate these reports yourself from VS Code or from the standalone app first. For automated conversion tasks, the AI should use `VizzyCode.Cli.exe` directly instead of depending on the VS Code command UI.
 
 That generates:
 
@@ -147,7 +166,7 @@ The repository build pipeline is:
 1. publish `VizzyCode.Cli` as a standalone Windows binary
 2. copy the extension files into `vscode-extension-dist`
 3. place the CLI in `vscode-extension-dist\bin\win-x64`
-4. generate `vizzycode-tools-0.0.60.vsix`
+4. generate the current `vizzycode-tools-*.vsix`
 5. install that `.vsix` into VS Code
 
 Repository command:
@@ -159,7 +178,7 @@ Repository command:
 Outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.60.vsix`
+- `vizzycode-tools-*.vsix`
 
 ## Self-Contained Bundle Layout
 
@@ -208,6 +227,10 @@ Commands:
 - `VizzyCode: Export Vizzy to Running Game`
 - `VizzyCode: Browse Craft Parts in Juno`
 - `VizzyCode: View Stages in Juno`
+- `VizzyCode: Save Juno Telemetry JSON`
+- `VizzyCode: Save Full Juno Craft Snapshot JSON`
+- `VizzyCode: Save Juno Telemetry Report for Humans/AI`
+- `VizzyCode: Save Full Juno Craft Report for Humans/AI`
 
 ## Troubleshooting
 

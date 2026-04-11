@@ -2,7 +2,7 @@
   "name": "vizzycode-tools",
   "displayName": "VizzyCode Tools",
   "description": "Import Vizzy XML to code, export code back to Vizzy XML, and run round-trip tests from VS Code.",
-  "version": "0.0.60",
+  "version": "0.0.61",
   "publisher": "vizzycode",
   "engines": {
     "vscode": "^1.85.0"
@@ -19,7 +19,16 @@
     "onStartupFinished",
     "onCommand:vizzycode.importXmlToCode",
     "onCommand:vizzycode.exportCodeToXml",
-    "onCommand:vizzycode.roundTripXml"
+    "onCommand:vizzycode.roundTripXml",
+    "onCommand:vizzycode.junoConnect",
+    "onCommand:vizzycode.junoImportFromGame",
+    "onCommand:vizzycode.junoExportToGame",
+    "onCommand:vizzycode.junoBrowseParts",
+    "onCommand:vizzycode.junoViewStages",
+    "onCommand:vizzycode.junoSaveTelemetry",
+    "onCommand:vizzycode.junoSaveSnapshot",
+    "onCommand:vizzycode.junoSaveTelemetryReport",
+    "onCommand:vizzycode.junoSaveSnapshotReport"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -63,6 +72,26 @@
         "command": "vizzycode.junoViewStages",
         "category": "VizzyCode",
         "title": "VizzyCode: View Stages in Juno"
+      },
+      {
+        "command": "vizzycode.junoSaveTelemetry",
+        "category": "VizzyCode",
+        "title": "VizzyCode: Save Juno Telemetry JSON"
+      },
+      {
+        "command": "vizzycode.junoSaveSnapshot",
+        "category": "VizzyCode",
+        "title": "VizzyCode: Save Full Juno Craft Snapshot JSON"
+      },
+      {
+        "command": "vizzycode.junoSaveTelemetryReport",
+        "category": "VizzyCode",
+        "title": "VizzyCode: Save Juno Telemetry Report for Humans/AI"
+      },
+      {
+        "command": "vizzycode.junoSaveSnapshotReport",
+        "category": "VizzyCode",
+        "title": "VizzyCode: Save Full Juno Craft Report for Humans/AI"
       }
     ],
     "menus": {

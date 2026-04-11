@@ -44,6 +44,7 @@ Start here if you want to write, maintain, or debug Vizzy scripts with this proj
 - [Raw Preservation Guide](docs/RawPreservationGuide.md)
 - [Export Validation And Coverage Guide](docs/ExportValidationAndCoverageGuide.md)
 - [Juno Live Bridge Guide](docs/JunoLiveBridgeGuide.md)
+- [Juno Telemetry And Craft Snapshot Guide](docs/JunoTelemetrySnapshotGuide.md)
 - [Mastering Vizzy - A Complete Guide](docs/Mastering%20Vizzy%20_%20A%20Complete%20Guide%20-%20Early%20Access%2008.07.25.md)
 
 Useful reference examples:
@@ -61,6 +62,7 @@ Important maintenance guidance:
 - [AI Repair Context Guide](docs/AiRepairContextGuide.md)
 - [Export Validation And Coverage Guide](docs/ExportValidationAndCoverageGuide.md)
 - [Juno Live Bridge Guide](docs/JunoLiveBridgeGuide.md)
+- [Juno Telemetry And Craft Snapshot Guide](docs/JunoTelemetrySnapshotGuide.md)
 
 ## Required Reading By Use Case
 
@@ -107,6 +109,7 @@ For fidelity-sensitive work, also include:
 - the original working XML
 - the current `.cs`
 - the current exported XML if one exists
+- a saved Juno craft snapshot JSON from the running bridge when the script depends on real part names, stages, activation groups, mass, fuel, or flight state
 
 This is mandatory for large mixed missions such as `T.T`.
 
@@ -133,6 +136,8 @@ If you want reliable AI help with VizzyCode, the documentation is part of the in
 - the current `.vizzy.cs`
 - the current exported XML
 - the matching `*.vizzy.meta.json` sidecar if the `.vizzy.cs` came from imported XML
+- the Juno craft snapshot JSON when working against a specific loaded craft
+- the Juno telemetry JSON when diagnosing a runtime failure
 - whether repo CLI export and VS Code plugin export are byte-identical
 - whether export validation currently passes or fails
 
@@ -156,6 +161,10 @@ The VS Code integration gives you:
 - `VizzyCode: Export Vizzy to Running Game`
 - `VizzyCode: Browse Craft Parts in Juno`
 - `VizzyCode: View Stages in Juno`
+- `VizzyCode: Save Juno Telemetry JSON`
+- `VizzyCode: Save Full Juno Craft Snapshot JSON`
+- `VizzyCode: Save Juno Telemetry Report for Humans/AI`
+- `VizzyCode: Save Full Juno Craft Report for Humans/AI`
 
 ## Juno Live Bridge
 
@@ -174,11 +183,17 @@ Supported bridge operations:
 - import a part's Vizzy XML directly from the running game
 - export generated Vizzy XML directly back into the selected part
 - inspect current stage and activation group metadata
+- save active-craft telemetry JSON for mission debugging
+- save a full craft snapshot JSON for AI/human authoring context
+- save readable Markdown reports built from telemetry/snapshot data for humans and AI agents
 - activate the next stage from the desktop app or VS Code extension
+
+For AI workflows, the readable Markdown report is the best first context file. The JSON is still useful as the exact raw data source, but it is intentionally more verbose and easier for an AI or human to misread. If an AI agent cannot access VS Code commands directly, use the standalone app menu or `VizzyCode.Cli.exe` for conversion tasks, and give the agent the saved `.report.md` plus the raw `.json` only when exact fields are needed.
 
 The bridge is intentionally local-only and should be treated as a live editing tool, not as a replacement for saving craft backups. Read the full bridge guide before changing complex programs through the game connection:
 
 - [Juno Live Bridge Guide](docs/JunoLiveBridgeGuide.md)
+- [Juno Telemetry And Craft Snapshot Guide](docs/JunoTelemetrySnapshotGuide.md)
 
 ### Export Validation In The App, CLI, And Extension
 

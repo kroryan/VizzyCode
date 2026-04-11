@@ -21,6 +21,7 @@
     <Compile Remove="VizzyCode.Cli\**\*.cs" />
     <Compile Remove="VizzyBuilder\**\*.cs" />
     <Compile Remove="Vizzy examples\**\*.cs" />
+    <Compile Remove="Mod Assets\**\*.cs" />
     <Compile Remove="lizpy\**\*.cs" />
     <Compile Remove="**\*.vizzy.cs" />
     <EmbeddedResource Remove="obj\**\*" />
@@ -29,6 +30,7 @@
     <EmbeddedResource Remove="VizzyCode.Cli\**\*" />
     <EmbeddedResource Remove="VizzyBuilder\**\*" />
     <EmbeddedResource Remove="Vizzy examples\**\*" />
+    <EmbeddedResource Remove="Mod Assets\**\*" />
     <EmbeddedResource Remove="lizpy\**\*" />
     <None Remove="obj\**\*" />
     <None Remove="bin\**\*" />
@@ -36,6 +38,7 @@
     <None Remove="VizzyCode.Cli\**\*" />
     <None Remove="VizzyBuilder\**\*" />
     <None Remove="Vizzy examples\**\*.cs" />
+    <None Remove="Mod Assets\**\*.cs" />
     <None Remove="lizpy\**\*" />
     <None Remove="**\*.vizzy.meta.json" />
   </ItemGroup>
