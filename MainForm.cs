@@ -465,9 +465,9 @@ namespace VizzyCode
         {
             statusLabel.Text = $"Importing from part {partId}…";
             var info = await JunoClient.GetVizzyAsync(partId);
-            if (info == null || !info.Ok)
+            if (info == null || !info.Ok || string.IsNullOrWhiteSpace(info.Xml))
             {
-                string err = info?.Error ?? "Connection failed";
+                string err = info?.Error ?? "Connection failed or empty Vizzy XML";
                 MessageBox.Show($"Import failed: {err}", "Juno Import",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 statusLabel.Text = $"Import failed: {err}";
@@ -574,10 +574,10 @@ namespace VizzyCode
         private async void menuJunoStages_Click(object s, EventArgs e)
         {
             var stages = await JunoClient.GetStagesAsync();
-            if (stages == null)
+            if (stages == null || !stages.Ok)
             {
-                MessageBox.Show("Could not reach the mod. Is Juno running?",
-                    "Juno: Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(stages?.Error ?? "Could not reach the mod. Is Juno running?",
+                    "Juno: Stages", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -599,9 +599,9 @@ namespace VizzyCode
         private async void menuJunoActivateStage_Click(object s, EventArgs e)
         {
             var result = await JunoClient.ActivateStageAsync();
-            if (result == null)
+            if (result == null || !result.Ok)
             {
-                MessageBox.Show("Could not reach the mod.", "Juno: Not Connected",
+                MessageBox.Show(result?.Error ?? "Could not reach the mod.", "Juno: Stage",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }

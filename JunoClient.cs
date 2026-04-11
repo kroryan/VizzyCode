@@ -28,45 +28,47 @@ namespace VizzyCode
         public class StatusInfo
         {
             public bool   Ok          { get; set; }
-            public string ModVersion  { get; set; }
-            public string Scene       { get; set; }   // "designer" | "flight" | "menu"
-            public string CraftName   { get; set; }
+            public string? ModVersion  { get; set; }
+            public string? Scene       { get; set; }   // "designer" | "flight" | "menu"
+            public string? CraftName   { get; set; }
         }
 
         public class PartInfo
         {
             public int    Id        { get; set; }
-            public string Name      { get; set; }
+            public string? Name      { get; set; }
             public bool   HasVizzy  { get; set; }
         }
 
         public class CraftInfo
         {
-            public string     Name  { get; set; }
-            public PartInfo[] Parts { get; set; }
+            public string?     Name  { get; set; }
+            public PartInfo[]? Parts { get; set; }
         }
 
         public class VizzyInfo
         {
             public bool   Ok       { get; set; }
             public int    PartId   { get; set; }
-            public string PartName { get; set; }
-            public string Xml      { get; set; }
-            public string Error    { get; set; }
+            public string? PartName { get; set; }
+            public string? Xml      { get; set; }
+            public string? Error    { get; set; }
         }
 
         public class StagesInfo
         {
+            public bool     Ok                    { get; set; } = true;
+            public string?  Error                 { get; set; }
             public int      CurrentStage          { get; set; }
             public int      NumStages             { get; set; }
-            public string[] ActivationGroupNames  { get; set; }
-            public bool[]   ActivationGroupStates { get; set; }
+            public string[] ActivationGroupNames  { get; set; } = Array.Empty<string>();
+            public bool[]   ActivationGroupStates { get; set; } = Array.Empty<bool>();
         }
 
         // ── API calls ─────────────────────────────────────────────────────────
 
         /// <summary>Ping the mod. Returns null if not running.</summary>
-        public static async Task<StatusInfo> GetStatusAsync()
+        public static async Task<StatusInfo?> GetStatusAsync()
         {
             try
             {
@@ -77,7 +79,7 @@ namespace VizzyCode
         }
 
         /// <summary>Get the current craft's part list.</summary>
-        public static async Task<CraftInfo> GetCraftAsync()
+        public static async Task<CraftInfo?> GetCraftAsync()
         {
             try
             {
@@ -88,7 +90,7 @@ namespace VizzyCode
         }
 
         /// <summary>Get the Vizzy XML for a specific part.</summary>
-        public static async Task<VizzyInfo> GetVizzyAsync(int partId)
+        public static async Task<VizzyInfo?> GetVizzyAsync(int partId)
         {
             try
             {
@@ -99,7 +101,7 @@ namespace VizzyCode
         }
 
         /// <summary>Push a Vizzy XML string to the game for a specific part.</summary>
-        public static async Task<VizzyInfo> PutVizzyAsync(int partId, string xml)
+        public static async Task<VizzyInfo?> PutVizzyAsync(int partId, string xml)
         {
             try
             {
@@ -114,7 +116,7 @@ namespace VizzyCode
         }
 
         /// <summary>Get staging information for the active craft.</summary>
-        public static async Task<StagesInfo> GetStagesAsync()
+        public static async Task<StagesInfo?> GetStagesAsync()
         {
             try
             {
@@ -125,7 +127,7 @@ namespace VizzyCode
         }
 
         /// <summary>Trigger the next stage activation (flight scene only).</summary>
-        public static async Task<StagesInfo> ActivateStageAsync()
+        public static async Task<StagesInfo?> ActivateStageAsync()
         {
             try
             {
@@ -160,7 +162,7 @@ namespace VizzyCode
         // ── Minimal JSON parsers ──────────────────────────────────────────────
         // We use simple field extraction to avoid taking a JSON library dependency.
 
-        private static StatusInfo ParseStatus(string j) => j == null ? null : new StatusInfo
+        private static StatusInfo? ParseStatus(string? j) => j == null ? null : new StatusInfo
         {
             Ok         = JsonBool(j, "ok") ?? false,
             ModVersion = JsonStr(j, "modVersion"),
@@ -168,7 +170,7 @@ namespace VizzyCode
             CraftName  = JsonStr(j, "craftName")
         };
 
-        private static CraftInfo ParseCraft(string j)
+        private static CraftInfo? ParseCraft(string? j)
         {
             if (j == null || j.Contains("\"error\"")) return null;
             var parts = ParsePartArray(j);
@@ -209,7 +211,7 @@ namespace VizzyCode
             return list.ToArray();
         }
 
-        private static VizzyInfo ParseVizzy(string j) => j == null ? null : new VizzyInfo
+        private static VizzyInfo? ParseVizzy(string? j) => j == null ? null : new VizzyInfo
         {
             Ok       = JsonBool(j, "ok") ?? false,
             PartId   = JsonInt(j, "partId") ?? 0,
@@ -218,15 +220,19 @@ namespace VizzyCode
             Error    = JsonStr(j, "error")
         };
 
-        private static StagesInfo ParseStages(string j) => j == null ? null : new StagesInfo
+        private static StagesInfo? ParseStages(string? j) => j == null ? null : new StagesInfo
         {
+            Ok = JsonBool(j, "ok") ?? !j.Contains("\"error\"", StringComparison.Ordinal),
+            Error = JsonStr(j, "error"),
             CurrentStage = JsonInt(j, "currentStage") ?? 0,
-            NumStages    = JsonInt(j, "numStages")    ?? 0
+            NumStages    = JsonInt(j, "numStages")    ?? 0,
+            ActivationGroupNames  = JsonStringArray(j, "activationGroupNames"),
+            ActivationGroupStates = JsonBoolArray(j, "activationGroupStates")
         };
 
         // ── Field extractors ──────────────────────────────────────────────────
 
-        private static string JsonStr(string j, string key)
+        private static string? JsonStr(string? j, string key)
         {
             if (j == null) return null;
             int ki = j.IndexOf($"\"{key}\"", StringComparison.Ordinal);
@@ -288,6 +294,97 @@ namespace VizzyCode
             var sb = new StringBuilder();
             while (pos < j.Length && (char.IsDigit(j[pos]) || j[pos] == '-')) { sb.Append(j[pos]); pos++; }
             return int.TryParse(sb.ToString(), out int v) ? v : (int?)null;
+        }
+
+        private static string[] JsonStringArray(string j, string key)
+        {
+            string? arr = JsonArrayBody(j, key);
+            if (arr == null) return Array.Empty<string>();
+
+            var values = new System.Collections.Generic.List<string>();
+            int pos = 0;
+            while (pos < arr.Length)
+            {
+                while (pos < arr.Length && (char.IsWhiteSpace(arr[pos]) || arr[pos] == ',')) pos++;
+                if (pos >= arr.Length) break;
+                if (arr[pos] == 'n')
+                {
+                    values.Add("");
+                    pos += 4;
+                    continue;
+                }
+                if (arr[pos] != '"') break;
+
+                pos++;
+                var sb = new StringBuilder();
+                while (pos < arr.Length)
+                {
+                    char c = arr[pos];
+                    if (c == '\\' && pos + 1 < arr.Length)
+                    {
+                        char n = arr[pos + 1];
+                        switch (n)
+                        {
+                            case '"':  sb.Append('"');  pos += 2; continue;
+                            case '\\': sb.Append('\\'); pos += 2; continue;
+                            case 'n':  sb.Append('\n'); pos += 2; continue;
+                            case 'r':  sb.Append('\r'); pos += 2; continue;
+                            case 't':  sb.Append('\t'); pos += 2; continue;
+                            default:   sb.Append(n);   pos += 2; continue;
+                        }
+                    }
+                    if (c == '"') { pos++; break; }
+                    sb.Append(c);
+                    pos++;
+                }
+                values.Add(sb.ToString());
+            }
+            return values.ToArray();
+        }
+
+        private static bool[] JsonBoolArray(string j, string key)
+        {
+            string? arr = JsonArrayBody(j, key);
+            if (arr == null) return Array.Empty<bool>();
+
+            var values = new System.Collections.Generic.List<bool>();
+            foreach (string raw in arr.Split(','))
+            {
+                string s = raw.Trim();
+                if (s.StartsWith("true", StringComparison.OrdinalIgnoreCase)) values.Add(true);
+                else if (s.StartsWith("false", StringComparison.OrdinalIgnoreCase)) values.Add(false);
+            }
+            return values.ToArray();
+        }
+
+        private static string? JsonArrayBody(string? j, string key)
+        {
+            if (j == null) return null;
+            int ki = j.IndexOf($"\"{key}\"", StringComparison.Ordinal);
+            if (ki < 0) return null;
+            int bracket = j.IndexOf('[', ki);
+            if (bracket < 0) return null;
+
+            bool inString = false;
+            bool esc = false;
+            int depth = 0;
+            for (int i = bracket; i < j.Length; i++)
+            {
+                char c = j[i];
+                if (esc) { esc = false; continue; }
+                if (inString && c == '\\') { esc = true; continue; }
+                if (c == '"') { inString = !inString; continue; }
+                if (inString) continue;
+
+                if (c == '[') depth++;
+                else if (c == ']')
+                {
+                    depth--;
+                    if (depth == 0)
+                        return j.Substring(bracket + 1, i - bracket - 1);
+                }
+            }
+            return null;
         }
     }
 }

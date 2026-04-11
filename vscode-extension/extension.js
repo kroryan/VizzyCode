@@ -240,8 +240,8 @@ async function junoBrowseParts() {
 
 async function junoViewStages() {
   const stages = await junoGet('/stages');
-  if (!stages) {
-    vscode.window.showWarningMessage('Cannot reach the mod. Is Juno running?');
+  if (!stages || stages.ok === false) {
+    vscode.window.showWarningMessage(stages?.error || 'Cannot reach the mod. Is Juno running?');
     return;
   }
 
@@ -257,7 +257,11 @@ async function junoViewStages() {
     'Activate Next Stage', 'Close'
   );
   if (result === 'Activate Next Stage') {
-    await junoPost('/stages/activate', {});
+    const activated = await junoPost('/stages/activate', {});
+    if (!activated || activated.ok === false) {
+      vscode.window.showWarningMessage(activated?.error || 'Could not activate the next stage.');
+      return;
+    }
     vscode.window.showInformationMessage('Stage activated!');
   }
 }

@@ -20,8 +20,15 @@ It is built on the same converter core as the desktop app, so the important conc
 - `VizzyCode: Import XML to Code`
 - `VizzyCode: Export Code to XML`
 - `VizzyCode: Round-Trip XML`
+- `VizzyCode: Connect to Juno`
+- `VizzyCode: Import Vizzy from Running Game`
+- `VizzyCode: Export Vizzy to Running Game`
+- `VizzyCode: Browse Craft Parts in Juno`
+- `VizzyCode: View Stages in Juno`
 
 When the extension is active, it also shows a `VizzyCode` item in the VS Code status bar.
+
+If the optional VizzyCode Juno mod is running, the extension also shows a Juno status item and can import/export Vizzy directly through the local bridge at `http://127.0.0.1:7842/`.
 
 ## CLI Requirement
 
@@ -140,7 +147,7 @@ The repository build pipeline is:
 1. publish `VizzyCode.Cli` as a standalone Windows binary
 2. copy the extension files into `vscode-extension-dist`
 3. place the CLI in `vscode-extension-dist\bin\win-x64`
-4. generate `vizzycode-tools-0.0.58.vsix`
+4. generate `vizzycode-tools-0.0.60.vsix`
 5. install that `.vsix` into VS Code
 
 Repository command:
@@ -152,7 +159,7 @@ Repository command:
 Outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.58.vsix`
+- `vizzycode-tools-0.0.60.vsix`
 
 ## Self-Contained Bundle Layout
 
@@ -196,6 +203,11 @@ Commands:
 - `VizzyCode: Import XML to Code`
 - `VizzyCode: Export Code to XML`
 - `VizzyCode: Round-Trip XML`
+- `VizzyCode: Connect to Juno`
+- `VizzyCode: Import Vizzy from Running Game`
+- `VizzyCode: Export Vizzy to Running Game`
+- `VizzyCode: Browse Craft Parts in Juno`
+- `VizzyCode: View Stages in Juno`
 
 ## Troubleshooting
 

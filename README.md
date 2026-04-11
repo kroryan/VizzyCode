@@ -43,6 +43,7 @@ Start here if you want to write, maintain, or debug Vizzy scripts with this proj
 - [AI Repair Context Guide](docs/AiRepairContextGuide.md)
 - [Raw Preservation Guide](docs/RawPreservationGuide.md)
 - [Export Validation And Coverage Guide](docs/ExportValidationAndCoverageGuide.md)
+- [Juno Live Bridge Guide](docs/JunoLiveBridgeGuide.md)
 - [Mastering Vizzy - A Complete Guide](docs/Mastering%20Vizzy%20_%20A%20Complete%20Guide%20-%20Early%20Access%2008.07.25.md)
 
 Useful reference examples:
@@ -59,6 +60,7 @@ Important maintenance guidance:
 - [Vizzy Blocks Mega Guide](docs/VizzyBlocksMegaGuide.md)
 - [AI Repair Context Guide](docs/AiRepairContextGuide.md)
 - [Export Validation And Coverage Guide](docs/ExportValidationAndCoverageGuide.md)
+- [Juno Live Bridge Guide](docs/JunoLiveBridgeGuide.md)
 
 ## Required Reading By Use Case
 
@@ -149,6 +151,34 @@ The VS Code integration gives you:
 - `VizzyCode: Import XML to Code`
 - `VizzyCode: Export Code to XML`
 - `VizzyCode: Round-Trip XML`
+- `VizzyCode: Connect to Juno`
+- `VizzyCode: Import Vizzy from Running Game`
+- `VizzyCode: Export Vizzy to Running Game`
+- `VizzyCode: Browse Craft Parts in Juno`
+- `VizzyCode: View Stages in Juno`
+
+## Juno Live Bridge
+
+VizzyCode can also talk directly to a running Juno: New Origins instance when the optional VizzyCode Juno mod is installed and enabled.
+
+The mod exposes a localhost-only HTTP bridge on:
+
+```text
+http://127.0.0.1:7842/
+```
+
+Supported bridge operations:
+
+- check whether the mod is running and which scene/craft is active
+- list the current craft parts and identify parts with Vizzy programs
+- import a part's Vizzy XML directly from the running game
+- export generated Vizzy XML directly back into the selected part
+- inspect current stage and activation group metadata
+- activate the next stage from the desktop app or VS Code extension
+
+The bridge is intentionally local-only and should be treated as a live editing tool, not as a replacement for saving craft backups. Read the full bridge guide before changing complex programs through the game connection:
+
+- [Juno Live Bridge Guide](docs/JunoLiveBridgeGuide.md)
 
 ### Export Validation In The App, CLI, And Extension
 
@@ -217,7 +247,7 @@ That script:
 Generated artifacts:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.58.vsix`
+- `vizzycode-tools-0.0.60.vsix`
 
 After installation, restart VS Code or run `Developer: Reload Window`.
 
@@ -422,7 +452,7 @@ That script performs all of these steps:
 Generated outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.58.vsix`
+- `vizzycode-tools-0.0.60.vsix`
 
 ## How To Create A Distributable Extension Bundle
 
@@ -437,7 +467,7 @@ If you want to distribute only the extension without the whole repository:
 2. take one of these outputs:
 
 - `vscode-extension-dist\`
-- `vizzycode-tools-0.0.58.vsix`
+- `vizzycode-tools-0.0.60.vsix`
 
 The bundle in `vscode-extension-dist\` is self-contained and already includes:
 
@@ -460,7 +490,7 @@ inside the extension folder.
 If you already have the generated `.vsix`, you can install it manually with either:
 
 ```powershell
-code --install-extension .\vizzycode-tools-0.0.58.vsix --force
+code --install-extension .\vizzycode-tools-0.0.60.vsix --force
 ```
 
 or from inside VS Code:
@@ -468,7 +498,7 @@ or from inside VS Code:
 1. open Extensions
 2. open the `...` menu
 3. choose `Install from VSIX...`
-4. select `vizzycode-tools-0.0.58.vsix`
+4. select `vizzycode-tools-0.0.60.vsix`
 
 ## Current Converter Capabilities
 
