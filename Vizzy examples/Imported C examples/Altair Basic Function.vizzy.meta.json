@@ -1,0 +1,1966 @@
+{
+  "Version": 1,
+  "Lines": [
+    {
+      "CleanLine": "using System;",
+      "ExactLine": "using System;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "using System.Linq;",
+      "ExactLine": "using System.Linq;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "using System.Collections.Generic;",
+      "ExactLine": "using System.Collections.Generic;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "using REWJUNO;",
+      "ExactLine": "using REWJUNO;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "using REWVIZZY;",
+      "ExactLine": "using REWVIZZY;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// \u2500\u2500 Program: Altair Basic Function \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "ExactLine": "// \u2500\u2500 Program: Altair Basic Function \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "Vz.Init(\u0022Altair Basic Function\u0022);",
+      "ExactLine": "Vz.Init(\u0022Altair Basic Function\u0022);",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// \u2500\u2500 Variables \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "ExactLine": "// \u2500\u2500 Variables \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// var Door = -0;",
+      "ExactLine": "// var Door = -0;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// var Elevator = -0;",
+      "ExactLine": "// var Elevator = -0;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// var Seat = -0;",
+      "ExactLine": "// var Seat = -0;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// var DoorState = -0;",
+      "ExactLine": "// var DoorState = -0;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// var ElevatorState = -0;",
+      "ExactLine": "// var ElevatorState = -0;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// var SeatState = -0;",
+      "ExactLine": "// var SeatState = -0;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// var LegState = -0;",
+      "ExactLine": "// var LegState = -0;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// var Reentry = -0;",
+      "ExactLine": "// var Reentry = -0;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// var LegCap = -0;",
+      "ExactLine": "// var LegCap = -0;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// var Ladder = -0;",
+      "ExactLine": "// var Ladder = -0;",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// VZPOS x=-10 y=-20",
+      "ExactLine": "// VZPOS x=-10 y=-20",
+      "MetadataLines": [
+        "// VZTOPBLOCK"
+      ]
+    },
+    {
+      "CleanLine": "using (new OnStart())",
+      "ExactLine": "using (new OnStart())",
+      "MetadataLines": [
+        "// VZBLOCK PEV2ZW50IGV2ZW50PSJGbGlnaHRTdGFydCIgaWQ9IjAiIHN0eWxlPSJmbGlnaHQtc3RhcnQiIHBvcz0iLTEwLC0yMCIgLz4=",
+        "// VZEL PEV2ZW50IGV2ZW50PSJGbGlnaHRTdGFydCIgaWQ9IjAiIHN0eWxlPSJmbGlnaHQtc3RhcnQiIHBvcz0iLTEwLC0yMCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "{",
+      "ExactLine": "{",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    // Altair Alphard Basic Function",
+      "ExactLine": "    // Altair Alphard Basic Function",
+      "MetadataLines": [
+        "    // VZEL PENvbW1lbnQgaWQ9IjEiIHN0eWxlPSJjb21tZW50IiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "    // Automated Vizzy located on \u0022Vizzy Here\u0022 Part",
+      "ExactLine": "    // Automated Vizzy located on \u0022Vizzy Here\u0022 Part",
+      "MetadataLines": [
+        "    // VZEL PENvbW1lbnQgaWQ9IjIiIHN0eWxlPSJjb21tZW50IiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "    // Initial Value",
+      "ExactLine": "    // Initial Value",
+      "MetadataLines": [
+        "    // VZEL PENvbW1lbnQgaWQ9IjMiIHN0eWxlPSJjb21tZW50IiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "    Door = -0;",
+      "ExactLine": "    Door = Vz.RawXmlConstant(@\u0022\u003CConstant number=\u0022\u0022-0\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "    // VZEL PFNldFZhcmlhYmxlIGlkPSI0IiBzdHlsZT0ic2V0LXZhcmlhYmxlIj48VmFyaWFibGUgbGlzdD0iZmFsc2UiIGxvY2FsPSJmYWxzZSIgdmFyaWFibGVOYW1lPSJEb29yIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Elevator = -0;",
+      "ExactLine": "    Elevator = Vz.RawXmlConstant(@\u0022\u003CConstant number=\u0022\u0022-0\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "    // VZEL PFNldFZhcmlhYmxlIGlkPSI1IiBzdHlsZT0ic2V0LXZhcmlhYmxlIj48VmFyaWFibGUgbGlzdD0iZmFsc2UiIGxvY2FsPSJmYWxzZSIgdmFyaWFibGVOYW1lPSJFbGV2YXRvciIgLz48L1NldFZhcmlhYmxlPg=="
+      ]
+    },
+    {
+      "CleanLine": "    Seat = -0;",
+      "ExactLine": "    Seat = Vz.RawXmlConstant(@\u0022\u003CConstant number=\u0022\u0022-0\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "    // VZEL PFNldFZhcmlhYmxlIGlkPSI2IiBzdHlsZT0ic2V0LXZhcmlhYmxlIj48VmFyaWFibGUgbGlzdD0iZmFsc2UiIGxvY2FsPSJmYWxzZSIgdmFyaWFibGVOYW1lPSJTZWF0IiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    LegCap = -0;",
+      "ExactLine": "    LegCap = Vz.RawXmlConstant(@\u0022\u003CConstant number=\u0022\u0022-0\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "    // VZEL PFNldFZhcmlhYmxlIGlkPSI3IiBzdHlsZT0ic2V0LXZhcmlhYmxlIj48VmFyaWFibGUgbGlzdD0iZmFsc2UiIGxvY2FsPSJmYWxzZSIgdmFyaWFibGVOYW1lPSJMZWdDYXAiIC8\u002BPC9TZXRWYXJpYWJsZT4="
+      ]
+    },
+    {
+      "CleanLine": "    Ladder = -0;",
+      "ExactLine": "    Ladder = Vz.RawXmlConstant(@\u0022\u003CConstant number=\u0022\u0022-0\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "    // VZEL PFNldFZhcmlhYmxlIGlkPSI4IiBzdHlsZT0ic2V0LXZhcmlhYmxlIj48VmFyaWFibGUgbGlzdD0iZmFsc2UiIGxvY2FsPSJmYWxzZSIgdmFyaWFibGVOYW1lPSJMYWRkZXIiIC8\u002BPC9TZXRWYXJpYWJsZT4="
+      ]
+    },
+    {
+      "CleanLine": "    DoorState = false;",
+      "ExactLine": "    DoorState = false;",
+      "MetadataLines": [
+        "    // VZEL PFNldFZhcmlhYmxlIGlkPSI5IiBzdHlsZT0ic2V0LXZhcmlhYmxlIj48VmFyaWFibGUgbGlzdD0iZmFsc2UiIGxvY2FsPSJmYWxzZSIgdmFyaWFibGVOYW1lPSJEb29yU3RhdGUiIC8\u002BPC9TZXRWYXJpYWJsZT4="
+      ]
+    },
+    {
+      "CleanLine": "    ElevatorState = false;",
+      "ExactLine": "    ElevatorState = false;",
+      "MetadataLines": [
+        "    // VZEL PFNldFZhcmlhYmxlIGlkPSIxMCIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iRWxldmF0b3JTdGF0ZSIgLz48L1NldFZhcmlhYmxlPg=="
+      ]
+    },
+    {
+      "CleanLine": "    LegState = false;",
+      "ExactLine": "    LegState = false;",
+      "MetadataLines": [
+        "    // VZEL PFNldFZhcmlhYmxlIGlkPSIxMSIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iTGVnU3RhdGUiIC8\u002BPC9TZXRWYXJpYWJsZT4="
+      ]
+    },
+    {
+      "CleanLine": "    SeatState = false;",
+      "ExactLine": "    SeatState = false;",
+      "MetadataLines": [
+        "    // VZEL PFNldFZhcmlhYmxlIGlkPSIxMiIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iU2VhdFN0YXRlIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Reentry = false;",
+      "ExactLine": "    Reentry = false;",
+      "MetadataLines": [
+        "    // VZEL PFNldFZhcmlhYmxlIGlkPSIxMyIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iUmVlbnRyeSIgLz48L1NldFZhcmlhYmxlPg=="
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetInput(CraftInput.Slider1, -0);",
+      "ExactLine": "    Vz.SetInput(CraftInput.Slider1, Vz.RawXmlConstant(@\u0022\u003CConstant number=\u0022\u0022-0\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldElucHV0IGlucHV0PSJzbGlkZXIxIiBpZD0iMTQiIHN0eWxlPSJzZXQtaW5wdXQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetInput(CraftInput.Slider2, 0);",
+      "ExactLine": "    Vz.SetInput(CraftInput.Slider2, Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00220\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldElucHV0IGlucHV0PSJzbGlkZXIyIiBpZD0iMTUiIHN0eWxlPSJzZXQtaW5wdXQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Solar_Panel(false);",
+      "ExactLine": "    Solar_Panel(false);",
+      "MetadataLines": [
+        "    // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJTb2xhciBQYW5lbCIgaWQ9IjE2IiBzdHlsZT0iY2FsbC1jdXN0b20taW5zdHJ1Y3Rpb24iIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Parachute(false, false);",
+      "ExactLine": "    Parachute(false, false);",
+      "MetadataLines": [
+        "    // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJQYXJhY2h1dGUiIGlkPSIxNyIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "    Gyro(true);",
+      "ExactLine": "    Gyro(true);",
+      "MetadataLines": [
+        "    // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJHeXJvIiBpZD0iMTgiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "    Gear(false);",
+      "ExactLine": "    Gear(false);",
+      "MetadataLines": [
+        "    // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJHZWFyIiBpZD0iMTkiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "    All_False();",
+      "ExactLine": "    All_False();",
+      "MetadataLines": [
+        "    // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJBbGwgRmFsc2UiIGlkPSIyMCIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "    using (new While(true))",
+      "ExactLine": "    using (new While(true))",
+      "MetadataLines": [
+        "    // VZEL PFdoaWxlIGlkPSIyMSIgc3R5bGU9IndoaWxlIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "    {",
+      "ExactLine": "    {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        // Seat Configuration",
+      "ExactLine": "        // Seat Configuration",
+      "MetadataLines": [
+        "        // VZEL PENvbW1lbnQgaWQ9IjIyIiBzdHlsZT0iY29tbWVudCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        using (new If(((Vz.ActivationGroup(5) == true) \u0026\u0026 (SeatState == false))))",
+      "ExactLine": "        using (new If(((Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00225\u0022\u0022 /\u003E\u0022)) == true) \u0026\u0026 (Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022false\u0022\u0022 variableName=\u0022\u0022SeatState\u0022\u0022 /\u003E\u0022) == false))))",
+      "MetadataLines": [
+        "        // VZEL PElmIGlkPSIyMyIgc3R5bGU9ImlmIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            Seat = 1;",
+      "ExactLine": "            Seat = Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00221\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSIyNCIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iU2VhdCIgLz48L1NldFZhcmlhYmxlPg=="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorChair\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorChair\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMjUiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Elevator(true);",
+      "ExactLine": "            Elevator(true);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJFbGV2YXRvciIgaWQ9IjI2IiBzdHlsZT0iY2FsbC1jdXN0b20taW5zdHJ1Y3Rpb24iIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(2);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00222\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSIyNyIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Rotator1\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Rotator1\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMjgiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(3);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00223\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSIyOSIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator5\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator5\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMzAiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator6\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator6\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMzEiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022ElevatorTable\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022ElevatorTable\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMzIiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(2);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00222\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSIzMyIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            All_False();",
+      "ExactLine": "            All_False();",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJBbGwgRmFsc2UiIGlkPSIzNCIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "            SeatState = true;",
+      "ExactLine": "            SeatState = true;",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSIzNSIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iU2VhdFN0YXRlIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        using (new ElseIf(((Vz.ActivationGroup(5) == false) \u0026\u0026 (SeatState == true))))",
+      "ExactLine": "        using (new ElseIf(((Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00225\u0022\u0022 /\u003E\u0022)) == false) \u0026\u0026 (Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022false\u0022\u0022 variableName=\u0022\u0022SeatState\u0022\u0022 /\u003E\u0022) == true))))",
+      "MetadataLines": [
+        "        // VZEL PEVsc2VJZiBpZD0iMzYiIHN0eWxlPSJlbHNlLWlmIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            Seat = 0;",
+      "ExactLine": "            Seat = Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00220\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSIzNyIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iU2VhdCIgLz48L1NldFZhcmlhYmxlPg=="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator5\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator5\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMzgiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator6\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator6\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMzkiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022ElevatorTable\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022ElevatorTable\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iNDAiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(2);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00222\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSI0MSIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorChair\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorChair\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iNDIiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Rotator1\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Rotator1\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iNDMiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(3);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00223\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSI0NCIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Elevator(true);",
+      "ExactLine": "            Elevator(true);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJFbGV2YXRvciIgaWQ9IjQ1IiBzdHlsZT0iY2FsbC1jdXN0b20taW5zdHJ1Y3Rpb24iIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(3);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00223\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSI0NiIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            All_False();",
+      "ExactLine": "            All_False();",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJBbGwgRmFsc2UiIGlkPSI0NyIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "            SeatState = false;",
+      "ExactLine": "            SeatState = false;",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSI0OCIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iU2VhdFN0YXRlIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        // Hatch Door",
+      "ExactLine": "        // Hatch Door",
+      "MetadataLines": [
+        "        // VZEL PENvbW1lbnQgaWQ9IjQ5IiBzdHlsZT0iY29tbWVudCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        using (new If(((Vz.ActivationGroup(6) == true) \u0026\u0026 (DoorState == false))))",
+      "ExactLine": "        using (new If(((Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00226\u0022\u0022 /\u003E\u0022)) == true) \u0026\u0026 (Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022false\u0022\u0022 variableName=\u0022\u0022DoorState\u0022\u0022 /\u003E\u0022) == false))))",
+      "MetadataLines": [
+        "        // VZEL PElmIGlkPSI1MCIgc3R5bGU9ImlmIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            Door = 1;",
+      "ExactLine": "            Door = Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00221\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSI1MSIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iRG9vciIgLz48L1NldFZhcmlhYmxlPg=="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorDoor\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorDoor\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iNTIiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Hatch Rotator\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Hatch Rotator\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iNTMiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(2);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00222\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSI1NCIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            All_False();",
+      "ExactLine": "            All_False();",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJBbGwgRmFsc2UiIGlkPSI1NSIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "            DoorState = true;",
+      "ExactLine": "            DoorState = true;",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSI1NiIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iRG9vclN0YXRlIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        using (new ElseIf(((Vz.ActivationGroup(6) == false) \u0026\u0026 (DoorState == true))))",
+      "ExactLine": "        using (new ElseIf(((Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00226\u0022\u0022 /\u003E\u0022)) == false) \u0026\u0026 (Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022false\u0022\u0022 variableName=\u0022\u0022DoorState\u0022\u0022 /\u003E\u0022) == true))))",
+      "MetadataLines": [
+        "        // VZEL PEVsc2VJZiBpZD0iNTciIHN0eWxlPSJlbHNlLWlmIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            Door = 0;",
+      "ExactLine": "            Door = Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00220\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSI1OCIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iRG9vciIgLz48L1NldFZhcmlhYmxlPg=="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorDoor\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorDoor\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iNTkiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Hatch Rotator\u0022), true);",
+      "ExactLine": "            Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Hatch Rotator\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iNjAiIHN0eWxlPSJzZXQtcGFydCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(2);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00222\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSI2MSIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            All_False();",
+      "ExactLine": "            All_False();",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJBbGwgRmFsc2UiIGlkPSI2MiIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "            DoorState = false;",
+      "ExactLine": "            DoorState = false;",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSI2MyIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iRG9vclN0YXRlIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        // Ladder, only active when door \u0026 landing leg are open",
+      "ExactLine": "        // Ladder, only active when door \u0026 landing leg are open",
+      "MetadataLines": [
+        "        // VZEL PENvbW1lbnQgaWQ9IjY0IiBzdHlsZT0iY29tbWVudCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        using (new If(((Vz.ActivationGroup(6) == true) \u0026\u0026 (Vz.ActivationGroup(9) == true))))",
+      "ExactLine": "        using (new If(((Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00226\u0022\u0022 /\u003E\u0022)) == true) \u0026\u0026 (Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00229\u0022\u0022 /\u003E\u0022)) == true))))",
+      "MetadataLines": [
+        "        // VZEL PElmIGlkPSI2NSIgc3R5bGU9ImlmIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            Ladder = 1;",
+      "ExactLine": "            Ladder = Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00221\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSI2NiIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iTGFkZGVyIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        using (new ElseIf(((Vz.ActivationGroup(6) == false) || (Vz.ActivationGroup(9) == false))))",
+      "ExactLine": "        using (new ElseIf(((Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00226\u0022\u0022 /\u003E\u0022)) == false) || (Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00229\u0022\u0022 /\u003E\u0022)) == false))))",
+      "MetadataLines": [
+        "        // VZEL PEVsc2VJZiBpZD0iNjciIHN0eWxlPSJlbHNlLWlmIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            Ladder = -0;",
+      "ExactLine": "            Ladder = Vz.RawXmlConstant(@\u0022\u003CConstant number=\u0022\u0022-0\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSI2OCIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iTGFkZGVyIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        // Landing Leg",
+      "ExactLine": "        // Landing Leg",
+      "MetadataLines": [
+        "        // VZEL PENvbW1lbnQgaWQ9IjY5IiBzdHlsZT0iY29tbWVudCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        using (new If(((Vz.ActivationGroup(9) == true) \u0026\u0026 (LegState == false))))",
+      "ExactLine": "        using (new If(((Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00229\u0022\u0022 /\u003E\u0022)) == true) \u0026\u0026 (Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022false\u0022\u0022 variableName=\u0022\u0022LegState\u0022\u0022 /\u003E\u0022) == false))))",
+      "MetadataLines": [
+        "        // VZEL PElmIGlkPSI3MCIgc3R5bGU9ImlmIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            LegCap = 1;",
+      "ExactLine": "            LegCap = Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00221\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSI3MSIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iTGVnQ2FwIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "            Landing_Leg(false, true);",
+      "ExactLine": "            Landing_Leg(false, true);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJMYW5kaW5nIExlZyIgaWQ9IjcyIiBzdHlsZT0iY2FsbC1jdXN0b20taW5zdHJ1Y3Rpb24iIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(0.8);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00220.8\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSI3MyIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.SetInput(CraftInput.Slider1, 1);",
+      "ExactLine": "            Vz.SetInput(CraftInput.Slider1, Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00221\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFNldElucHV0IGlucHV0PSJzbGlkZXIxIiBpZD0iNzQiIHN0eWxlPSJzZXQtaW5wdXQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "            Gear(true);",
+      "ExactLine": "            Gear(true);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJHZWFyIiBpZD0iNzUiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Landing_Leg(true, true);",
+      "ExactLine": "            Landing_Leg(true, true);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJMYW5kaW5nIExlZyIgaWQ9Ijc2IiBzdHlsZT0iY2FsbC1jdXN0b20taW5zdHJ1Y3Rpb24iIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(1.5);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00221.5\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSI3NyIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            All_False();",
+      "ExactLine": "            All_False();",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJBbGwgRmFsc2UiIGlkPSI3OCIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "            Gear(false);",
+      "ExactLine": "            Gear(false);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJHZWFyIiBpZD0iNzkiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            LegState = true;",
+      "ExactLine": "            LegState = true;",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSI4MCIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iTGVnU3RhdGUiIC8\u002BPC9TZXRWYXJpYWJsZT4="
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        using (new ElseIf(((Vz.ActivationGroup(9) == false) \u0026\u0026 (LegState == true))))",
+      "ExactLine": "        using (new ElseIf(((Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00229\u0022\u0022 /\u003E\u0022)) == false) \u0026\u0026 (Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022false\u0022\u0022 variableName=\u0022\u0022LegState\u0022\u0022 /\u003E\u0022) == true))))",
+      "MetadataLines": [
+        "        // VZEL PEVsc2VJZiBpZD0iODEiIHN0eWxlPSJlbHNlLWlmIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            Vz.SetInput(CraftInput.Slider1, -0);",
+      "ExactLine": "            Vz.SetInput(CraftInput.Slider1, Vz.RawXmlConstant(@\u0022\u003CConstant number=\u0022\u0022-0\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFNldElucHV0IGlucHV0PSJzbGlkZXIxIiBpZD0iODIiIHN0eWxlPSJzZXQtaW5wdXQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "            LegCap = -0;",
+      "ExactLine": "            LegCap = Vz.RawXmlConstant(@\u0022\u003CConstant number=\u0022\u0022-0\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSI4MyIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iTGVnQ2FwIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "            Gear(true);",
+      "ExactLine": "            Gear(true);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJHZWFyIiBpZD0iODQiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(1);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00221\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSI4NSIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Landing_Leg(true, false);",
+      "ExactLine": "            Landing_Leg(true, false);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJMYW5kaW5nIExlZyIgaWQ9Ijg2IiBzdHlsZT0iY2FsbC1jdXN0b20taW5zdHJ1Y3Rpb24iIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(0.4);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00220.4\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSI4NyIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            Landing_Leg(true, true);",
+      "ExactLine": "            Landing_Leg(true, true);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJMYW5kaW5nIExlZyIgaWQ9Ijg4IiBzdHlsZT0iY2FsbC1jdXN0b20taW5zdHJ1Y3Rpb24iIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "            Vz.WaitSeconds(0.4);",
+      "ExactLine": "            Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00220.4\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "            // VZEL PFdhaXRTZWNvbmRzIGlkPSI4OSIgc3R5bGU9IndhaXQtc2Vjb25kcyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            All_False();",
+      "ExactLine": "            All_False();",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJBbGwgRmFsc2UiIGlkPSI5MCIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "            Gear(false);",
+      "ExactLine": "            Gear(false);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJHZWFyIiBpZD0iOTEiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            LegState = false;",
+      "ExactLine": "            LegState = false;",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSI5MiIgc3R5bGU9InNldC12YXJpYWJsZSI\u002BPFZhcmlhYmxlIGxpc3Q9ImZhbHNlIiBsb2NhbD0iZmFsc2UiIHZhcmlhYmxlTmFtZT0iTGVnU3RhdGUiIC8\u002BPC9TZXRWYXJpYWJsZT4="
+      ]
+    },
+    {
+      "CleanLine": "            Gyro(true);",
+      "ExactLine": "            Gyro(true);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJHeXJvIiBpZD0iOTMiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        Lift_Elevator();",
+      "ExactLine": "        Lift_Elevator();",
+      "MetadataLines": [
+        "        // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJMaWZ0IEVsZXZhdG9yIiBpZD0iOTQiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        // Gyro",
+      "ExactLine": "        // Gyro",
+      "MetadataLines": [
+        "        // VZEL PENvbW1lbnQgaWQ9Ijk1IiBzdHlsZT0iY29tbWVudCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        using (new If(((Vz.ActivationGroup(9) == true) \u0026\u0026 Vz.Craft.Grounded())))",
+      "ExactLine": "        using (new If(((Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00229\u0022\u0022 /\u003E\u0022)) == true) \u0026\u0026 Vz.Craft.Grounded())))",
+      "MetadataLines": [
+        "        // VZEL PElmIGlkPSI5NiIgc3R5bGU9ImlmIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            Gyro(false);",
+      "ExactLine": "            Gyro(false);",
+      "MetadataLines": [
+        "            // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJHeXJvIiBpZD0iOTciIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        // Parachute Auto Deploy",
+      "ExactLine": "        // Parachute Auto Deploy",
+      "MetadataLines": [
+        "        // VZEL PENvbW1lbnQgaWQ9Ijk4IiBzdHlsZT0iY29tbWVudCIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        using (new If(((Vz.Craft.AltitudeAGL() \u003C 2000) \u0026\u0026 (Reentry == true))))",
+      "ExactLine": "        using (new If(((Vz.Craft.AltitudeAGL() \u003C Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00222000\u0022\u0022 /\u003E\u0022)) \u0026\u0026 (Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022false\u0022\u0022 variableName=\u0022\u0022Reentry\u0022\u0022 /\u003E\u0022) == true))))",
+      "MetadataLines": [
+        "        // VZEL PElmIGlkPSI5OSIgc3R5bGU9ImlmIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            using (new If((Vz.Craft.AltitudeAGL() \u003E= 1500)))",
+      "ExactLine": "            using (new If((Vz.Craft.AltitudeAGL() \u003E= Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00221500\u0022\u0022 /\u003E\u0022))))",
+      "MetadataLines": [
+        "            // VZEL PElmIGlkPSIxMDAiIHN0eWxlPSJpZiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            {",
+      "ExactLine": "            {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "                Parachute(true, false);",
+      "ExactLine": "                Parachute(true, false);",
+      "MetadataLines": [
+        "                // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJQYXJhY2h1dGUiIGlkPSIxMDEiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            }",
+      "ExactLine": "            }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            using (new ElseIf((Vz.Craft.AltitudeAGL() \u003C 500)))",
+      "ExactLine": "            using (new ElseIf((Vz.Craft.AltitudeAGL() \u003C Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u0022500\u0022\u0022 /\u003E\u0022))))",
+      "MetadataLines": [
+        "            // VZEL PEVsc2VJZiBpZD0iMTAyIiBzdHlsZT0iZWxzZS1pZiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            {",
+      "ExactLine": "            {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "                Parachute(true, true);",
+      "ExactLine": "                Parachute(true, true);",
+      "MetadataLines": [
+        "                // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJQYXJhY2h1dGUiIGlkPSIxMDMiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            }",
+      "ExactLine": "            }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            // Restart Parachute",
+      "ExactLine": "            // Restart Parachute",
+      "MetadataLines": [
+        "            // VZEL PENvbW1lbnQgaWQ9IjEwNCIgc3R5bGU9ImNvbW1lbnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "            using (new If(Vz.Craft.Grounded()))",
+      "ExactLine": "            using (new If(Vz.Craft.Grounded()))",
+      "MetadataLines": [
+        "            // VZEL PElmIGlkPSIxMDUiIHN0eWxlPSJpZiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "            {",
+      "ExactLine": "            {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "                Parachute(false, false);",
+      "ExactLine": "                Parachute(false, false);",
+      "MetadataLines": [
+        "                // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJQYXJhY2h1dGUiIGlkPSIxMDYiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "                Reentry = false;",
+      "ExactLine": "                Reentry = false;",
+      "MetadataLines": [
+        "                // VZEL PFNldFZhcmlhYmxlIGlkPSIxMDciIHN0eWxlPSJzZXQtdmFyaWFibGUiPjxWYXJpYWJsZSBsaXN0PSJmYWxzZSIgbG9jYWw9ImZhbHNlIiB2YXJpYWJsZU5hbWU9IlJlZW50cnkiIC8\u002BPC9TZXRWYXJpYWJsZT4="
+      ]
+    },
+    {
+      "CleanLine": "            }",
+      "ExactLine": "            }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        // Reentry Trigger",
+      "ExactLine": "        // Reentry Trigger",
+      "MetadataLines": [
+        "        // VZEL PENvbW1lbnQgaWQ9IjEwOCIgc3R5bGU9ImNvbW1lbnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        using (new If(((Vz.RawXmlCraftProperty(@\u0022\u003CCraftProperty property=\u0022\u0022Part.Temperature\u0022\u0022 style=\u0022\u0022part\u0022\u0022\u003E\u003CCraftProperty property=\u0022\u0022Part.NameToID\u0022\u0022 style=\u0022\u0022part-id\u0022\u0022\u003E\u003CConstant text=\u0022\u0022HeatShield\u0022\u0022 /\u003E\u003C/CraftProperty\u003E\u003C/CraftProperty\u003E\u0022) \u003E 473) \u0026\u0026 (Vz.Craft.Velocity.VerticalSurface() \u003C -0))))",
+      "ExactLine": "        using (new If(((Vz.RawXmlCraftProperty(@\u0022\u003CCraftProperty property=\u0022\u0022Part.Temperature\u0022\u0022 style=\u0022\u0022part\u0022\u0022\u003E\u003CCraftProperty property=\u0022\u0022Part.NameToID\u0022\u0022 style=\u0022\u0022part-id\u0022\u0022\u003E\u003CConstant text=\u0022\u0022HeatShield\u0022\u0022 /\u003E\u003C/CraftProperty\u003E\u003C/CraftProperty\u003E\u0022) \u003E Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u0022473\u0022\u0022 /\u003E\u0022)) \u0026\u0026 (Vz.Craft.Velocity.VerticalSurface() \u003C Vz.RawXmlConstant(@\u0022\u003CConstant number=\u0022\u0022-0\u0022\u0022 /\u003E\u0022)))))",
+      "MetadataLines": [
+        "        // VZEL PElmIGlkPSIxMDkiIHN0eWxlPSJpZiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            Reentry = true;",
+      "ExactLine": "            Reentry = true;",
+      "MetadataLines": [
+        "            // VZEL PFNldFZhcmlhYmxlIGlkPSIxMTAiIHN0eWxlPSJzZXQtdmFyaWFibGUiPjxWYXJpYWJsZSBsaXN0PSJmYWxzZSIgbG9jYWw9ImZhbHNlIiB2YXJpYWJsZU5hbWU9IlJlZW50cnkiIC8\u002BPC9TZXRWYXJpYWJsZT4="
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        // Door Button",
+      "ExactLine": "        // Door Button",
+      "MetadataLines": [
+        "        // VZEL PENvbW1lbnQgaWQ9IjExMSIgc3R5bGU9ImNvbW1lbnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        using (new If((((Vz.RawXmlCraftProperty(@\u0022\u003CCraftProperty property=\u0022\u0022Part.Activated\u0022\u0022 style=\u0022\u0022part\u0022\u0022\u003E\u003CCraftProperty property=\u0022\u0022Part.NameToID\u0022\u0022 style=\u0022\u0022part-id\u0022\u0022\u003E\u003CConstant text=\u0022\u0022Door Button 2\u0022\u0022 /\u003E\u003C/CraftProperty\u003E\u003C/CraftProperty\u003E\u0022) == true) || (Vz.RawXmlCraftProperty(@\u0022\u003CCraftProperty property=\u0022\u0022Part.Activated\u0022\u0022 style=\u0022\u0022part\u0022\u0022\u003E\u003CCraftProperty property=\u0022\u0022Part.NameToID\u0022\u0022 style=\u0022\u0022part-id\u0022\u0022\u003E\u003CConstant text=\u0022\u0022Door Button 1\u0022\u0022 /\u003E\u003C/CraftProperty\u003E\u003C/CraftProperty\u003E\u0022) == true)) \u0026\u0026 (DoorState == false))))",
+      "ExactLine": "        using (new If((((Vz.RawXmlCraftProperty(@\u0022\u003CCraftProperty property=\u0022\u0022Part.Activated\u0022\u0022 style=\u0022\u0022part\u0022\u0022\u003E\u003CCraftProperty property=\u0022\u0022Part.NameToID\u0022\u0022 style=\u0022\u0022part-id\u0022\u0022\u003E\u003CConstant text=\u0022\u0022Door Button 2\u0022\u0022 /\u003E\u003C/CraftProperty\u003E\u003C/CraftProperty\u003E\u0022) == true) || (Vz.RawXmlCraftProperty(@\u0022\u003CCraftProperty property=\u0022\u0022Part.Activated\u0022\u0022 style=\u0022\u0022part\u0022\u0022\u003E\u003CCraftProperty property=\u0022\u0022Part.NameToID\u0022\u0022 style=\u0022\u0022part-id\u0022\u0022\u003E\u003CConstant text=\u0022\u0022Door Button 1\u0022\u0022 /\u003E\u003C/CraftProperty\u003E\u003C/CraftProperty\u003E\u0022) == true)) \u0026\u0026 (Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022false\u0022\u0022 variableName=\u0022\u0022DoorState\u0022\u0022 /\u003E\u0022) == false))))",
+      "MetadataLines": [
+        "        // VZEL PElmIGlkPSIxMTIiIHN0eWxlPSJpZiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            Vz.SetActivationGroup(6, true);",
+      "ExactLine": "            Vz.SetActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00226\u0022\u0022 /\u003E\u0022), true);",
+      "MetadataLines": [
+        "            // VZEL PFNldEFjdGl2YXRpb25Hcm91cCBpZD0iMTEzIiBzdHlsZT0ic2V0LWFnIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        using (new If((((Vz.RawXmlCraftProperty(@\u0022\u003CCraftProperty property=\u0022\u0022Part.Activated\u0022\u0022 style=\u0022\u0022part\u0022\u0022\u003E\u003CCraftProperty property=\u0022\u0022Part.NameToID\u0022\u0022 style=\u0022\u0022part-id\u0022\u0022\u003E\u003CConstant text=\u0022\u0022Door Button 2\u0022\u0022 /\u003E\u003C/CraftProperty\u003E\u003C/CraftProperty\u003E\u0022) == true) || (Vz.RawXmlCraftProperty(@\u0022\u003CCraftProperty property=\u0022\u0022Part.Activated\u0022\u0022 style=\u0022\u0022part\u0022\u0022\u003E\u003CCraftProperty property=\u0022\u0022Part.NameToID\u0022\u0022 style=\u0022\u0022part-id\u0022\u0022\u003E\u003CConstant text=\u0022\u0022Door Button 1\u0022\u0022 /\u003E\u003C/CraftProperty\u003E\u003C/CraftProperty\u003E\u0022) == true)) \u0026\u0026 (DoorState == true))))",
+      "ExactLine": "        using (new If((((Vz.RawXmlCraftProperty(@\u0022\u003CCraftProperty property=\u0022\u0022Part.Activated\u0022\u0022 style=\u0022\u0022part\u0022\u0022\u003E\u003CCraftProperty property=\u0022\u0022Part.NameToID\u0022\u0022 style=\u0022\u0022part-id\u0022\u0022\u003E\u003CConstant text=\u0022\u0022Door Button 2\u0022\u0022 /\u003E\u003C/CraftProperty\u003E\u003C/CraftProperty\u003E\u0022) == true) || (Vz.RawXmlCraftProperty(@\u0022\u003CCraftProperty property=\u0022\u0022Part.Activated\u0022\u0022 style=\u0022\u0022part\u0022\u0022\u003E\u003CCraftProperty property=\u0022\u0022Part.NameToID\u0022\u0022 style=\u0022\u0022part-id\u0022\u0022\u003E\u003CConstant text=\u0022\u0022Door Button 1\u0022\u0022 /\u003E\u003C/CraftProperty\u003E\u003C/CraftProperty\u003E\u0022) == true)) \u0026\u0026 (Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022false\u0022\u0022 variableName=\u0022\u0022DoorState\u0022\u0022 /\u003E\u0022) == true))))",
+      "MetadataLines": [
+        "        // VZEL PElmIGlkPSIxMTQiIHN0eWxlPSJpZiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        {",
+      "ExactLine": "        {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "            Vz.SetActivationGroup(6, false);",
+      "ExactLine": "            Vz.SetActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00226\u0022\u0022 /\u003E\u0022), false);",
+      "MetadataLines": [
+        "            // VZEL PFNldEFjdGl2YXRpb25Hcm91cCBpZD0iMTE1IiBzdHlsZT0ic2V0LWFnIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "        }",
+      "ExactLine": "        }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        Vz.WaitSeconds(0.1);",
+      "ExactLine": "        Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00220.1\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "        // VZEL PFdhaXRTZWNvbmRzIGlkPSIxMTYiIHN0eWxlPSJ3YWl0LXNlY29uZHMiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    }",
+      "ExactLine": "    }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "}",
+      "ExactLine": "}",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// \u2500\u2500 Custom Instructions \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "ExactLine": "// \u2500\u2500 Custom Instructions \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "MetadataLines": [
+        "// VZTOPBLOCK",
+        "// VZBLOCK PEN1c3RvbUluc3RydWN0aW9uIGNhbGxGb3JtYXQ9IkdlYXIgKDApICIgZm9ybWF0PSJHZWFyIHx2YWx1ZXwgIiBuYW1lPSJHZWFyIiBpZD0iMTE3IiBzdHlsZT0iY3VzdG9tLWluc3RydWN0aW9uIiBwb3M9IjE3MjkuNTAyLC05NC41NDU3NSIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "var Gear = Vz.DeclareCustomInstruction(\u0022Gear\u0022, \u0022value\u0022).SetInstructions((value) =\u003E",
+      "ExactLine": "var Gear = Vz.DeclareCustomInstruction(\u0022Gear\u0022, \u0022value\u0022).SetInstructions((value) =\u003E",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "{",
+      "ExactLine": "{",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear1\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear1\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTE4IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear2\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear2\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTE5IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear3\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear3\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTIwIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear4\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear4\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTIxIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear5\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear5\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTIyIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear6\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear6\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTIzIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear7\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear7\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTI0IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear8\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear8\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTI1IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear9\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear9\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTI2IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear10\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear10\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTI3IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear11\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear11\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTI4IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear12\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear12\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTI5IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear13\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear13\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTMwIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear14\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear14\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTMxIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear15\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear15\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTMyIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear16\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear16\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTMzIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear17\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear17\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTM0IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear18\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear18\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTM1IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear19\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear19\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTM2IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear20\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gear20\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTM3IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "});",
+      "ExactLine": "});",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "var All_False = Vz.DeclareCustomInstruction(\u0022All False\u0022).SetInstructions(() =\u003E",
+      "ExactLine": "var All_False = Vz.DeclareCustomInstruction(\u0022All False\u0022).SetInstructions(() =\u003E",
+      "MetadataLines": [
+        "// VZTOPBLOCK",
+        "// VZBLOCK PEN1c3RvbUluc3RydWN0aW9uIGNhbGxGb3JtYXQ9IkFsbCBGYWxzZSIgZm9ybWF0PSJBbGwgRmFsc2UiIG5hbWU9IkFsbCBGYWxzZSIgaWQ9IjEzOCIgc3R5bGU9ImN1c3RvbS1pbnN0cnVjdGlvbiIgcG9zPSI4NDUuNjcxMywtMzUuNDY4ODMiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "{",
+      "ExactLine": "{",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    Elevator(false);",
+      "ExactLine": "    Elevator(false);",
+      "MetadataLines": [
+        "    // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJFbGV2YXRvciIgaWQ9IjEzOSIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "    Landing_Leg(false, false);",
+      "ExactLine": "    Landing_Leg(false, false);",
+      "MetadataLines": [
+        "    // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJMYW5kaW5nIExlZyIgaWQ9IjE0MCIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Rotator1\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Rotator1\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTQxIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorChair\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorChair\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTQyIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Hatch Rotator\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Hatch Rotator\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTQzIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022ElevatorTable\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022ElevatorTable\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTQ0IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator5\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator5\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTQ1IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator6\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator6\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTQ2IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorDoor\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorDoor\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTQ3IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift1\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift1\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTQ4IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift2\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift2\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTQ5IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorToilet\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorToilet\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTUwIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Door Button 1\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Door Button 1\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTUxIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Door Button 2\u0022), false);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Door Button 2\u0022), false);",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTUyIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "});",
+      "ExactLine": "});",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "var Elevator = Vz.DeclareCustomInstruction(\u0022Elevator\u0022, \u0022value\u0022).SetInstructions((value) =\u003E",
+      "ExactLine": "var Elevator = Vz.DeclareCustomInstruction(\u0022Elevator\u0022, \u0022value\u0022).SetInstructions((value) =\u003E",
+      "MetadataLines": [
+        "// VZTOPBLOCK",
+        "// VZBLOCK PEN1c3RvbUluc3RydWN0aW9uIGNhbGxGb3JtYXQ9IkVsZXZhdG9yICgwKSAiIGZvcm1hdD0iRWxldmF0b3IgfHZhbHVlfCAiIG5hbWU9IkVsZXZhdG9yIiBpZD0iMTUzIiBzdHlsZT0iY3VzdG9tLWluc3RydWN0aW9uIiBwb3M9Ijg0NS45ODcyLC03MzYuMjM4MiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "{",
+      "ExactLine": "{",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator1\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator1\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTU0IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator2\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator2\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTU1IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator3\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator3\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTU2IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator4\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Elevator4\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTU3IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorBed1\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorBed1\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTU4IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorBed2\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorBed2\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTU5IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "});",
+      "ExactLine": "});",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "var Lift_Elevator = Vz.DeclareCustomInstruction(\u0022Lift Elevator\u0022).SetInstructions(() =\u003E",
+      "ExactLine": "var Lift_Elevator = Vz.DeclareCustomInstruction(\u0022Lift Elevator\u0022).SetInstructions(() =\u003E",
+      "MetadataLines": [
+        "// VZTOPBLOCK",
+        "// VZBLOCK PEN1c3RvbUluc3RydWN0aW9uIGNhbGxGb3JtYXQ9IkxpZnQgRWxldmF0b3IiIGZvcm1hdD0iTGlmdCBFbGV2YXRvciIgbmFtZT0iTGlmdCBFbGV2YXRvciIgaWQ9IjE2MCIgc3R5bGU9ImN1c3RvbS1pbnN0cnVjdGlvbiIgcG9zPSI4NDAuOTMzNCwtMTA5NS41NiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "{",
+      "ExactLine": "{",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    // Lift Elevator",
+      "ExactLine": "    // Lift Elevator",
+      "MetadataLines": [
+        "    // VZEL PENvbW1lbnQgaWQ9IjE2MSIgc3R5bGU9ImNvbW1lbnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    using (new If(((Vz.ActivationGroup(4) == true) \u0026\u0026 (ElevatorState == false))))",
+      "ExactLine": "    using (new If(((Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00224\u0022\u0022 /\u003E\u0022)) == true) \u0026\u0026 (Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022false\u0022\u0022 variableName=\u0022\u0022ElevatorState\u0022\u0022 /\u003E\u0022) == false))))",
+      "MetadataLines": [
+        "    // VZEL PElmIGlkPSIxNjIiIHN0eWxlPSJpZiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "    {",
+      "ExactLine": "    {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        Elevator = 1;",
+      "ExactLine": "        Elevator = Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00221\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "        // VZEL PFNldFZhcmlhYmxlIGlkPSIxNjMiIHN0eWxlPSJzZXQtdmFyaWFibGUiPjxWYXJpYWJsZSBsaXN0PSJmYWxzZSIgbG9jYWw9ImZhbHNlIiB2YXJpYWJsZU5hbWU9IkVsZXZhdG9yIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorToilet\u0022), true);",
+      "ExactLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorToilet\u0022), true);",
+      "MetadataLines": [
+        "        // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTY0IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift1\u0022), true);",
+      "ExactLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift1\u0022), true);",
+      "MetadataLines": [
+        "        // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTY1IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        Vz.WaitSeconds(0.5);",
+      "ExactLine": "        Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00220.5\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "        // VZEL PFdhaXRTZWNvbmRzIGlkPSIxNjYiIHN0eWxlPSJ3YWl0LXNlY29uZHMiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift2\u0022), true);",
+      "ExactLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift2\u0022), true);",
+      "MetadataLines": [
+        "        // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTY3IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        Vz.WaitSeconds(2);",
+      "ExactLine": "        Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00222\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "        // VZEL PFdhaXRTZWNvbmRzIGlkPSIxNjgiIHN0eWxlPSJ3YWl0LXNlY29uZHMiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        All_False();",
+      "ExactLine": "        All_False();",
+      "MetadataLines": [
+        "        // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJBbGwgRmFsc2UiIGlkPSIxNjkiIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        ElevatorState = true;",
+      "ExactLine": "        ElevatorState = true;",
+      "MetadataLines": [
+        "        // VZEL PFNldFZhcmlhYmxlIGlkPSIxNzAiIHN0eWxlPSJzZXQtdmFyaWFibGUiPjxWYXJpYWJsZSBsaXN0PSJmYWxzZSIgbG9jYWw9ImZhbHNlIiB2YXJpYWJsZU5hbWU9IkVsZXZhdG9yU3RhdGUiIC8\u002BPC9TZXRWYXJpYWJsZT4="
+      ]
+    },
+    {
+      "CleanLine": "    }",
+      "ExactLine": "    }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    using (new ElseIf(((Vz.ActivationGroup(4) == false) \u0026\u0026 (ElevatorState == true))))",
+      "ExactLine": "    using (new ElseIf(((Vz.ActivationGroup(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00224\u0022\u0022 /\u003E\u0022)) == false) \u0026\u0026 (Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022false\u0022\u0022 variableName=\u0022\u0022ElevatorState\u0022\u0022 /\u003E\u0022) == true))))",
+      "MetadataLines": [
+        "    // VZEL PEVsc2VJZiBpZD0iMTcxIiBzdHlsZT0iZWxzZS1pZiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "    {",
+      "ExactLine": "    {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        Elevator = 0;",
+      "ExactLine": "        Elevator = Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00220\u0022\u0022 /\u003E\u0022);",
+      "MetadataLines": [
+        "        // VZEL PFNldFZhcmlhYmxlIGlkPSIxNzIiIHN0eWxlPSJzZXQtdmFyaWFibGUiPjxWYXJpYWJsZSBsaXN0PSJmYWxzZSIgbG9jYWw9ImZhbHNlIiB2YXJpYWJsZU5hbWU9IkVsZXZhdG9yIiAvPjwvU2V0VmFyaWFibGU\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorToilet\u0022), true);",
+      "ExactLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022RotatorToilet\u0022), true);",
+      "MetadataLines": [
+        "        // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTczIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift1\u0022), true);",
+      "ExactLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift1\u0022), true);",
+      "MetadataLines": [
+        "        // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTc0IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift2\u0022), true);",
+      "ExactLine": "        Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Lift2\u0022), true);",
+      "MetadataLines": [
+        "        // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTc1IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        Vz.WaitSeconds(2);",
+      "ExactLine": "        Vz.WaitSeconds(Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u00222\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "        // VZEL PFdhaXRTZWNvbmRzIGlkPSIxNzYiIHN0eWxlPSJ3YWl0LXNlY29uZHMiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "        All_False();",
+      "ExactLine": "        All_False();",
+      "MetadataLines": [
+        "        // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJBbGwgRmFsc2UiIGlkPSIxNzciIHN0eWxlPSJjYWxsLWN1c3RvbS1pbnN0cnVjdGlvbiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "        ElevatorState = false;",
+      "ExactLine": "        ElevatorState = false;",
+      "MetadataLines": [
+        "        // VZEL PFNldFZhcmlhYmxlIGlkPSIxNzgiIHN0eWxlPSJzZXQtdmFyaWFibGUiPjxWYXJpYWJsZSBsaXN0PSJmYWxzZSIgbG9jYWw9ImZhbHNlIiB2YXJpYWJsZU5hbWU9IkVsZXZhdG9yU3RhdGUiIC8\u002BPC9TZXRWYXJpYWJsZT4="
+      ]
+    },
+    {
+      "CleanLine": "    }",
+      "ExactLine": "    }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    // Solar Panel Auto Close or Open",
+      "ExactLine": "    // Solar Panel Auto Close or Open",
+      "MetadataLines": [
+        "    // VZEL PENvbW1lbnQgaWQ9IjE3OSIgc3R5bGU9ImNvbW1lbnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    using (new If((Vz.Craft.AltitudeASL() \u003E= 100000)))",
+      "ExactLine": "    using (new If((Vz.Craft.AltitudeASL() \u003E= Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u0022100000\u0022\u0022 /\u003E\u0022))))",
+      "MetadataLines": [
+        "    // VZEL PElmIGlkPSIxODAiIHN0eWxlPSJpZiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "    {",
+      "ExactLine": "    {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        Solar_Panel(true);",
+      "ExactLine": "        Solar_Panel(true);",
+      "MetadataLines": [
+        "        // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJTb2xhciBQYW5lbCIgaWQ9IjE4MSIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "    }",
+      "ExactLine": "    }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    using (new ElseIf((Vz.Craft.AltitudeASL() \u003C 100000)))",
+      "ExactLine": "    using (new ElseIf((Vz.Craft.AltitudeASL() \u003C Vz.RawXmlConstant(@\u0022\u003CConstant text=\u0022\u0022100000\u0022\u0022 /\u003E\u0022))))",
+      "MetadataLines": [
+        "    // VZEL PEVsc2VJZiBpZD0iMTgyIiBzdHlsZT0iZWxzZS1pZiIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "    {",
+      "ExactLine": "    {",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "        Solar_Panel(false);",
+      "ExactLine": "        Solar_Panel(false);",
+      "MetadataLines": [
+        "        // VZEL PENhbGxDdXN0b21JbnN0cnVjdGlvbiBjYWxsPSJTb2xhciBQYW5lbCIgaWQ9IjE4MyIgc3R5bGU9ImNhbGwtY3VzdG9tLWluc3RydWN0aW9uIiAvPg=="
+      ]
+    },
+    {
+      "CleanLine": "    }",
+      "ExactLine": "    }",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "});",
+      "ExactLine": "});",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "var Landing_Leg = Vz.DeclareCustomInstruction(\u0022Landing Leg\u0022, \u0022value1\u0022, \u0022value2\u0022).SetInstructions((value1, value2) =\u003E",
+      "ExactLine": "var Landing_Leg = Vz.DeclareCustomInstruction(\u0022Landing Leg\u0022, \u0022value1\u0022, \u0022value2\u0022).SetInstructions((value1, value2) =\u003E",
+      "MetadataLines": [
+        "// VZTOPBLOCK",
+        "// VZBLOCK PEN1c3RvbUluc3RydWN0aW9uIGNhbGxGb3JtYXQ9IkxhbmRpbmcgTGVnICgwKSBDYXAgKDEpICIgZm9ybWF0PSJMYW5kaW5nIExlZyB8dmFsdWUxfCBDYXAgfHZhbHVlMnwgIiBuYW1lPSJMYW5kaW5nIExlZyIgaWQ9IjE4NCIgc3R5bGU9ImN1c3RvbS1pbnN0cnVjdGlvbiIgcG9zPSI4MzYuNzg4NSwtMjIzMS42ODMiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "{",
+      "ExactLine": "{",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg1\u0022), value1);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg1\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value1\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTg1IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg2\u0022), value1);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg2\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value1\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTg2IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg3\u0022), value1);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg3\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value1\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTg3IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg4\u0022), value1);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg4\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value1\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTg4IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg5\u0022), value1);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg5\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value1\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTg5IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg6\u0022), value1);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg6\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value1\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTkwIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg7\u0022), value1);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg7\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value1\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTkxIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg8\u0022), value1);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Leg8\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value1\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTkyIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022LegCap1\u0022), value2);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022LegCap1\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value2\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTkzIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022LegCap2\u0022), value2);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022LegCap2\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value2\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTk0IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022LegCap3\u0022), value2);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022LegCap3\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value2\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTk1IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022LegCap4\u0022), value2);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022LegCap4\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value2\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTk2IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "});",
+      "ExactLine": "});",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "var Solar_Panel = Vz.DeclareCustomInstruction(\u0022Solar Panel\u0022, \u0022value\u0022).SetInstructions((value) =\u003E",
+      "ExactLine": "var Solar_Panel = Vz.DeclareCustomInstruction(\u0022Solar Panel\u0022, \u0022value\u0022).SetInstructions((value) =\u003E",
+      "MetadataLines": [
+        "// VZTOPBLOCK",
+        "// VZBLOCK PEN1c3RvbUluc3RydWN0aW9uIGNhbGxGb3JtYXQ9IlNvbGFyIFBhbmVsICgwKSAiIGZvcm1hdD0iU29sYXIgUGFuZWwgfHZhbHVlfCAiIG5hbWU9IlNvbGFyIFBhbmVsIiBpZD0iMTk3IiBzdHlsZT0iY3VzdG9tLWluc3RydWN0aW9uIiBwb3M9IjgzMy42NDczLC0yODQ0LjM3NyIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "{",
+      "ExactLine": "{",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022SolarPanel1\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022SolarPanel1\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTk4IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022SolarPanel2\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022SolarPanel2\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMTk5IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022SolarPanel3\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022SolarPanel3\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMjAwIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022SolarPanel4\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022SolarPanel4\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMjAxIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "});",
+      "ExactLine": "});",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "var Parachute = Vz.DeclareCustomInstruction(\u0022Parachute\u0022, \u0022value1\u0022, \u0022value2\u0022).SetInstructions((value1, value2) =\u003E",
+      "ExactLine": "var Parachute = Vz.DeclareCustomInstruction(\u0022Parachute\u0022, \u0022value1\u0022, \u0022value2\u0022).SetInstructions((value1, value2) =\u003E",
+      "MetadataLines": [
+        "// VZTOPBLOCK",
+        "// VZBLOCK PEN1c3RvbUluc3RydWN0aW9uIGNhbGxGb3JtYXQ9IlBhcmFjaHV0ZSAoMCkgYW5kICgxKSAiIGZvcm1hdD0iUGFyYWNodXRlIHx2YWx1ZTF8IGFuZCB8dmFsdWUyfCAiIG5hbWU9IlBhcmFjaHV0ZSIgaWQ9IjIwMiIgc3R5bGU9ImN1c3RvbS1pbnN0cnVjdGlvbiIgcG9zPSI4MjcuNzY0NCwtMzExNy4xNzkiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "{",
+      "ExactLine": "{",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Parachute1\u0022), value1);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Parachute1\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value1\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMjAzIiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Parachute2\u0022), value2);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Parachute2\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value2\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMjA0IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Parachute3\u0022), value1);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Parachute3\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value1\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMjA1IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Parachute4\u0022), value2);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Parachute4\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value2\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMjA2IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "});",
+      "ExactLine": "});",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "var Gyro = Vz.DeclareCustomInstruction(\u0022Gyro\u0022, \u0022value\u0022).SetInstructions((value) =\u003E",
+      "ExactLine": "var Gyro = Vz.DeclareCustomInstruction(\u0022Gyro\u0022, \u0022value\u0022).SetInstructions((value) =\u003E",
+      "MetadataLines": [
+        "// VZTOPBLOCK",
+        "// VZBLOCK PEN1c3RvbUluc3RydWN0aW9uIGNhbGxGb3JtYXQ9Ikd5cm8gKDApICIgZm9ybWF0PSJHeXJvIHx2YWx1ZXwgIiBuYW1lPSJHeXJvIiBpZD0iMjA3IiBzdHlsZT0iY3VzdG9tLWluc3RydWN0aW9uIiBwb3M9IjgyOC4yNjU2LC0zMzk0LjE4MSIgLz4="
+      ]
+    },
+    {
+      "CleanLine": "{",
+      "ExactLine": "{",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gyro1\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gyro1\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMjA4IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gyro2\u0022), value);",
+      "ExactLine": "    Vz.SetPartProperty(PartPropertySetType.Activated, Vz.PartNameToID(\u0022Gyro2\u0022), Vz.RawXmlVariable(@\u0022\u003CVariable list=\u0022\u0022false\u0022\u0022 local=\u0022\u0022true\u0022\u0022 variableName=\u0022\u0022value\u0022\u0022 /\u003E\u0022));",
+      "MetadataLines": [
+        "    // VZEL PFNldENyYWZ0UHJvcGVydHkgcHJvcGVydHk9IlBhcnQuU2V0QWN0aXZhdGVkIiBpZD0iMjA5IiBzdHlsZT0ic2V0LXBhcnQiIC8\u002B"
+      ]
+    },
+    {
+      "CleanLine": "});",
+      "ExactLine": "});",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "// \u2500\u2500 Serialize output \u2500\u2500",
+      "ExactLine": "// \u2500\u2500 Serialize output \u2500\u2500",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "Console.WriteLine(Vz.context.currentProgram.Serialize().ToString());",
+      "ExactLine": "Console.WriteLine(Vz.context.currentProgram.Serialize().ToString());",
+      "MetadataLines": []
+    },
+    {
+      "CleanLine": "",
+      "ExactLine": "",
+      "MetadataLines": []
+    }
+  ]
+}
