@@ -12,3 +12,5 @@ VizzyBuilder/
 lizpy/
 *.xml
 !*.csproj
+!Mod Assets/**
+*.meta
