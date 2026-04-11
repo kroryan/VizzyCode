@@ -12,6 +12,7 @@ namespace VizzyCode
         private ToolStrip    toolStrip;
         private StatusStrip  statusStrip;
         private ToolStripStatusLabel statusLabel;
+        private ToolStripStatusLabel statusJuno;   // Juno connection indicator
 
         private SplitContainer splitMain;   // left | right
         private SplitContainer splitLeft;   // tree | warnings (vertical in left panel)
@@ -23,10 +24,13 @@ namespace VizzyCode
         // Menu items
         private ToolStripMenuItem menuFile, menuOpenCraft, menuOpenVizzy, menuSaveCs, menuSaveXml,
             menuCopyItem, menuExamples, menuExCraft, menuExVizzy, menuExit,
-            menuView, menuTheme, menuHelp, menuAbout;
+            menuView, menuTheme, menuHelp, menuAbout,
+            menuJuno, menuJunoConnect, menuJunoStatus, menuJunoBrowse,
+            menuJunoImport, menuJunoExport, menuJunoStages, menuJunoActivateStage;
 
         // Toolbar
         private ToolStripButton btnOpenCraft, btnOpenVizzy, btnSave, btnCopy, btnExCraft, btnExVizzy;
+        private ToolStripButton btnJunoImport, btnJunoExport;
 
         protected override void Dispose(bool d) { if (d && components != null) components.Dispose(); base.Dispose(d); }
 
@@ -51,6 +55,29 @@ namespace VizzyCode
             menuHelp      = new ToolStripMenuItem("&Help");
             menuAbout     = new ToolStripMenuItem("&About...");
 
+            // ── Juno menu ─────────────────────────────────────────────────────
+            menuJuno             = new ToolStripMenuItem("&Juno");
+            menuJunoConnect      = new ToolStripMenuItem("Connect / Check Status")      { ShortcutKeys = Keys.Control | Keys.J };
+            menuJunoStatus       = new ToolStripMenuItem("● Not connected")              { Enabled = false };
+            menuJunoBrowse       = new ToolStripMenuItem("Browse Craft Parts...");
+            menuJunoImport       = new ToolStripMenuItem("← Import Vizzy from Game");
+            menuJunoExport       = new ToolStripMenuItem("→ Export Vizzy to Game");
+            menuJunoStages       = new ToolStripMenuItem("View Stages...");
+            menuJunoActivateStage = new ToolStripMenuItem("Activate Next Stage");
+
+            menuJuno.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                menuJunoStatus, new ToolStripSeparator(),
+                menuJunoConnect,
+                new ToolStripSeparator(),
+                menuJunoBrowse,
+                menuJunoImport,
+                menuJunoExport,
+                new ToolStripSeparator(),
+                menuJunoStages,
+                menuJunoActivateStage
+            });
+
             menuFile.DropDownItems.AddRange(new ToolStripItem[]
             {
                 menuOpenCraft, menuOpenVizzy, new ToolStripSeparator(),
@@ -60,7 +87,7 @@ namespace VizzyCode
             menuExamples.DropDownItems.AddRange(new ToolStripItem[] { menuExCraft, menuExVizzy });
             menuView.DropDownItems.Add(menuTheme);
             menuHelp.DropDownItems.Add(menuAbout);
-            menuStrip.Items.AddRange(new ToolStripItem[] { menuFile, menuView, menuHelp });
+            menuStrip.Items.AddRange(new ToolStripItem[] { menuFile, menuJuno, menuView, menuHelp });
 
             // ── Toolbar ───────────────────────────────────────────────────────
             toolStrip = new ToolStrip();
@@ -70,16 +97,21 @@ namespace VizzyCode
             btnCopy      = new ToolStripButton { Text = "Copy",       ToolTipText = "Copy to clipboard" };
             btnExCraft   = new ToolStripButton { Text = "Ex: Craft",  ToolTipText = "Load example craft" };
             btnExVizzy   = new ToolStripButton { Text = "Ex: Vizzy",  ToolTipText = "Load example vizzy" };
+            btnJunoImport = new ToolStripButton { Text = "⬇ Juno", ToolTipText = "Import Vizzy from running game" };
+            btnJunoExport = new ToolStripButton { Text = "⬆ Juno", ToolTipText = "Export Vizzy to running game" };
             toolStrip.Items.AddRange(new ToolStripItem[]
             {
                 btnOpenCraft, btnOpenVizzy, btnSave, btnCopy,
-                new ToolStripSeparator(), btnExCraft, btnExVizzy
+                new ToolStripSeparator(), btnExCraft, btnExVizzy,
+                new ToolStripSeparator(), btnJunoImport, btnJunoExport
             });
 
             // ── Status bar ────────────────────────────────────────────────────
             statusStrip = new StatusStrip();
             statusLabel = new ToolStripStatusLabel("Ready") { Spring = true, TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
+            statusJuno  = new ToolStripStatusLabel("Juno: —") { ForeColor = System.Drawing.Color.Gray };
             statusStrip.Items.Add(statusLabel);
+            statusStrip.Items.Add(statusJuno);
 
             // ── Tree view ─────────────────────────────────────────────────────
             treeView = new TreeView
@@ -137,22 +169,32 @@ namespace VizzyCode
             MainMenuStrip = menuStrip;
 
             // ── Wire events ───────────────────────────────────────────────────
-            menuOpenCraft.Click += menuOpenCraft_Click;
-            menuOpenVizzy.Click += menuOpenVizzy_Click;
-            menuSaveCs.Click   += menuSaveCs_Click;
-            menuSaveXml.Click  += menuSaveXml_Click;
-            menuCopyItem.Click  += menuCopy_Click;
-            menuExCraft.Click   += menuExampleCraft_Click;
-            menuExVizzy.Click   += menuExampleVizzy_Click;
-            menuExit.Click      += menuExit_Click;
-            menuTheme.Click     += menuTheme_Click;
-            menuAbout.Click     += menuAbout_Click;
+            menuOpenCraft.Click  += menuOpenCraft_Click;
+            menuOpenVizzy.Click  += menuOpenVizzy_Click;
+            menuSaveCs.Click     += menuSaveCs_Click;
+            menuSaveXml.Click    += menuSaveXml_Click;
+            menuCopyItem.Click   += menuCopy_Click;
+            menuExCraft.Click    += menuExampleCraft_Click;
+            menuExVizzy.Click    += menuExampleVizzy_Click;
+            menuExit.Click       += menuExit_Click;
+            menuTheme.Click      += menuTheme_Click;
+            menuAbout.Click      += menuAbout_Click;
+
+            menuJunoConnect.Click       += menuJunoConnect_Click;
+            menuJunoBrowse.Click        += menuJunoBrowse_Click;
+            menuJunoImport.Click        += menuJunoImport_Click;
+            menuJunoExport.Click        += menuJunoExport_Click;
+            menuJunoStages.Click        += menuJunoStages_Click;
+            menuJunoActivateStage.Click += menuJunoActivateStage_Click;
+
             btnOpenCraft.Click  += btnOpenCraft_Click;
             btnOpenVizzy.Click  += btnOpenVizzy_Click;
             btnSave.Click       += btnSave_Click;
             btnCopy.Click       += btnCopy_Click;
             btnExCraft.Click    += btnExCraft_Click;
             btnExVizzy.Click    += btnExVizzy_Click;
+            btnJunoImport.Click += (_, _) => menuJunoImport_Click(null!, null!);
+            btnJunoExport.Click += (_, _) => menuJunoExport_Click(null!, null!);
 
             ApplyTheme();
         }

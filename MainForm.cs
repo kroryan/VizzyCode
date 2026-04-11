@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
 
@@ -15,6 +16,10 @@ namespace VizzyCode
         private string? _currentFile;
         private CleanViewSidecar? _currentSidecar;
         private bool _isDark = true;
+
+        // Juno integration state
+        private int  _junoPartId   = -1;   // part id currently loaded from game
+        private string? _junoPartName;     // display name for status
 
         public MainForm(string? fileToOpen = null)
         {
@@ -371,6 +376,245 @@ namespace VizzyCode
         }
 
         // ── Theme ──────────────────────────────────────────────────────────────
+
+        // ── Juno menu handlers ─────────────────────────────────────────────────
+
+        private async void menuJunoConnect_Click(object s, EventArgs e)
+        {
+            statusLabel.Text = "Connecting to Juno…";
+            var info = await JunoClient.GetStatusAsync();
+            if (info == null)
+            {
+                SetJunoStatus(connected: false, label: "Not running");
+                MessageBox.Show(
+                    $"Cannot reach the VizzyCode mod at {JunoClient.BaseUrl}\n\n" +
+                    "Make sure Juno: New Origins is running and the VizzyCode mod is installed.",
+                    "Juno: Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            string scene = info.Scene ?? "unknown";
+            string craft = info.CraftName != null ? $"  ·  Craft: {info.CraftName}" : "";
+            SetJunoStatus(connected: true, label: $"Juno {scene}{craft}");
+            statusLabel.Text = $"Connected — mod v{info.ModVersion}  ·  Scene: {scene}{craft}";
+        }
+
+        private async void menuJunoBrowse_Click(object s, EventArgs e)
+        {
+            var craft = await JunoClient.GetCraftAsync();
+            if (craft == null)
+            {
+                MessageBox.Show("Could not reach the mod. Is Juno running?",
+                    "Juno: Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Build a simple part picker dialog
+            using var dlg = new Form
+            {
+                Text = $"Craft Parts — {craft.Name}",
+                Width = 420, Height = 380,
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false, MinimizeBox = false
+            };
+            var list = new ListBox { Dock = DockStyle.Fill, Font = new Font("Consolas", 10f) };
+            var btnOk     = new Button { Text = "Import Vizzy", DialogResult = DialogResult.OK,
+                Dock = DockStyle.Bottom, Height = 34 };
+            var lblHint = new Label { Text = "Double-click or select and press Import.",
+                Dock = DockStyle.Top, Height = 22, Font = new Font("Segoe UI", 8f),
+                ForeColor = Color.Gray };
+
+            var vizzyParts = (craft.Parts ?? Array.Empty<JunoClient.PartInfo>())
+                             .Where(p => p.HasVizzy).ToArray();
+
+            foreach (var p in vizzyParts)
+                list.Items.Add($"[{p.Id,4}]  {p.Name}");
+
+            if (list.Items.Count == 0)
+            {
+                MessageBox.Show("No parts with Vizzy programs found in the current craft.",
+                    "No Vizzy Parts", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            list.SelectedIndex = 0;
+            list.DoubleClick += (_, _) => dlg.DialogResult = DialogResult.OK;
+            dlg.Controls.Add(list);
+            dlg.Controls.Add(btnOk);
+            dlg.Controls.Add(lblHint);
+
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+            if (list.SelectedIndex < 0) return;
+
+            var selected = vizzyParts[list.SelectedIndex];
+            await ImportVizzyFromPart(selected.Id, selected.Name);
+        }
+
+        private async void menuJunoImport_Click(object s, EventArgs e)
+        {
+            // Import from whichever part is currently tracked, or ask user to browse
+            if (_junoPartId < 0)
+            {
+                menuJunoBrowse_Click(s, e);
+                return;
+            }
+            await ImportVizzyFromPart(_junoPartId, _junoPartName);
+        }
+
+        private async Task ImportVizzyFromPart(int partId, string? partName)
+        {
+            statusLabel.Text = $"Importing from part {partId}…";
+            var info = await JunoClient.GetVizzyAsync(partId);
+            if (info == null || !info.Ok)
+            {
+                string err = info?.Error ?? "Connection failed";
+                MessageBox.Show($"Import failed: {err}", "Juno Import",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                statusLabel.Text = $"Import failed: {err}";
+                return;
+            }
+
+            // Convert XML to code and load into editor
+            try
+            {
+                var doc  = XDocument.Parse(info.Xml);
+                var conv = new VizzyXmlConverter();
+                string exactCode = conv.ConvertProgramToCode(doc);
+                var cleanView    = CodeCleanView.CreateCleanCode(exactCode);
+
+                _currentFile    = null;
+                _currentSidecar = cleanView.Sidecar;
+                _junoPartId     = partId;
+                _junoPartName   = partName ?? info.PartName;
+
+                codeEditor.Text = cleanView.CleanCode.Replace("\r\n", "\n").Replace("\n", "\r\n");
+                Highlight();
+                UpdateTree(doc, conv);
+                Text = $"VizzyCode  –  [Juno] {_junoPartName} (part {partId})";
+
+                SetJunoStatus(connected: true,
+                    label: $"Part {partId}: {_junoPartName}");
+                statusLabel.Text = $"Imported from Juno — part {partId}: {_junoPartName}";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error processing Vizzy XML:\n{ex.Message}", "Import Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void menuJunoExport_Click(object s, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(codeEditor.Text))
+            {
+                MessageBox.Show("Nothing to export.", "Juno Export",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (_junoPartId < 0)
+            {
+                MessageBox.Show(
+                    "No part selected. Use Juno > Browse Craft Parts to pick a part first.",
+                    "Juno Export", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Convert code to Vizzy XML
+            string programName = _junoPartName ?? "GeneratedProgram";
+            string cleanCode   = codeEditor.Text.Replace("\r\n", "\n");
+            string exportCode  = CodeCleanView.RestoreExactCode(cleanCode, _currentSidecar);
+
+            string xml;
+            try
+            {
+                var conv   = new VizzyXmlConverter();
+                var xmlDoc = conv.ConvertCodeToXml(exportCode, programName);
+
+                var errors = VizzyExportValidator.Validate(xmlDoc);
+                if (errors.Count > 0)
+                {
+                    var res = MessageBox.Show(
+                        "Export validation found issues:\n\n" +
+                        VizzyExportValidator.Format(errors) +
+                        "\n\nExport anyway?",
+                        "Validation Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    if (res != DialogResult.Yes) return;
+                }
+
+                xml = xmlDoc.Root!.ToString(System.Xml.Linq.SaveOptions.None);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Code conversion failed:\n{ex.Message}", "Export Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            statusLabel.Text = $"Sending to Juno part {_junoPartId}…";
+            var result = await JunoClient.PutVizzyAsync(_junoPartId, xml);
+
+            if (result == null || !result.Ok)
+            {
+                string err = result?.Error ?? "Connection failed";
+                MessageBox.Show($"Export to Juno failed: {err}", "Juno Export",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                statusLabel.Text = $"Export failed: {err}";
+                return;
+            }
+
+            SetJunoStatus(connected: true, label: $"Exported → part {_junoPartId}");
+            statusLabel.Text = $"Exported to Juno — part {_junoPartId}: {result.PartName}";
+            MessageBox.Show(
+                $"Vizzy program sent to Juno successfully!\n\nPart: {result.PartName} (id {result.PartId})\n\n" +
+                "The game has updated the program. If you're in the designer, you'll see it immediately.",
+                "Juno Export OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private async void menuJunoStages_Click(object s, EventArgs e)
+        {
+            var stages = await JunoClient.GetStagesAsync();
+            if (stages == null)
+            {
+                MessageBox.Show("Could not reach the mod. Is Juno running?",
+                    "Juno: Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Current stage:  {stages.CurrentStage} / {stages.NumStages}");
+            sb.AppendLine();
+            sb.AppendLine("Activation groups:");
+            var names  = stages.ActivationGroupNames  ?? Array.Empty<string>();
+            var states = stages.ActivationGroupStates ?? Array.Empty<bool>();
+            for (int i = 0; i < names.Length; i++)
+            {
+                string state = i < states.Length ? (states[i] ? "ON " : "OFF") : "???";
+                sb.AppendLine($"  [{state}]  {names[i]}");
+            }
+
+            MessageBox.Show(sb.ToString(), "Juno: Stages", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private async void menuJunoActivateStage_Click(object s, EventArgs e)
+        {
+            var result = await JunoClient.ActivateStageAsync();
+            if (result == null)
+            {
+                MessageBox.Show("Could not reach the mod.", "Juno: Not Connected",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            statusLabel.Text = $"Stage activated — now at stage {result.CurrentStage}/{result.NumStages}";
+        }
+
+        private void SetJunoStatus(bool connected, string label)
+        {
+            if (InvokeRequired) { Invoke(new Action(() => SetJunoStatus(connected, label))); return; }
+            statusJuno.Text      = $"Juno: {label}";
+            statusJuno.ForeColor = connected ? Color.LimeGreen : Color.Gray;
+            menuJunoStatus.Text  = (connected ? "● Connected" : "○ Not connected") + $"  —  {label}";
+        }
 
         private void ApplyTheme()
         {

@@ -38,6 +38,31 @@
         "command": "vizzycode.roundTripXml",
         "category": "VizzyCode",
         "title": "VizzyCode Round-Trip XML"
+      },
+      {
+        "command": "vizzycode.junoConnect",
+        "category": "VizzyCode",
+        "title": "VizzyCode: Connect to Juno"
+      },
+      {
+        "command": "vizzycode.junoImportFromGame",
+        "category": "VizzyCode",
+        "title": "VizzyCode: Import Vizzy from Running Game"
+      },
+      {
+        "command": "vizzycode.junoExportToGame",
+        "category": "VizzyCode",
+        "title": "VizzyCode: Export Vizzy to Running Game"
+      },
+      {
+        "command": "vizzycode.junoBrowseParts",
+        "category": "VizzyCode",
+        "title": "VizzyCode: Browse Craft Parts in Juno"
+      },
+      {
+        "command": "vizzycode.junoViewStages",
+        "category": "VizzyCode",
+        "title": "VizzyCode: View Stages in Juno"
       }
     ],
     "menus": {
@@ -67,6 +92,16 @@
         {
           "command": "vizzycode.exportCodeToXml",
           "when": "resourceExtname == .cs",
+          "group": "navigation"
+        },
+        {
+          "command": "vizzycode.junoExportToGame",
+          "when": "resourceExtname == .cs",
+          "group": "navigation"
+        },
+        {
+          "command": "vizzycode.junoImportFromGame",
+          "when": "resourceExtname == .xml",
           "group": "navigation"
         }
       ]
