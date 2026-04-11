@@ -22,16 +22,9 @@ namespace VizzyCode
 
             Shown += (_, _) =>
             {
-                try { splitMain.SplitterDistance  = 230; } catch { }
-                try { splitRight.SplitterDistance = (int)(splitRight.Width * 0.60); } catch { }
-                try { splitLeft.SplitterDistance  = (int)(splitLeft.Height * 0.70); } catch { }
+                try { splitMain.SplitterDistance = 230; } catch { }
+                try { splitLeft.SplitterDistance = (int)(splitLeft.Height * 0.70); } catch { }
             };
-
-            chatPanel.GetCurrentCode  = () => codeEditor.Text;
-            chatPanel.GetWorkingDirectory = GetAgentWorkingDirectory;
-            chatPanel.GetDocumentKey = GetAgentDocumentKey;
-            chatPanel.OnInsertCode    = InsertCodeFromChat;
-            chatPanel.OnReplaceCode   = ReplaceCodeFromChat;
 
             if (fileToOpen != null && File.Exists(fileToOpen))
                 LoadFile(fileToOpen);
@@ -45,18 +38,15 @@ namespace VizzyCode
         {
             codeEditor.Text =
                 "// ═══════════════════════════════════════════════════════════\r\n" +
-                "//  VizzyCode  –  Open · Convert · AI-edit Vizzy programs\r\n" +
+                "//  VizzyCode  –  Open · Convert · Edit Vizzy programs\r\n" +
                 "// ═══════════════════════════════════════════════════════════\r\n" +
                 "//\r\n" +
                 "//  File > Open Craft XML   – open a craft .xml file\r\n" +
                 "//  File > Open Vizzy XML   – open a standalone vizzy program\r\n" +
-                "//  File > Save as .cs      – save for VizzyBuilder\r\n" +
+                "//  File > Save as .cs      – save the editable code\r\n" +
+                "//  File > Save as Vizzy XML – export back to Vizzy XML\r\n" +
                 "//\r\n" +
                 "//  Toolbar: Ex: Craft / Ex: Vizzy  – load built-in examples\r\n" +
-                "//\r\n" +
-                "//  Chat panel (right): ask AI to write or modify Vizzy code\r\n" +
-                "//  Supports Claude, Gemini, OpenAI and Local LLMs.\r\n" +
-                "//  Use ⚙ in the chat panel to configure API keys.\r\n" +
                 "//\r\n";
             Highlight();
         }
@@ -234,55 +224,6 @@ namespace VizzyCode
             }
         }
 
-        // ── Chat integration ───────────────────────────────────────────────────
-
-        private void InsertCodeFromChat(string code)
-        {
-            // If editor has selection, replace it. Otherwise append.
-            if (codeEditor.SelectionLength > 0)
-                codeEditor.SelectedText = code;
-            else
-            {
-                codeEditor.SelectionStart = codeEditor.TextLength;
-                codeEditor.AppendText("\r\n" + code);
-            }
-            Highlight();
-            statusLabel.Text = "Code inserted from AI Assistant.";
-        }
-
-        private void ReplaceCodeFromChat(string code)
-        {
-            codeEditor.Text = (code ?? string.Empty).Replace("\r\n", "\n").Replace("\n", "\r\n");
-            Highlight();
-            statusLabel.Text = "Code updated from AI workspace.";
-        }
-
-        private string GetAgentWorkingDirectory()
-        {
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(_currentFile))
-                {
-                    string? dir = Path.GetDirectoryName(_currentFile);
-                    if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
-                        return dir;
-                }
-            }
-            catch
-            {
-            }
-
-            return AppBaseDir();
-        }
-
-        private string GetAgentDocumentKey()
-        {
-            if (!string.IsNullOrWhiteSpace(_currentFile))
-                return _currentFile;
-
-            return "unsaved-editor-buffer";
-        }
-
         // ── Save / Copy ────────────────────────────────────────────────────────
 
         private void SaveCode()
@@ -309,7 +250,7 @@ namespace VizzyCode
         private void SaveToVizzyXml()
         {
             if (string.IsNullOrWhiteSpace(codeEditor.Text)) return;
-            
+
             string programName = _currentFile != null
                 ? Path.GetFileNameWithoutExtension(_currentFile)
                 : "GeneratedProgram";
@@ -342,12 +283,12 @@ namespace VizzyCode
                 };
 
                 if (dlg.ShowDialog() != DialogResult.OK) return;
-                
+
                 xmlDoc.Save(dlg.FileName);
                 statusLabel.Text = $"Saved Vizzy XML: {Path.GetFileName(dlg.FileName)}";
                 MessageBox.Show(
                     $"Vizzy XML program saved successfully!\n\nFile: {dlg.FileName}\n\n" +
-                    "You can now import this file into SimpleRockets 2 and run it with Vizzy.",
+                    "You can now import this file into Juno: New Origins and run it with Vizzy.",
                     "Vizzy XML Saved",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -410,11 +351,10 @@ namespace VizzyCode
                 "VizzyCode v1.0\n\n" +
                 "Opens Vizzy XML programs (craft files or standalone) and converts\n" +
                 "them to editable C# VizzyBuilder code.\n\n" +
-                "Includes AI chat powered by Claude (subscription or API key).\n\n" +
                 "VizzyBuilder by Rayan Ral  ·  github.com/kroryan/VizzyCode",
                 "About VizzyCode", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-        // Toolbar shortcut
+        // Toolbar shortcuts
         private void btnOpenCraft_Click(object s, EventArgs e) => menuOpenCraft_Click(s, e);
         private void btnOpenVizzy_Click(object s, EventArgs e) => menuOpenVizzy_Click(s, e);
         private void btnSave_Click(object s, EventArgs e) => SaveToVizzyXml();
@@ -445,7 +385,6 @@ namespace VizzyCode
             warningsBox.BackColor = bg2; warningsBox.ForeColor = _isDark ? Color.FromArgb(220,120,120) : Color.DarkRed;
             statusStrip.BackColor = sbBg;
             statusLabel.ForeColor = Color.White;
-            chatPanel.ApplyTheme(_isDark);
             Highlight();
         }
 

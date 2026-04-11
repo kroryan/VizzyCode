@@ -15,12 +15,10 @@ namespace VizzyCode
 
         private SplitContainer splitMain;   // left | right
         private SplitContainer splitLeft;   // tree | warnings (vertical in left panel)
-        private SplitContainer splitRight;  // code | chat (horizontal in right panel)
 
         private TreeView    treeView;
         private RichTextBox warningsBox;
         private RichTextBox codeEditor;
-        private ChatPanel   chatPanel;
 
         // Menu items
         private ToolStripMenuItem menuFile, menuOpenCraft, menuOpenVizzy, menuSaveCs, menuSaveXml,
@@ -52,7 +50,7 @@ namespace VizzyCode
             menuTheme     = new ToolStripMenuItem("Light Theme");
             menuHelp      = new ToolStripMenuItem("&Help");
             menuAbout     = new ToolStripMenuItem("&About...");
- 
+
             menuFile.DropDownItems.AddRange(new ToolStripItem[]
             {
                 menuOpenCraft, menuOpenVizzy, new ToolStripSeparator(),
@@ -106,9 +104,6 @@ namespace VizzyCode
             };
             codeEditor.LostFocus += (_, _) => Highlight();
 
-            // ── Chat panel ────────────────────────────────────────────────────
-            chatPanel = new ChatPanel { Dock = DockStyle.Fill };
-
             // ── Split: left (tree+warnings) ───────────────────────────────────
             splitLeft = new SplitContainer
             {
@@ -118,23 +113,14 @@ namespace VizzyCode
             splitLeft.Panel1.Controls.Add(treeView);
             splitLeft.Panel2.Controls.Add(warningsBox);
 
-            // ── Split: right (code | chat) ────────────────────────────────────
-            splitRight = new SplitContainer
-            {
-                Dock = DockStyle.Fill, Orientation = Orientation.Vertical,
-                BorderStyle = BorderStyle.None
-            };
-            splitRight.Panel1.Controls.Add(codeEditor);
-            splitRight.Panel2.Controls.Add(chatPanel);
-
-            // ── Main split: left | right ──────────────────────────────────────
+            // ── Main split: left | code ───────────────────────────────────────
             splitMain = new SplitContainer
             {
                 Dock = DockStyle.Fill, Orientation = Orientation.Vertical,
                 BorderStyle = BorderStyle.None
             };
             splitMain.Panel1.Controls.Add(splitLeft);
-            splitMain.Panel2.Controls.Add(splitRight);
+            splitMain.Panel2.Controls.Add(codeEditor);
 
             // ── Form ──────────────────────────────────────────────────────────
             AutoScaleDimensions = new System.Drawing.SizeF(7f, 15f);

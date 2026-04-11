@@ -7,13 +7,15 @@ namespace VizzyCode
     internal static class DebugLog
     {
         private static readonly object Sync = new();
-        private static string LogPath => Path.Combine(AiSettings.SettingsDirectory, "debug.log");
+        private static string SettingsDir => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VizzyCode");
+        private static string LogPath => Path.Combine(SettingsDir, "debug.log");
 
         public static void Write(string message)
         {
             try
             {
-                Directory.CreateDirectory(AiSettings.SettingsDirectory);
+                Directory.CreateDirectory(SettingsDir);
                 lock (Sync)
                 {
                     File.AppendAllText(
