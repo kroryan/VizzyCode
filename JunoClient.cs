@@ -126,6 +126,20 @@ namespace VizzyCode
             catch { return null; }
         }
 
+        /// <summary>Get the full bridge snapshot JSON for diagnostics and AI context.</summary>
+        public static async Task<string?> GetSnapshotJsonAsync()
+        {
+            try { return await GetAsync("/snapshot"); }
+            catch { return null; }
+        }
+
+        /// <summary>Get the live telemetry JSON for the active craft.</summary>
+        public static async Task<string?> GetTelemetryJsonAsync()
+        {
+            try { return await GetAsync("/telemetry"); }
+            catch { return null; }
+        }
+
         /// <summary>Trigger the next stage activation (flight scene only).</summary>
         public static async Task<StagesInfo?> ActivateStageAsync()
         {

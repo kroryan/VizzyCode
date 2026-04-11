@@ -596,6 +596,191 @@ namespace VizzyCode
             MessageBox.Show(sb.ToString(), "Juno: Stages", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
+        private async void menuJunoTelemetry_Click(object s, EventArgs e)
+        {
+            await SaveJunoJson("telemetry", () => JunoClient.GetTelemetryJsonAsync());
+        }
+
+        private async void menuJunoSnapshot_Click(object s, EventArgs e)
+        {
+            await SaveJunoJson("snapshot", () => JunoClient.GetSnapshotJsonAsync());
+        }
+
+        private async void menuJunoTelemetryReport_Click(object s, EventArgs e)
+        {
+            await SaveJunoReport("telemetry", () => JunoClient.GetTelemetryJsonAsync());
+        }
+
+        private async void menuJunoSnapshotReport_Click(object s, EventArgs e)
+        {
+            await SaveJunoReport("snapshot", () => JunoClient.GetSnapshotJsonAsync());
+        }
+
+        private async Task SaveJunoJson(string kind, Func<Task<string?>> fetch)
+        {
+            statusLabel.Text = $"Reading Juno {kind}...";
+            string? json = await fetch();
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                MessageBox.Show(
+                    $"Could not read Juno {kind}. Make sure Juno is running with the VizzyCode mod enabled.",
+                    "Juno JSON Export", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                statusLabel.Text = $"Juno {kind} unavailable.";
+                return;
+            }
+
+            string craftName = ExtractJsonString(json, "craftName") ?? "JunoCraft";
+            string safeCraft = Regex.Replace(craftName, @"[^a-zA-Z0-9_\-. ]+", "_").Trim();
+            if (string.IsNullOrWhiteSpace(safeCraft)) safeCraft = "JunoCraft";
+
+            using var dlg = new SaveFileDialog
+            {
+                Title = $"Save Juno {kind} JSON",
+                Filter = "JSON Files (*.json)|*.json|All Files (*.*)|*.*",
+                DefaultExt = "json",
+                FileName = $"{safeCraft}.{kind}.json",
+                InitialDirectory = AppBaseDir()
+            };
+
+            if (dlg.ShowDialog(this) != DialogResult.OK)
+            {
+                statusLabel.Text = $"Juno {kind} export cancelled.";
+                return;
+            }
+
+            File.WriteAllText(dlg.FileName, PrettyJson(json), Encoding.UTF8);
+            statusLabel.Text = $"Saved Juno {kind}: {Path.GetFileName(dlg.FileName)}";
+            MessageBox.Show(
+                $"Saved Juno {kind} JSON successfully.\n\nFile: {dlg.FileName}\n\n" +
+                "Give this JSON to humans or AI agents as craft context before editing Vizzy.",
+                "Juno JSON Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private async Task SaveJunoReport(string kind, Func<Task<string?>> fetch)
+        {
+            statusLabel.Text = $"Reading Juno {kind} for report...";
+            string? json = await fetch();
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                MessageBox.Show(
+                    $"Could not read Juno {kind}. Make sure Juno is running with the VizzyCode mod enabled.",
+                    "Juno Report Export", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                statusLabel.Text = $"Juno {kind} unavailable.";
+                return;
+            }
+
+            string craftName = ExtractJsonString(json, "craftName") ?? "JunoCraft";
+            string safeCraft = Regex.Replace(craftName, @"[^a-zA-Z0-9_\-. ]+", "_").Trim();
+            if (string.IsNullOrWhiteSpace(safeCraft)) safeCraft = "JunoCraft";
+
+            string report;
+            try
+            {
+                report = JunoReportBuilder.BuildMarkdownReport(json, kind);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Could not build the readable report: {ex.Message}",
+                    "Juno Report Export", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                statusLabel.Text = "Juno report generation failed.";
+                return;
+            }
+
+            using var dlg = new SaveFileDialog
+            {
+                Title = $"Save Juno {kind} report",
+                Filter = "Markdown Files (*.md)|*.md|Text Files (*.txt)|*.txt|All Files (*.*)|*.*",
+                DefaultExt = "md",
+                FileName = $"{safeCraft}.{kind}.report.md",
+                InitialDirectory = AppBaseDir()
+            };
+
+            if (dlg.ShowDialog(this) != DialogResult.OK)
+            {
+                statusLabel.Text = $"Juno {kind} report export cancelled.";
+                return;
+            }
+
+            File.WriteAllText(dlg.FileName, report, Encoding.UTF8);
+            statusLabel.Text = $"Saved Juno {kind} report: {Path.GetFileName(dlg.FileName)}";
+            MessageBox.Show(
+                $"Saved Juno {kind} Markdown report successfully.\n\nFile: {dlg.FileName}\n\n" +
+                "This is the recommended human/AI-readable craft context. Keep the JSON too when exact raw fields are needed.",
+                "Juno Report Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private static string? ExtractJsonString(string json, string key)
+        {
+            var match = Regex.Match(json, $"\"{Regex.Escape(key)}\"\\s*:\\s*\"(?<v>(?:\\\\.|[^\"])*)\"");
+            if (!match.Success) return null;
+            return match.Groups["v"].Value.Replace("\\\"", "\"").Replace("\\\\", "\\");
+        }
+
+        private static string PrettyJson(string json)
+        {
+            var sb = new StringBuilder();
+            bool inString = false;
+            bool escape = false;
+            int indent = 0;
+
+            foreach (char c in json)
+            {
+                if (escape)
+                {
+                    sb.Append(c);
+                    escape = false;
+                    continue;
+                }
+
+                if (c == '\\' && inString)
+                {
+                    sb.Append(c);
+                    escape = true;
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inString = !inString;
+                    sb.Append(c);
+                    continue;
+                }
+
+                if (inString)
+                {
+                    sb.Append(c);
+                    continue;
+                }
+
+                switch (c)
+                {
+                    case '{':
+                    case '[':
+                        sb.Append(c).AppendLine();
+                        sb.Append(new string(' ', ++indent * 2));
+                        break;
+                    case '}':
+                    case ']':
+                        sb.AppendLine();
+                        sb.Append(new string(' ', --indent * 2)).Append(c);
+                        break;
+                    case ',':
+                        sb.Append(c).AppendLine();
+                        sb.Append(new string(' ', indent * 2));
+                        break;
+                    case ':':
+                        sb.Append(": ");
+                        break;
+                    default:
+                        if (!char.IsWhiteSpace(c)) sb.Append(c);
+                        break;
+                }
+            }
+
+            return sb.ToString();
+        }
+
         private async void menuJunoActivateStage_Click(object s, EventArgs e)
         {
             var result = await JunoClient.ActivateStageAsync();

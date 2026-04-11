@@ -26,7 +26,9 @@ namespace VizzyCode
             menuCopyItem, menuExamples, menuExCraft, menuExVizzy, menuExit,
             menuView, menuTheme, menuHelp, menuAbout,
             menuJuno, menuJunoConnect, menuJunoStatus, menuJunoBrowse,
-            menuJunoImport, menuJunoExport, menuJunoStages, menuJunoActivateStage;
+            menuJunoImport, menuJunoExport, menuJunoStages, menuJunoTelemetry,
+            menuJunoSnapshot, menuJunoTelemetryReport, menuJunoSnapshotReport,
+            menuJunoActivateStage;
 
         // Toolbar
         private ToolStripButton btnOpenCraft, btnOpenVizzy, btnSave, btnCopy, btnExCraft, btnExVizzy;
@@ -63,6 +65,10 @@ namespace VizzyCode
             menuJunoImport       = new ToolStripMenuItem("← Import Vizzy from Game");
             menuJunoExport       = new ToolStripMenuItem("→ Export Vizzy to Game");
             menuJunoStages       = new ToolStripMenuItem("View Stages...");
+            menuJunoTelemetry    = new ToolStripMenuItem("Save Telemetry JSON...");
+            menuJunoSnapshot     = new ToolStripMenuItem("Save Full Craft Snapshot JSON...");
+            menuJunoTelemetryReport = new ToolStripMenuItem("Save Telemetry Report for Humans/AI...");
+            menuJunoSnapshotReport  = new ToolStripMenuItem("Save Full Craft Report for Humans/AI...");
             menuJunoActivateStage = new ToolStripMenuItem("Activate Next Stage");
 
             menuJuno.DropDownItems.AddRange(new ToolStripItem[]
@@ -75,6 +81,10 @@ namespace VizzyCode
                 menuJunoExport,
                 new ToolStripSeparator(),
                 menuJunoStages,
+                menuJunoTelemetry,
+                menuJunoSnapshot,
+                menuJunoTelemetryReport,
+                menuJunoSnapshotReport,
                 menuJunoActivateStage
             });
 
@@ -185,6 +195,10 @@ namespace VizzyCode
             menuJunoImport.Click        += menuJunoImport_Click;
             menuJunoExport.Click        += menuJunoExport_Click;
             menuJunoStages.Click        += menuJunoStages_Click;
+            menuJunoTelemetry.Click     += menuJunoTelemetry_Click;
+            menuJunoSnapshot.Click      += menuJunoSnapshot_Click;
+            menuJunoTelemetryReport.Click += menuJunoTelemetryReport_Click;
+            menuJunoSnapshotReport.Click  += menuJunoSnapshotReport_Click;
             menuJunoActivateStage.Click += menuJunoActivateStage_Click;
 
             btnOpenCraft.Click  += btnOpenCraft_Click;
