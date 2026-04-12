@@ -166,6 +166,12 @@ namespace VizzyCodeMod
 
         private object GetSnapshot()
         {
+            try { return GetSnapshotInternal(); }
+            catch (Exception ex) { return Err($"snapshot exception: {ex.GetType().Name}: {ex.Message}"); }
+        }
+
+        private object GetSnapshotInternal()
+        {
             var status = (StatusResponse)GetStatus();
             var snapshot = new BridgeSnapshotResponse
             {
@@ -193,7 +199,8 @@ namespace VizzyCodeMod
 
         private object GetTelemetry()
         {
-            return BuildTelemetry(CurrentCraftScript());
+            try { return BuildTelemetry(CurrentCraftScript()); }
+            catch (Exception ex) { return Err($"telemetry exception: {ex.GetType().Name}: {ex.Message}"); }
         }
 
         private object GetPartDetails(int partId)
@@ -505,59 +512,65 @@ namespace VizzyCodeMod
                 t.inWater = SafeBool(node, "InContactWithWater");
             }
 
-            ICraftFlightData fd = null;
-            try { fd = cs.FlightData; } catch { }
-            if (fd == null)
+            try
+            {
+                var fd = cs.FlightData;
+                if (fd == null)
+                {
+                    t.quality = scene == "designer" ? "designer_static" : "flight_no_flightdata";
+                    t.trackedFallback = node != null;
+                    return t;
+                }
+                t.quality = "flight_active_full";
+                t.activeFullFlightData = true;
+                t.timeReal = SafeDouble(fd, "TimeReal");
+                t.timeDelta = SafeDouble(fd, "TimeDelta");
+                t.timeMultiplier = SafeDouble(fd, "TimeMultiplier");
+                t.altitudeASL = fd.AltitudeAboveSeaLevel;
+                t.altitudeAGL = fd.AltitudeAboveGroundLevel;
+                t.altitudeTerrain = fd.AltitudeAboveTerrain;
+                t.velocityMagnitude = fd.VelocityMagnitude;
+                t.surfaceVelocityMagnitude = fd.SurfaceVelocityMagnitude;
+                t.verticalSurfaceVelocity = fd.VerticalSurfaceVelocity;
+                t.lateralSurfaceVelocity = fd.LateralSurfaceVelocity;
+                t.accelerationMagnitude = fd.AccelerationMagnitude;
+                t.machNumber = fd.MachNumber;
+                t.angleOfAttack = fd.AngleOfAttack;
+                t.pitch = fd.Pitch;
+                t.heading = fd.Heading;
+                t.bankAngle = fd.BankAngle;
+                t.sideSlip = fd.SideSlip;
+                t.gravityMagnitude = fd.GravityMagnitude;
+                t.currentMassKg = fd.CurrentMassUnscaled;
+                t.fuelMass = fd.FuelMass;
+                t.remainingFuelInStage = fd.RemainingFuelInStage;
+                t.remainingBattery = fd.RemainingBattery;
+                t.remainingMonopropellant = fd.RemainingMonopropellant;
+                t.currentEngineThrustN = fd.CurrentEngineThrustUnscaled;
+                t.maxActiveEngineThrustN = fd.MaxActiveEngineThrustUnscaled;
+                t.currentReactionControlNozzleThrust = fd.CurrentReactionControlNozzleThrust;
+                t.grounded = fd.Grounded;
+                t.inWater = fd.InWater;
+                t.supportsWarpBurn = fd.SupportsWarpBurn;
+                t.solarRadiationIntensity = fd.SolarRadiationIntensity;
+                t.parentPlanetOcclusion = fd.ParentPlanetOcclusion;
+                t.position = ToVec3(fd.Position);
+                t.velocity = ToVec3(fd.Velocity);
+                t.surfaceVelocity = ToVec3(fd.SurfaceVelocity);
+                t.acceleration = ToVec3(fd.Acceleration);
+                t.gravity = ToVec3(fd.Gravity);
+                t.craftForward = ToVec3(fd.CraftForward);
+                t.craftUp = ToVec3(fd.CraftUp);
+                t.craftRight = ToVec3(fd.CraftRight);
+                t.orbit = BuildOrbitInfo(fd.Orbit);
+                t.performance = BuildPerformanceInfo(fd.Performance);
+                t.navTarget = BuildTargetInfo(fd.NavSphereTarget);
+            }
+            catch
             {
                 t.quality = scene == "designer" ? "designer_static" : "flight_no_flightdata";
                 t.trackedFallback = node != null;
-                return t;
             }
-
-            t.quality = "flight_active_full";
-            t.activeFullFlightData = true;
-            t.timeReal = SafeDouble(fd, "TimeReal");
-            t.timeDelta = SafeDouble(fd, "TimeDelta");
-            t.timeMultiplier = SafeDouble(fd, "TimeMultiplier");
-            t.altitudeASL = fd.AltitudeAboveSeaLevel;
-            t.altitudeAGL = fd.AltitudeAboveGroundLevel;
-            t.altitudeTerrain = fd.AltitudeAboveTerrain;
-            t.velocityMagnitude = fd.VelocityMagnitude;
-            t.surfaceVelocityMagnitude = fd.SurfaceVelocityMagnitude;
-            t.verticalSurfaceVelocity = fd.VerticalSurfaceVelocity;
-            t.lateralSurfaceVelocity = fd.LateralSurfaceVelocity;
-            t.accelerationMagnitude = fd.AccelerationMagnitude;
-            t.machNumber = fd.MachNumber;
-            t.angleOfAttack = fd.AngleOfAttack;
-            t.pitch = fd.Pitch;
-            t.heading = fd.Heading;
-            t.bankAngle = fd.BankAngle;
-            t.sideSlip = fd.SideSlip;
-            t.gravityMagnitude = fd.GravityMagnitude;
-            t.currentMassKg = fd.CurrentMassUnscaled;
-            t.fuelMass = fd.FuelMass;
-            t.remainingFuelInStage = fd.RemainingFuelInStage;
-            t.remainingBattery = fd.RemainingBattery;
-            t.remainingMonopropellant = fd.RemainingMonopropellant;
-            t.currentEngineThrustN = fd.CurrentEngineThrustUnscaled;
-            t.maxActiveEngineThrustN = fd.MaxActiveEngineThrustUnscaled;
-            t.currentReactionControlNozzleThrust = fd.CurrentReactionControlNozzleThrust;
-            t.grounded = fd.Grounded;
-            t.inWater = fd.InWater;
-            t.supportsWarpBurn = fd.SupportsWarpBurn;
-            t.solarRadiationIntensity = fd.SolarRadiationIntensity;
-            t.parentPlanetOcclusion = fd.ParentPlanetOcclusion;
-            t.position = ToVec3(fd.Position);
-            t.velocity = ToVec3(fd.Velocity);
-            t.surfaceVelocity = ToVec3(fd.SurfaceVelocity);
-            t.acceleration = ToVec3(fd.Acceleration);
-            t.gravity = ToVec3(fd.Gravity);
-            t.craftForward = ToVec3(fd.CraftForward);
-            t.craftUp = ToVec3(fd.CraftUp);
-            t.craftRight = ToVec3(fd.CraftRight);
-            t.orbit = BuildOrbitInfo(fd.Orbit);
-            t.performance = BuildPerformanceInfo(fd.Performance);
-            t.navTarget = BuildTargetInfo(fd.NavSphereTarget);
             return t;
         }
 
@@ -649,6 +662,12 @@ namespace VizzyCodeMod
 
         private object GetTelemetryFull()
         {
+            try { return GetTelemetryFullInternal(); }
+            catch (Exception ex) { return Err($"telemetry/full exception: {ex.GetType().Name}: {ex.Message}"); }
+        }
+
+        private object GetTelemetryFullInternal()
+        {
             var cs = CurrentCraftScript();
             var scene = CurrentScene();
             var t = new TelemetryFullResponse { scene = scene };
@@ -690,8 +709,9 @@ namespace VizzyCodeMod
                 }
             }
 
-            ICraftFlightData fd = null;
-            try { fd = cs.FlightData; } catch { }
+            try
+            {
+            var fd = cs.FlightData;
             if (fd != null)
             {
                 t.quality = "flight_active_full";
@@ -761,6 +781,7 @@ namespace VizzyCodeMod
                     };
                 }
             }
+            } catch { /* FlightData not available in this scene */ }
 
             // Universal time from flight state
             try
