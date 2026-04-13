@@ -172,7 +172,7 @@ namespace VizzyCodeMod
 
         private object GetSnapshotInternal()
         {
-            var status = (StatusResponse)GetStatus();
+            var status = GetStatus() as StatusResponse ?? new StatusResponse();
             var snapshot = new BridgeSnapshotResponse
             {
                 scene = status.scene,
@@ -257,7 +257,15 @@ namespace VizzyCodeMod
                 string xmlStr = JsonExtractString(body, "xml");
                 if (xmlStr == null) return Err("Missing 'xml' field");
 
-                var programXml = XElement.Parse(xmlStr);
+                // Strip UTF-8 BOM if present
+                xmlStr = xmlStr.TrimStart('\uFEFF');
+
+                // XElement.Parse cannot handle an <?xml?> declaration — use XDocument for those
+                XElement programXml;
+                if (xmlStr.TrimStart().StartsWith("<?xml", StringComparison.OrdinalIgnoreCase))
+                    programXml = System.Xml.Linq.XDocument.Parse(xmlStr).Root;
+                else
+                    programXml = XElement.Parse(xmlStr);
 
                 var fpData = part.GetModifier<FlightProgramData>();
                 if (fpData == null) return Err("Part has no FlightProgramData modifier");
@@ -515,7 +523,7 @@ namespace VizzyCodeMod
             try
             {
                 var fd = cs.FlightData;
-                if (fd == null)
+                if (fd == null || scene == "designer")
                 {
                     t.quality = scene == "designer" ? "designer_static" : "flight_no_flightdata";
                     t.trackedFallback = node != null;
@@ -549,6 +557,8 @@ namespace VizzyCodeMod
                 t.currentEngineThrustN = fd.CurrentEngineThrustUnscaled;
                 t.maxActiveEngineThrustN = fd.MaxActiveEngineThrustUnscaled;
                 t.currentReactionControlNozzleThrust = fd.CurrentReactionControlNozzleThrust;
+                t.weightedThrottleResponse = SafeDouble(fd, "WeightedThrottleResponse");
+                t.weightedThrottleResponseTime = SafeDouble(fd, "WeightedThrottleResponseTime");
                 t.grounded = fd.Grounded;
                 t.inWater = fd.InWater;
                 t.supportsWarpBurn = fd.SupportsWarpBurn;
@@ -570,6 +580,7 @@ namespace VizzyCodeMod
             {
                 t.quality = scene == "designer" ? "designer_static" : "flight_no_flightdata";
                 t.trackedFallback = node != null;
+                t.activeFullFlightData = false;
             }
             return t;
         }
@@ -594,8 +605,10 @@ namespace VizzyCodeMod
                 meanMotion = SafeDouble(orbit, "MeanMotion"),
                 rightAscension = SafeDouble(orbit, "RightAscension"),
                 periapsisArgument = SafeDouble(orbit, "PeriapsisArgument"),
-                burnNodeDeltaV = SafeDouble(orbit, "BurnNodeDeltaV"),
-                hasBurnNodePoint = SafeObj(orbit, "BurnNodePoint") != null
+                burnNodeDeltaV = ToVec3(SafeObj(orbit, "BurnNodeDeltaV")),
+                hasBurnNodePoint = Math.Abs(SafeCoord(SafeObj(orbit, "BurnNodeDeltaV"), "x")) > 0.001
+                                || Math.Abs(SafeCoord(SafeObj(orbit, "BurnNodeDeltaV"), "y")) > 0.001
+                                || Math.Abs(SafeCoord(SafeObj(orbit, "BurnNodeDeltaV"), "z")) > 0.001
             };
         }
 
@@ -632,7 +645,7 @@ namespace VizzyCodeMod
             try
             {
                 var root = GetRootPlanetNode();
-                if (root == null) return Err("Planet tree unavailable — requires flight scene");
+                if (root == null) return Err("Planet tree unavailable - requires flight scene");
 
                 var response = new PlanetsResponse();
                 CollectPlanets(root, response.planets, "");
@@ -648,7 +661,7 @@ namespace VizzyCodeMod
             try
             {
                 var root = GetRootPlanetNode();
-                if (root == null) return Err("Planet tree unavailable — requires flight scene");
+                if (root == null) return Err("Planet tree unavailable - requires flight scene");
 
                 var node = FindPlanetNode(root, name.ToLowerInvariant());
                 if (node == null) return Err($"Planet '{name}' not found");
@@ -684,6 +697,7 @@ namespace VizzyCodeMod
             t.hasCraftScript = true;
             try { t.hasCommandPod = cs.ActiveCommandPod != null; } catch { }
             try { t.physicsEnabled = cs.IsPhysicsEnabled; } catch { }
+            try { t.currentMassKg = cs.Mass; } catch { }
             t.quality = scene == "designer" ? "designer_static" : "flight_no_flightdata";
 
             var node = SafeObj(cs, "CraftNode");
@@ -712,7 +726,7 @@ namespace VizzyCodeMod
             try
             {
             var fd = cs.FlightData;
-            if (fd != null)
+            if (fd != null && scene != "designer")
             {
                 t.quality = "flight_active_full";
                 t.activeFullFlightData = true;
@@ -742,6 +756,8 @@ namespace VizzyCodeMod
                 t.currentEngineThrustN = fd.CurrentEngineThrustUnscaled;
                 t.maxActiveEngineThrustN = fd.MaxActiveEngineThrustUnscaled;
                 t.currentReactionControlNozzleThrust = fd.CurrentReactionControlNozzleThrust;
+                t.weightedThrottleResponse = SafeDouble(fd, "WeightedThrottleResponse");
+                t.weightedThrottleResponseTime = SafeDouble(fd, "WeightedThrottleResponseTime");
                 t.grounded = fd.Grounded;
                 t.inWater = fd.InWater;
                 t.supportsWarpBurn = fd.SupportsWarpBurn;
@@ -774,14 +790,23 @@ namespace VizzyCodeMod
                 {
                     t.atmosphereSample = new AtmosphereSampleInfo
                     {
-                        density = SafeDouble(atm, "Density"),
-                        pressure = SafeDouble(atm, "Pressure"),
+                        density = SafeDouble(atm, "Density") > 0 ? SafeDouble(atm, "Density")
+                                : SafeDouble(atm, "AirDensity") > 0 ? SafeDouble(atm, "AirDensity")
+                                : SafeDouble(atm, "LocalDensity"),
+                        pressure = SafeDouble(atm, "Pressure") > 0 ? SafeDouble(atm, "Pressure")
+                                 : SafeDouble(atm, "AirPressure") > 0 ? SafeDouble(atm, "AirPressure")
+                                 : SafeDouble(atm, "LocalPressure"),
                         temperature = SafeDouble(atm, "Temperature"),
                         speedOfSound = SafeDouble(atm, "SpeedOfSound")
                     };
                 }
             }
-            } catch { /* FlightData not available in this scene */ }
+            }
+            catch
+            {
+                /* FlightData not available in this scene */
+                t.trackedFallback = node != null;
+            }
 
             // Universal time from flight state
             try
@@ -816,8 +841,13 @@ namespace VizzyCodeMod
                         r.timeMultiplier = SafeDouble(fd, "TimeMultiplier");
                     }
 
-                    // TimeSinceLaunch from CraftNode or FlightProgramData fallback
-                    r.timeSinceLaunch = SafeDouble(cs, "TimeSinceLaunch");
+                    // TimeSinceLaunch from CraftNode (try common property names)
+                    var tslNode = SafeObj(cs, "CraftNode");
+                    double tsl = SafeDouble(tslNode, "TimeSinceLaunch");
+                    if (tsl == 0) tsl = SafeDouble(tslNode, "MissionTime");
+                    if (tsl == 0) tsl = SafeDouble(tslNode, "LaunchTime");
+                    if (tsl == 0) tsl = SafeDouble(cs, "TimeSinceLaunch");
+                    r.timeSinceLaunch = tsl;
                 }
             }
             catch (Exception ex) { return Err(ex.Message); }
@@ -888,16 +918,19 @@ namespace VizzyCodeMod
                 var flightScene = Game.Instance.FlightScene;
                 var biomeData = SafeObj(flightScene, "CraftBiomeData");
 
+                var craftNode = Game.Instance.FlightScene?.CraftNode;
                 var r = new BiomeResponse
                 {
                     biome = SafeString(biomeData, "BiomeName") ?? SafeString(biomeData, "Name") ?? "unknown",
                     planet = SafeString(biomeData, "PlanetName") ?? SafeString(biomeData, "BodyName")
                           ?? SafeString(SafeObj(biomeData, "Planet"), "Name")
-                          ?? SafeString(SafeObj(biomeData, "Body"), "Name") ?? ""
+                          ?? SafeString(SafeObj(biomeData, "Body"), "Name")
+                          ?? SafeString(SafeObj(craftNode, "Parent"), "Name")
+                          ?? SafeString(craftNode, "ParentName")
+                          ?? SafeString(craftNode, "ParentBodyName") ?? ""
                 };
 
                 // Try to get lat/lon from craft node
-                var craftNode = Game.Instance.FlightScene?.CraftNode;
                 if (craftNode != null)
                 {
                     var latLon = SafeObj(craftNode, "LatLon");
@@ -1079,8 +1112,10 @@ namespace VizzyCodeMod
 
         private static PartData FindPart(ICraftScript cs, int id)
         {
-            foreach (var p in cs.Data.Assembly.Parts)
-                if (p.Id == id) return p;
+            var parts = cs?.Data?.Assembly?.Parts;
+            if (parts == null) return null;
+            foreach (var p in parts)
+                if (p != null && p.Id == id) return p;
             return null;
         }
 

@@ -178,6 +178,8 @@ namespace VizzyCodeMod
         public double currentEngineThrustN;
         public double maxActiveEngineThrustN;
         public double currentReactionControlNozzleThrust;
+        public double weightedThrottleResponse;
+        public double weightedThrottleResponseTime;
         public bool grounded;
         public bool inWater;
         public bool supportsWarpBurn;
@@ -213,7 +215,7 @@ namespace VizzyCodeMod
         public double meanMotion;
         public double rightAscension;
         public double periapsisArgument;
-        public double burnNodeDeltaV;
+        public Vec3 burnNodeDeltaV;
         public bool hasBurnNodePoint;
     }
 
@@ -412,6 +414,8 @@ namespace VizzyCodeMod
         public double currentEngineThrustN;
         public double maxActiveEngineThrustN;
         public double currentReactionControlNozzleThrust;
+        public double weightedThrottleResponse;
+        public double weightedThrottleResponseTime;
         public bool grounded;
         public bool inWater;
         public bool supportsWarpBurn;
@@ -430,6 +434,7 @@ namespace VizzyCodeMod
         public TargetInfo navTarget;
 
         // ── extended fields ──
+        public bool trackedFallback;
         public double angularVelocityMagnitude;
         public Vec3 angularVelocity;
         public double dragAccelerationMagnitude;

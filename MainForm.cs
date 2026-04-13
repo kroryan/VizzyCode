@@ -353,7 +353,7 @@ namespace VizzyCode
         }
         private void menuAbout_Click(object s, EventArgs e) =>
             MessageBox.Show(
-                "VizzyCode v1.0\n\n" +
+                "VizzyCode 0.0.62\n\n" +
                 "Opens Vizzy XML programs (craft files or standalone) and converts\n" +
                 "them to editable C# VizzyBuilder code.\n\n" +
                 "VizzyBuilder by Rayan Ral  ·  github.com/kroryan/VizzyCode",
@@ -608,7 +608,7 @@ namespace VizzyCode
 
         private async void menuJunoTelemetryReport_Click(object s, EventArgs e)
         {
-            await SaveJunoReport("telemetry", () => JunoClient.GetTelemetryJsonAsync());
+            await SaveJunoReport("telemetry", () => JunoClient.GetTelemetryFullJsonAsync());
         }
 
         private async void menuJunoSnapshotReport_Click(object s, EventArgs e)

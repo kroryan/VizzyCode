@@ -210,7 +210,7 @@ namespace VizzyCode
                 ("Period", Unit(orbit, "period", "s")),
                 ("Semi-major axis", Unit(orbit, "semiMajorAxis", "m")),
                 ("True anomaly", Unit(orbit, "trueAnomaly", "deg")),
-                ("Burn node Δv", Unit(orbit, "burnNodeDeltaV", "m/s")),
+                ("Burn node Δv", Vec3Magnitude(Obj(orbit, "burnNodeDeltaV"), "m/s")),
                 ("Has burn node", BoolText(orbit, "hasBurnNodePoint"))
             );
             sb.AppendLine();
@@ -458,6 +458,20 @@ namespace VizzyCode
         {
             string? n = NumText(e, key);
             return string.IsNullOrEmpty(n) ? null : $"{n} {unit}";
+        }
+
+        /// <summary>Computes the magnitude of a Vec3 object {x,y,z} and formats it with a unit.</summary>
+        private static string? Vec3Magnitude(JsonElement? vec, string unit)
+        {
+            if (vec == null || vec.Value.ValueKind != JsonValueKind.Object) return null;
+            if (!vec.Value.TryGetProperty("x", out var xv)) return null;
+            if (!vec.Value.TryGetProperty("y", out var yv)) return null;
+            if (!vec.Value.TryGetProperty("z", out var zv)) return null;
+            if (!xv.TryGetDouble(out double x) || !yv.TryGetDouble(out double y) || !zv.TryGetDouble(out double z))
+                return null;
+            double mag = Math.Sqrt(x * x + y * y + z * z);
+            if (mag == 0.0) return null;
+            return $"{mag.ToString("0.####", CultureInfo.InvariantCulture)} {unit}";
         }
 
         private static string? NumText(JsonElement? e, string key)

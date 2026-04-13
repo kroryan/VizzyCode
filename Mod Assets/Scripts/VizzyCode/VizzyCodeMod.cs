@@ -16,7 +16,7 @@ namespace VizzyCodeMod
     public class VizzyCodeMod : GameMod
     {
         public const int BridgePort = 7842;
-        public const string ModVersion = "0.0.61";
+        public const string ModVersion = "0.0.62";
 
         private VizzyCodeMod() : base() { }
         public static VizzyCodeMod Instance { get; } = GetModInstance<VizzyCodeMod>();

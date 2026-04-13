@@ -140,6 +140,13 @@ namespace VizzyCode
             catch { return null; }
         }
 
+        /// <summary>Get the extended telemetry JSON (lat/lon, atmosphere, angular velocity, universal time).</summary>
+        public static async Task<string?> GetTelemetryFullJsonAsync()
+        {
+            try { return await GetAsync("/telemetry/full"); }
+            catch { return null; }
+        }
+
         /// <summary>Trigger the next stage activation (flight scene only).</summary>
         public static async Task<StagesInfo?> ActivateStageAsync()
         {

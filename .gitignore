@@ -1,16 +1,49 @@
 bin/
 obj/
 publish/
-publish_debug/
-publish_debug2/
-publish_debug3/
-*.user
+publish_*/
 .vs/
+*.user
 *.suo
+*.meta
 .DS_Store
 VizzyBuilder/
 lizpy/
+release/
+vizzy_coverage_report.txt
+_tmp_vscode_exts*/
+hotfix_debug*/
+orbit_fix_build/
+
+# Unity SDK / third-party assemblies - not our code
+Mod Assets/ModTools/
+Mod Assets/Settings/
+Mod Assets/InputSystem_Actions.inputactions
+Mod Assets/ModData.asset
+Mod Assets/Readme.asset
+Mod Assets/UniversalRenderPipelineGlobalSettings.asset
+Mod Assets/VizzyCode.asmdef
+Mod Assets/*.sr2-mod
+
+# XML files (Vizzy examples tracked explicitly via git add -f)
 *.xml
 !*.csproj
-!Mod Assets/**
-*.meta
+
+# VS Code extension dist is a build artifact
+# vscode-extension-dist/ kept tracked intentionally (release scripts depend on it)
+
+# VSIX build artifacts
+*.vsix
+vscode-extension-vsix/
+
+# Dev tools / test scratch
+VizzyTool/
+TestRT/
+_*.xml
+_*.cs
+_*.txt
+*.vizzy.cs
+*.vizzy.meta.json
+
+# Per-user Claude Code settings
+.claude/settings.local.json

@@ -49,7 +49,7 @@ function activate(context) {
       await safeRun(() => junoSaveJson('snapshot', '/snapshot'));
     }),
     vscode.commands.registerCommand('vizzycode.junoSaveTelemetryReport', async () => {
-      await safeRun(() => junoSaveReport('telemetry', '/telemetry'));
+      await safeRun(() => junoSaveReport('telemetry', '/telemetry/full'));
     }),
     vscode.commands.registerCommand('vizzycode.junoSaveSnapshotReport', async () => {
       await safeRun(() => junoSaveReport('snapshot', '/snapshot'));
@@ -413,7 +413,7 @@ function buildJunoMarkdownReport(payload, kind) {
     lines.push('');
   }
 
-  if (telemetry.navTarget) {
+  if (telemetry.navTarget?.exists) {
     section(lines, 'Nav Target');
     table(lines, [
       ['Exists', boolText(telemetry.navTarget.exists)],
@@ -421,6 +421,31 @@ function buildJunoMarkdownReport(payload, kind) {
       ['Name', telemetry.navTarget.name],
       ['Body', telemetry.navTarget.bodyName],
       ['Raw type', telemetry.navTarget.rawType]
+    ]);
+    lines.push('');
+  }
+
+  // Extended fields from /telemetry/full
+  const hasFullFields = telemetry.latDeg !== undefined || telemetry.lonDeg !== undefined || telemetry.angularVelocityMagnitude !== undefined;
+  if (hasFullFields) {
+    section(lines, 'Position And Orientation');
+    table(lines, [
+      ['Latitude', unit(telemetry.latDeg, 'deg')],
+      ['Longitude', unit(telemetry.lonDeg, 'deg')],
+      ['Angular velocity', unit(telemetry.angularVelocityMagnitude, 'rad/s')],
+      ['Drag acceleration', unit(telemetry.dragAccelerationMagnitude, 'm/s^2')],
+      ['Universal time', unit(telemetry.universalTime, 's')]
+    ]);
+    lines.push('');
+  }
+
+  if (telemetry.atmosphereSample) {
+    section(lines, 'Atmosphere At Position');
+    table(lines, [
+      ['Density', unit(telemetry.atmosphereSample.density, 'kg/m^3')],
+      ['Pressure', unit(telemetry.atmosphereSample.pressure, 'Pa')],
+      ['Temperature', unit(telemetry.atmosphereSample.temperature, 'K')],
+      ['Speed of sound', unit(telemetry.atmosphereSample.speedOfSound, 'm/s')]
     ]);
     lines.push('');
   }
