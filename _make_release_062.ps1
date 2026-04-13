@@ -47,7 +47,7 @@ foreach ($item in $sharedItems) {
 # ── VS Code plugin ─────────────────────────────────────────────────────────────
 $pluginBundle = Join-Path $pluginDir "vizzycode-tools"
 New-Item -ItemType Directory -Force -Path $pluginBundle | Out-Null
-Copy-Item -Path (Join-Path $base "vscode-extension-dist\*") -Destination $pluginBundle -Recurse -Force
+Copy-Item -Path (Join-Path $base "vscode-extension\*") -Destination $pluginBundle -Recurse -Force
 
 $vsix = Join-Path $base "vizzycode-tools-$pluginVersion.vsix"
 if (-not (Test-Path -LiteralPath $vsix)) { throw "Missing VSIX: $vsix" }

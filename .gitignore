@@ -29,8 +29,8 @@ Mod Assets/*.sr2-mod
 *.xml
 !*.csproj
 
-# VS Code extension dist is a build artifact
-# vscode-extension-dist/ kept tracked intentionally (release scripts depend on it)
+# VS Code extension dist - derived copy, release script reads from vscode-extension/ directly
+vscode-extension-dist/
 
 # VSIX build artifacts
 *.vsix
