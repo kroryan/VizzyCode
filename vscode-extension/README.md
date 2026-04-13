@@ -163,22 +163,20 @@ The extension is not a standalone JavaScript-only package. It depends on the bun
 
 The repository build pipeline is:
 
-1. publish `VizzyCode.Cli` as a standalone Windows binary
-2. copy the extension files into `vscode-extension-dist`
-3. place the CLI in `vscode-extension-dist\bin\win-x64`
-4. generate the current `vizzycode-tools-*.vsix`
-5. install that `.vsix` into VS Code
+1. publish `VizzyCode.Cli` as a standalone Windows binary (`publish_cli_<ver>\VizzyCode.Cli.exe`)
+2. copy the CLI into `vscode-extension\bin\win-x64\VizzyCode.Cli.exe`
+3. run `_make_release_<ver>.ps1` — this builds the VSIX and all three release zips
 
-Repository command:
+Manual VSIX build:
 
 ```powershell
-.\scripts\install-vscode-integration.ps1
+cd vscode-extension
+npx @vscode/vsce package --out ../vizzycode-tools-0.0.62.vsix
 ```
 
-Outputs:
+Output:
 
-- `vscode-extension-dist\`
-- `vizzycode-tools-*.vsix`
+- `vizzycode-tools-0.0.62.vsix` (includes CLI inside `bin/win-x64/`)
 
 ## Self-Contained Bundle Layout
 
