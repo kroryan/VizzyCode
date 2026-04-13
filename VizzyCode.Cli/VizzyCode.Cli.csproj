@@ -6,6 +6,7 @@
     <AssemblyName>VizzyCode.Cli</AssemblyName>
     <RootNamespace>VizzyCode</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>..\icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\VizzyXmlConverter.cs" Link="VizzyXmlConverter.cs" />

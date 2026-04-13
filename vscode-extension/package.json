@@ -30,6 +30,7 @@
     "onCommand:vizzycode.junoSaveTelemetryReport",
     "onCommand:vizzycode.junoSaveSnapshotReport"
   ],
+  "icon": "icon.png",
   "main": "./extension.js",
   "files": [
     "extension.js",
@@ -37,6 +38,7 @@
     "README.md",
     "INSTALL.md",
     "install.ps1",
+    "icon.png",
     "bin/**"
   ],
   "contributes": {
