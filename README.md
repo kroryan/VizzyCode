@@ -2,7 +2,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kroryan/VizzyCode)
 
-[![VizzyCodeWiki](https://kroryan.github.io/quartz-vizzycode)
+https://kroryan.github.io/quartz-vizzycode
 
 
 
