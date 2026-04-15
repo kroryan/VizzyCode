@@ -1,5 +1,11 @@
 # VizzyCode
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kroryan/VizzyCode)
+
+[![VizzyCodeWiki](https://kroryan.github.io/quartz-vizzycode)
+
+
+
 VizzyCode is a Windows Forms editor for opening Vizzy XML, converting it to C#-style Vizzy authoring code, editing it, and exporting back to Vizzy XML.
 
 ## Documentation Language Policy
