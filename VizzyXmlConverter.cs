@@ -1159,7 +1159,9 @@ namespace VizzyCode
                 // Legacy/simple
                 "heading"                         => "Vz.Craft.Nav.Heading()",
                 "pitch"                           => "Vz.Craft.Nav.Pitch()",
-                _                                 => $"Vz.Craft.Property(\"{Esc(prop)}\")"
+                _                                 => ch.Count > 0
+                    ? BuildReadablePreservedCall("RawXmlCraftProperty", el)
+                    : $"Vz.Craft.Property(\"{Esc(prop)}\")"
             };
         }
 
@@ -1268,6 +1270,7 @@ namespace VizzyCode
                 "substring" => $"Vz.SubString({a}, {b}, {c})",
                 "contains"  => $"Vz.Contains({a}, {b})",
                 "format"    => $"Vz.Format({a}, {b}{extraArgs})",
+                "friendly"  => $"Vz.StringOp(\"friendly\", {a}, \"{el.Attribute("subOp")?.Value ?? "time"}\")",
                 _           => $"Vz.StringOp(\"{op}\", {a}, {b})"
             };
         }
@@ -2150,7 +2153,10 @@ namespace VizzyCode
             if (l.StartsWith("Vz.FlightLog("))
             {
                 var parts = SplitArgs(c1);
-                return new XElement("FlightLog", new XAttribute("style", "flightlog"),
+                // Juno's native XML uses <LogFlight>, not <FlightLog>.
+                // The importer accepts both tag names, but the exporter must
+                // output <LogFlight> to match what Juno expects.
+                return new XElement("LogFlight", new XAttribute("style", "flightlog"),
                     MakeConstantArg(parts.Count > 0 ? parts[0] : "\"\""),
                     MakeConstantArg(parts.Count > 1 ? parts[1] : "false"));
             }
@@ -2663,6 +2669,21 @@ namespace VizzyCode
             // ── Vz.Planet(p).Property() ─────────────────────────────────────────
             if (TryConvertPlanetPropertyCall(call, out var planetExpr))
                 return planetExpr;
+
+            // Vz.ActivationGroup(N) must be emitted as an <ActivationGroup> child so
+            // Juno accepts it inside <WaitUntil>/<Conditional>. Serializing the call
+            // as a Variable reference makes Juno load the program blank.
+            if (call.StartsWith("Vz.ActivationGroup(") && call.EndsWith(")"))
+            {
+                var agArgs = SplitArgs(ExtractParenthesisContent(call));
+                if (agArgs.Count == 1)
+                {
+                    var argEl = ConvertApiCallToXml(agArgs[0]) ?? CreateVariableReference(agArgs[0]);
+                    return new XElement("ActivationGroup",
+                        new XAttribute("style", "activation-group"),
+                        argEl);
+                }
+            }
 
             // Variable reference (plain identifier)
             if (System.Text.RegularExpressions.Regex.IsMatch(call, @"^[A-Za-z_]\w*$"))
@@ -3243,7 +3264,16 @@ namespace VizzyCode
         {
             if (op.Equals("friendly", StringComparison.OrdinalIgnoreCase))
             {
+                // The second arg (args[1]) may carry an explicit subOp hint
+                // ("distance" or "time") preserved from the original XML.
                 string subOp = InferFriendlySubOp(args.Count > 0 ? args[0] : "");
+                if (args.Count > 1)
+                {
+                    string hint = args[1].Trim().Trim('"');
+                    if (hint.Equals("distance", StringComparison.OrdinalIgnoreCase) ||
+                        hint.Equals("time", StringComparison.OrdinalIgnoreCase))
+                        subOp = hint;
+                }
                 var friendlyEl = new XElement("StringOp",
                     new XAttribute("op", op),
                     new XAttribute("subOp", subOp),
@@ -3326,14 +3356,44 @@ namespace VizzyCode
                 }
             }
 
-            if (closeIndex < 0 || closeIndex + 4 > call.Length || call[closeIndex + 1] != '.' || !call.EndsWith("()", StringComparison.Ordinal))
+            if (closeIndex < 0 || closeIndex + 2 > call.Length || call[closeIndex + 1] != '.')
             {
                 element = null;
                 return false;
             }
 
-            string pArg = call.Substring(prefix.Length, closeIndex - prefix.Length).Trim();
-            string prop = call.Substring(closeIndex + 2, call.Length - closeIndex - 4).Trim().ToLowerInvariant();
+            // Two calling conventions reach this point:
+            //   Vz.Planet(p).Prop()                  — ends with "()"
+            //   Vz.Planet(p).Op("name")              — fallback for op names without a
+            //                                         dedicated C# helper (meanmotion,
+            //                                         periapsisargument, …)
+            // The .Op branch is required so Juno does not load these programs blank.
+            string prop;
+            if (call.EndsWith("()", StringComparison.Ordinal))
+            {
+                prop = call.Substring(closeIndex + 2, call.Length - closeIndex - 4).Trim().ToLowerInvariant();
+            }
+            else if (call.EndsWith(")", StringComparison.Ordinal))
+            {
+                const string opCall = "Op(";
+                int opIdx = call.IndexOf(opCall, closeIndex + 2, StringComparison.Ordinal);
+                if (opIdx < 0)
+                {
+                    element = null;
+                    return false;
+                }
+                string opArg = call.Substring(opIdx + opCall.Length,
+                                              call.Length - opIdx - opCall.Length - 1).Trim();
+                if (opArg.Length >= 2 && opArg[0] == '"' && opArg[opArg.Length - 1] == '"')
+                    opArg = opArg.Substring(1, opArg.Length - 2);
+                prop = opArg.ToLowerInvariant();
+            }
+            else
+            {
+                element = null;
+                return false;
+            }
+
             if (!System.Text.RegularExpressions.Regex.IsMatch(prop, @"^[a-z_]\w*$"))
             {
                 element = null;
@@ -3364,6 +3424,7 @@ namespace VizzyCode
                 _                  => prop
             };
 
+            string pArg = call.Substring(prefix.Length, closeIndex - prefix.Length).Trim();
             var pEl = ConvertApiCallToXml(pArg) ?? CreateVariableReference(pArg);
             element = new XElement("Planet",
                 new XAttribute("op", opStr),
