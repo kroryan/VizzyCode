@@ -231,7 +231,11 @@ namespace VizzyCode
         private void EmitCustomExpressions(XElement expressions, StringBuilder sb)
         {
             var exprs = expressions.Elements("CustomExpression").ToList();
-            if (exprs.Count == 0) return;
+            // Capture orphan (non-CustomExpression) children for round-trip fidelity.
+            // Juno's designer can leave floating elements (CraftProperty, MathFunction, etc.)
+            // with pos attributes directly inside <Expressions>; without this they are lost.
+            var orphans = expressions.Elements().Where(e => e.Name.LocalName != "CustomExpression").ToList();
+            if (exprs.Count == 0 && orphans.Count == 0) return;
             sb.AppendLine("// ── Custom Expressions ───────────────────────────────");
             foreach (var expr in exprs)
             {
@@ -253,6 +257,13 @@ namespace VizzyCode
                 sb.AppendLine($"    return {returnCode};");
                 sb.AppendLine("});");
                 sb.AppendLine();
+            }
+            // Re-emit orphan elements verbatim (base64-encoded full XML, same pattern as VZEL)
+            foreach (var orphan in orphans)
+            {
+                string xml = orphan.ToString(SaveOptions.DisableFormatting);
+                string payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(xml));
+                sb.AppendLine($"// VZORPHANEXPR {payload}");
             }
         }
 
@@ -1159,7 +1170,9 @@ namespace VizzyCode
                 // Legacy/simple
                 "heading"                         => "Vz.Craft.Nav.Heading()",
                 "pitch"                           => "Vz.Craft.Nav.Pitch()",
-                _                                 => $"Vz.Craft.Property(\"{Esc(prop)}\")"
+                _                                 => ch.Count > 0
+                    ? BuildReadablePreservedCall("RawXmlCraftProperty", el)
+                    : $"Vz.Craft.Property(\"{Esc(prop)}\")"
             };
         }
 
@@ -1268,6 +1281,7 @@ namespace VizzyCode
                 "substring" => $"Vz.SubString({a}, {b}, {c})",
                 "contains"  => $"Vz.Contains({a}, {b})",
                 "format"    => $"Vz.Format({a}, {b}{extraArgs})",
+                "friendly"  => $"Vz.StringOp(\"friendly\", {a}, \"{el.Attribute("subOp")?.Value ?? "time"}\")",
                 _           => $"Vz.StringOp(\"{op}\", {a}, {b})"
             };
         }
@@ -1435,6 +1449,7 @@ namespace VizzyCode
             var instructionBlocks = new List<XElement>();
             var preamble = new XElement("_preamble");
             var ceElements = new List<XElement>(); // CustomExpression declarations
+            var orphanExprElements = new List<XElement>(); // VZORPHANEXPR preserved floating nodes
 
             // Pre-scan 1: build CI name map (sanitized C# identifier → original CI name).
             // This lets us recognise calls like "Universal_Anomaly(a, b, c);" as
@@ -1524,6 +1539,21 @@ namespace VizzyCode
                     catch
                     {
                         _pendingInstructionMetadata = null;
+                    }
+                    continue;
+                }
+
+                if (line.StartsWith("// VZORPHANEXPR ", StringComparison.Ordinal))
+                {
+                    string payload = line.Substring("// VZORPHANEXPR ".Length).Trim();
+                    try
+                    {
+                        string xml = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+                        orphanExprElements.Add(XElement.Parse(xml));
+                    }
+                    catch
+                    {
+                        // Silently skip malformed orphan payloads
                     }
                     continue;
                 }
@@ -1787,6 +1817,45 @@ namespace VizzyCode
                     continue;
                 }
 
+                // ── Compound assignment: varName += expr; (also -=, *=, /=, %=, ^=) ──
+                // Mirrors ParseInstructionLines (line ~2995) so top-level `Time += ...` survives round-trip.
+                {
+                    var chgM = System.Text.RegularExpressions.Regex.Match(line,
+                        @"^(\w+)\s*(\+|-|\*|/|%|\^)=\s*(.+);$");
+                    if (chgM.Success)
+                    {
+                        string cvName = chgM.Groups[1].Value;
+                        string cvOp   = chgM.Groups[2].Value;
+                        string cvVal  = chgM.Groups[3].Value.Trim();
+                        var cvVarEl = new XElement("Variable",
+                            new XAttribute("list",  "false"),
+                            new XAttribute("local", _localVariables.Contains(cvName) ? "true" : "false"),
+                            new XAttribute("variableName", cvName));
+                        if (cvOp == "+")
+                        {
+                            var cvValEl = ConvertApiCallToXml(cvVal) ?? CreateVariableReference(cvVal);
+                            AddPreambleInstruction(preamble,
+                                ApplyPendingInstructionMetadata(new XElement("ChangeVariable",
+                                    new XAttribute("style", "change-variable"),
+                                    cvVarEl, cvValEl)));
+                        }
+                        else
+                        {
+                            string normalizedOp = NormalizeBinaryOp(cvOp);
+                            var rhsEl = ConvertApiCallToXml(cvVal) ?? CreateVariableReference(cvVal);
+                            var binEl = new XElement("BinaryOp",
+                                new XAttribute("op", normalizedOp),
+                                new XAttribute("style", BinaryStyle(normalizedOp)),
+                                new XElement(cvVarEl), rhsEl);
+                            AddPreambleInstruction(preamble,
+                                ApplyPendingInstructionMetadata(new XElement("SetVariable",
+                                    new XAttribute("style", "set-variable"),
+                                    cvVarEl, binEl)));
+                        }
+                        continue;
+                    }
+                }
+
                 // ── Top-level Vz.* calls ────────────────────────────────────────
                 if (line.StartsWith("Vz."))
                 {
@@ -1795,7 +1864,19 @@ namespace VizzyCode
                         continue;
 
                     var instruction = ConvertInstructionToXml(line);
+                    if (instruction != null)
+                        instruction = ApplyPendingInstructionMetadata(instruction);
                     AddPreambleInstruction(preamble, instruction);
+                }
+                else
+                {
+                    // Bare custom-instruction call at top level, e.g.
+                    //   Aerobrake_to_Target(TargetCoordinates, 10000);
+                    // Without this else, such calls are silently dropped (no "Vz." prefix, no "=").
+                    var ciInstruction = ConvertInstructionToXml(line);
+                    if (ciInstruction != null)
+                        ciInstruction = ApplyPendingInstructionMetadata(ciInstruction);
+                    AddPreambleInstruction(preamble, ciInstruction);
                 }
             }
 
@@ -1814,6 +1895,7 @@ namespace VizzyCode
                 program.Add(block);
             var expressionsEl = new XElement("Expressions");
             foreach (var ce in ceElements) expressionsEl.Add(ce);
+            foreach (var orphan in orphanExprElements) expressionsEl.Add(orphan);
             program.Add(expressionsEl);
 
             // Post-process: assign sequential id and pos to all instruction-level elements
@@ -2046,7 +2128,7 @@ namespace VizzyCode
                 "else" => new XElement("ElseIf",
                     new XAttribute("style", "else"),
                     new XElement("Constant", new XAttribute("bool", "true")),
-                    body),
+                    body.HasElements ? body : null),
                 "while" => new XElement("While", new XAttribute("style", "while"), ConvertValueToXml(condArg), body),
                 // WaitUntil has ONLY a condition child — NO nested <Instructions>
                 "waituntil" => new XElement("WaitUntil", new XAttribute("style", "wait-until"), ConvertValueToXml(condArg)),
@@ -2150,7 +2232,10 @@ namespace VizzyCode
             if (l.StartsWith("Vz.FlightLog("))
             {
                 var parts = SplitArgs(c1);
-                return new XElement("FlightLog", new XAttribute("style", "flightlog"),
+                // Juno's native XML uses <LogFlight>, not <FlightLog>.
+                // The importer accepts both tag names, but the exporter must
+                // output <LogFlight> to match what Juno expects.
+                return new XElement("LogFlight", new XAttribute("style", "flightlog"),
                     MakeConstantArg(parts.Count > 0 ? parts[0] : "\"\""),
                     MakeConstantArg(parts.Count > 1 ? parts[1] : "false"));
             }
@@ -2595,6 +2680,23 @@ namespace VizzyCode
                 }
             }
 
+            // Binary expressions must be checked BEFORE vector component access (.x/.y/.z)
+            // AND before specific function-call patterns (Vz.PosToLatLongAgl/Asl/ToPosition).
+            // Otherwise `CirclePlaneOffset / OrthogonalNormal.y` gets swallowed as
+            // `(CirclePlaneOffset / OrthogonalNormal).y` instead of `CirclePlaneOffset / (OrthogonalNormal.y)`.
+            if (TryConvertBinaryExpression(call, new[] { "||" }, tuple => CreateBoolOp("or", tuple.left, tuple.right), out var orExpr))
+                return orExpr;
+            if (TryConvertBinaryExpression(call, new[] { "&&" }, tuple => CreateBoolOp("and", tuple.left, tuple.right), out var andExpr))
+                return andExpr;
+            if (TryConvertBinaryExpression(call, new[] { ">=", "<=", "==", "!=", ">", "<" }, CreateComparison, out var cmpExpr))
+                return cmpExpr;
+            if (TryConvertBinaryExpression(call, new[] { "+", "-" }, CreateBinaryOpElement, out var addExpr))
+                return addExpr;
+            if (TryConvertBinaryExpression(call, new[] { "*", "/", "%" }, CreateBinaryOpElement, out var mulExpr))
+                return mulExpr;
+            if (TryConvertBinaryExpression(call, new[] { "^" }, CreateBinaryOpElement, out var powExpr))
+                return powExpr;
+
             // ── Vector component access: expr.x / expr.y / expr.z ───────────────
             // Matches when the expression ends with a literal ".x", ".y", ".z"
             // (not inside parentheses).
@@ -2640,18 +2742,6 @@ namespace VizzyCode
                 return new XElement("Planet", new XAttribute("op", "toPosition"), new XAttribute("style", "planet-to-position"), pEl);
             }
 
-            if (TryConvertBinaryExpression(call, new[] { "||" }, tuple => CreateBoolOp("or", tuple.left, tuple.right), out var orExpr))
-                return orExpr;
-            if (TryConvertBinaryExpression(call, new[] { "&&" }, tuple => CreateBoolOp("and", tuple.left, tuple.right), out var andExpr))
-                return andExpr;
-            if (TryConvertBinaryExpression(call, new[] { ">=", "<=", "==", "!=", ">", "<" }, CreateComparison, out var cmpExpr))
-                return cmpExpr;
-            if (TryConvertBinaryExpression(call, new[] { "+", "-" }, CreateBinaryOpElement, out var addExpr))
-                return addExpr;
-            if (TryConvertBinaryExpression(call, new[] { "*", "/", "%" }, CreateBinaryOpElement, out var mulExpr))
-                return mulExpr;
-            if (TryConvertBinaryExpression(call, new[] { "^" }, CreateBinaryOpElement, out var powExpr))
-                return powExpr;
             // Word infix operators: "A max B", "A min B", "A rand B"
             if (TryConvertBinaryExpression(call, new[] { " max " }, CreateBinaryOpElement, out var maxWExpr))
                 return maxWExpr;
@@ -2663,6 +2753,21 @@ namespace VizzyCode
             // ── Vz.Planet(p).Property() ─────────────────────────────────────────
             if (TryConvertPlanetPropertyCall(call, out var planetExpr))
                 return planetExpr;
+
+            // Vz.ActivationGroup(N) must be emitted as an <ActivationGroup> child so
+            // Juno accepts it inside <WaitUntil>/<Conditional>. Serializing the call
+            // as a Variable reference makes Juno load the program blank.
+            if (call.StartsWith("Vz.ActivationGroup(") && call.EndsWith(")"))
+            {
+                var agArgs = SplitArgs(ExtractParenthesisContent(call));
+                if (agArgs.Count == 1)
+                {
+                    var argEl = ConvertApiCallToXml(agArgs[0]) ?? CreateVariableReference(agArgs[0]);
+                    return new XElement("ActivationGroup",
+                        new XAttribute("style", "activation-group"),
+                        argEl);
+                }
+            }
 
             // Variable reference (plain identifier)
             if (System.Text.RegularExpressions.Regex.IsMatch(call, @"^[A-Za-z_]\w*$"))
@@ -3243,7 +3348,16 @@ namespace VizzyCode
         {
             if (op.Equals("friendly", StringComparison.OrdinalIgnoreCase))
             {
+                // The second arg (args[1]) may carry an explicit subOp hint
+                // ("distance" or "time") preserved from the original XML.
                 string subOp = InferFriendlySubOp(args.Count > 0 ? args[0] : "");
+                if (args.Count > 1)
+                {
+                    string hint = args[1].Trim().Trim('"');
+                    if (hint.Equals("distance", StringComparison.OrdinalIgnoreCase) ||
+                        hint.Equals("time", StringComparison.OrdinalIgnoreCase))
+                        subOp = hint;
+                }
                 var friendlyEl = new XElement("StringOp",
                     new XAttribute("op", op),
                     new XAttribute("subOp", subOp),
@@ -3326,14 +3440,44 @@ namespace VizzyCode
                 }
             }
 
-            if (closeIndex < 0 || closeIndex + 4 > call.Length || call[closeIndex + 1] != '.' || !call.EndsWith("()", StringComparison.Ordinal))
+            if (closeIndex < 0 || closeIndex + 2 > call.Length || call[closeIndex + 1] != '.')
             {
                 element = null;
                 return false;
             }
 
-            string pArg = call.Substring(prefix.Length, closeIndex - prefix.Length).Trim();
-            string prop = call.Substring(closeIndex + 2, call.Length - closeIndex - 4).Trim().ToLowerInvariant();
+            // Two calling conventions reach this point:
+            //   Vz.Planet(p).Prop()                  — ends with "()"
+            //   Vz.Planet(p).Op("name")              — fallback for op names without a
+            //                                         dedicated C# helper (meanmotion,
+            //                                         periapsisargument, …)
+            // The .Op branch is required so Juno does not load these programs blank.
+            string prop;
+            if (call.EndsWith("()", StringComparison.Ordinal))
+            {
+                prop = call.Substring(closeIndex + 2, call.Length - closeIndex - 4).Trim().ToLowerInvariant();
+            }
+            else if (call.EndsWith(")", StringComparison.Ordinal))
+            {
+                const string opCall = "Op(";
+                int opIdx = call.IndexOf(opCall, closeIndex + 2, StringComparison.Ordinal);
+                if (opIdx < 0)
+                {
+                    element = null;
+                    return false;
+                }
+                string opArg = call.Substring(opIdx + opCall.Length,
+                                              call.Length - opIdx - opCall.Length - 1).Trim();
+                if (opArg.Length >= 2 && opArg[0] == '"' && opArg[opArg.Length - 1] == '"')
+                    opArg = opArg.Substring(1, opArg.Length - 2);
+                prop = opArg.ToLowerInvariant();
+            }
+            else
+            {
+                element = null;
+                return false;
+            }
+
             if (!System.Text.RegularExpressions.Regex.IsMatch(prop, @"^[a-z_]\w*$"))
             {
                 element = null;
@@ -3364,6 +3508,7 @@ namespace VizzyCode
                 _                  => prop
             };
 
+            string pArg = call.Substring(prefix.Length, closeIndex - prefix.Length).Trim();
             var pEl = ConvertApiCallToXml(pArg) ?? CreateVariableReference(pArg);
             element = new XElement("Planet",
                 new XAttribute("op", opStr),
@@ -3773,7 +3918,13 @@ namespace VizzyCode
                 ("Log", "LogMessage") => true,
                 ("DisplayMessage", "Display") => true,
                 ("Display", "DisplayMessage") => true,
-                _ => false
+                // Importer normalizes <SetCraftProperty property="Part.Set*"> to Vz.SetPartProperty,
+                // which the exporter re-emits as <SetPartProperty>. VZEL preserves the original form.
+                ("SetCraftProperty", "SetPartProperty") => true,
+                ("SetPartProperty", "SetCraftProperty") => true,
+                ("SetCameraProperty", "SetCamera") => true,
+                ("SetCamera", "SetCameraProperty") => true,
+                _ => false,
             };
         }
 
