@@ -26,6 +26,15 @@ If documentation is added or updated, it must stay in English.
 
 VizzyCode supports two related workflows.
 
+## Recommended Guides & External Resources
+
+For more practical examples and in-depth tutorials, check out these Steam guides:
+
+* [**Basic Launch Automation Script**](https://steamcommunity.com/sharedfiles/filedetails/?id=3247360849) — Covers autostaging, launch to inclination, and roll autopilot setup.
+* [**Vector Math & PID Control in Vizzy**](https://steamcommunity.com/sharedfiles/filedetails/?id=2944674093) — Explores the basics of vector math (defining and using reference frames), PID controller creation, and handling user input for a "hover and land at target" script.
+
+> **Note:** While these guides focus on step-by-step practical examples and screenshots (ideal for beginners getting hands-on with Vizzy), they cover most core Vizzy blocks in detail. Additional guides can also be found directly on [my Steam profile](https://steamcommunity.com/).
+
 ### Existing Vizzy Program Fidelity
 
 `XML -> code -> XML`
