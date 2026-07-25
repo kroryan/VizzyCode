@@ -19,6 +19,7 @@ namespace VizzyCode
         private HashSet<string> _localVariables = new(StringComparer.Ordinal);
         // Maps sanitized C# identifier → original CustomInstruction name for CI call detection.
         private Dictionary<string, string> _ciNameMap = new(StringComparer.Ordinal);
+        private Dictionary<string, string> _widgetVarMap = new(StringComparer.Ordinal);
         private XElement? _pendingTopLevelHeader;
         private XElement? _pendingInstructionMetadata;
         private (int X, int Y)? _pendingTopLevelPosition;
@@ -142,6 +143,7 @@ namespace VizzyCode
         {
             _listVariables.Clear();
             _warnings.Clear();
+            _widgetVarMap.Clear();
 
             string name = program.Attribute("name")?.Value ?? "MyProgram";
             var sb = new StringBuilder();
@@ -690,7 +692,8 @@ namespace VizzyCode
             string x = ch.Count > 1 ? ConvertExpression(ch[1]) : "0";
             string y = ch.Count > 2 ? ConvertExpression(ch[2]) : "0";
             string color = ch.Count > 3 ? ConvertExpression(ch[3]) : "\"#FFFFFF\"";
-            sb.AppendLine($"{ind}{widget}.SetPixel({x}, {y}, {color});");
+            string size = ch.Count > 4 ? ", " + ConvertExpression(ch[4]) : "";
+            sb.AppendLine($"{ind}{widget}.SetPixel({x}, {y}, {color}{size});");
         }
         private void EmitSetLinePoints(XElement el, StringBuilder sb, string ind)
         {
@@ -1428,6 +1431,7 @@ namespace VizzyCode
                 !code.Contains("Vz.RawCraftProperty(", StringComparison.Ordinal) &&
                 !code.Contains("Vz.RawEval(", StringComparison.Ordinal);
             _listVariables.Clear();
+            _widgetVarMap.Clear();
             var lines = code.Split('\n').Select(l => l.TrimEnd()).ToList();
             string resolvedProgramName = programName;
             foreach (var rawLine in lines)
@@ -1441,6 +1445,23 @@ namespace VizzyCode
                 }
             }
             var program = new XElement("Program", new XAttribute("name", resolvedProgramName));
+
+            // Detect MFD usage: widget creation or widget property assignment patterns
+            bool requiresMfd = lines.Any(ln =>
+            {
+                string t = ln.Trim();
+                return t.Contains("= new Vz") ||
+                       t.Contains("Vz.InitTexture(") || t.Contains("Vz.DestroyWidget(") ||
+                       t.Contains("Vz.DestroyAllWidgets(") ||
+                       t.Contains("Vz.SendWidgetToFront(") || t.Contains("Vz.SendWidgetToBack(") ||
+                       t.Contains(".Subscribe(WidgetEventType.") ||
+                       t.Contains(".SetPixel(") || t.Contains(".SetPoints(") ||
+                       System.Text.RegularExpressions.Regex.IsMatch(t, @"^""[^""]+""\.\w+\s*=") ||
+                       System.Text.RegularExpressions.Regex.IsMatch(t, @"^\w+\.\w+\s*=.*WidgetAnchor\.") ||
+                       System.Text.RegularExpressions.Regex.IsMatch(t, @"Vz\.\w+\(.+\)\.(?:Size|Color|Opacity|Parent|Position|Rotation|Visible|Text|AutoSize|Alignment|Anchor|FillAmount|FillMethod|Icon|FillColor|TextColor|BackgroundColor)\s*=");
+            });
+            if (requiresMfd)
+                program.Add(new XAttribute("requiresMfd", "true"));
 
             var variables = new XElement("Variables");
             var declaredVariables = new HashSet<string>(StringComparer.Ordinal); // Vizzy is case-sensitive: f ≠ F
@@ -1486,6 +1507,17 @@ namespace VizzyCode
                     ? new XElement("Variable", new XAttribute("name", vname), new XElement("Items"))
                     : CreateVariableDeclaration(vname, vval));
                 declaredVariables.Add(vname);
+            }
+
+            // Pre-scan 3: build widget variable → widget name map from all VzXxx var = new VzXxx(...) lines.
+            // This must happen before the main loop so forward references (e.g. lblMode used inside
+            // OnStart but declared after it) are resolved correctly.
+            foreach (var rawLine in lines)
+            {
+                var wMatch = System.Text.RegularExpressions.Regex.Match(rawLine.Trim(),
+                    @"^Vz(?<type>\w+)\s+(?<varName>\w+)\s*=\s*new\s+Vz\w+\((?<nameArg>.+)\)$");
+                if (wMatch.Success)
+                    _widgetVarMap[wMatch.Groups["varName"].Value] = wMatch.Groups["nameArg"].Value.Trim();
             }
 
             for (int i = 0; i < lines.Count; i++)
@@ -2201,7 +2233,7 @@ namespace VizzyCode
             if (l == "Vz.ActivateStage()") return new XElement("ActivateStage", new XAttribute("style", "activate-stage"));
             if (l == "Vz.Break()") return new XElement("Break", new XAttribute("style", "break"));
             if (l == "Vz.Beep()") return new XElement("Beep", new XAttribute("style", "play-beep"));
-            if (l == "Vz.DestroyAllWidgets()") return new XElement("DestroyAllWidgets", new XAttribute("style", "destroy-all-mfd-widgets"));
+            if (l == "Vz.DestroyAllWidgets()") return new XElement("SetCraftProperty", new XAttribute("property", "Mfd.Destroy.All"), new XAttribute("style", "destroy-all-mfd-widgets"));
 
             // One-argument instructions
             string c1 = ExtractParenthesisContent(l);
@@ -2259,13 +2291,30 @@ namespace VizzyCode
             if (l.StartsWith("Vz.TargetNode("))
                 return new XElement("SetTarget", new XAttribute("style", "set-target"), MakeConstantArg(c1));
             if (l.StartsWith("Vz.DestroyWidget("))
-                return new XElement("DestroyWidget", new XAttribute("style", "destroy-mfd-widget"), MakeConstantArg(c1));
+                return new XElement("SetCraftProperty",
+                    new XAttribute("property", "Mfd.Destroy"),
+                    new XAttribute("style", "destroy-mfd-widget"),
+                    ConvertValueToXml(c1));
             if (l.StartsWith("Vz.SendWidgetToFront("))
-                return new XElement("SendWidgetToFront", new XAttribute("style", "set-mfd-order-front"), MakeConstantArg(c1));
+                return new XElement("SetCraftProperty",
+                    new XAttribute("property", "Mfd.Order.SendToFront"),
+                    new XAttribute("style", "set-mfd-order-front"),
+                    ConvertValueToXml(c1));
             if (l.StartsWith("Vz.SendWidgetToBack("))
-                return new XElement("SendWidgetToBack", new XAttribute("style", "set-mfd-order-back"), MakeConstantArg(c1));
+                return new XElement("SetCraftProperty",
+                    new XAttribute("property", "Mfd.Order.SendToBack"),
+                    new XAttribute("style", "set-mfd-order-back"),
+                    ConvertValueToXml(c1));
             if (l.StartsWith("Vz.InitTexture("))
-                return new XElement("InitTexture", new XAttribute("style", "set-mfd-texture-initialize"), MakeConstantArg(c1));
+            {
+                var texParts = SplitArgs(c1);
+                var texEl = new XElement("SetCraftProperty",
+                    new XAttribute("property", "Mfd.Texture.Initialize"),
+                    new XAttribute("style", "set-mfd-texture-initialize"));
+                foreach (var p in texParts)
+                    texEl.Add(ConvertValueToXml(p));
+                return texEl;
+            }
             if (l.StartsWith("Vz.LockNavSphere("))
             {
                 var parts = SplitArgs(c1);
@@ -2285,62 +2334,140 @@ namespace VizzyCode
             if (l.StartsWith("Vz.SetPitch("))
                 return new XElement("SetTargetHeading", new XAttribute("property", "pitch"), new XAttribute("style", "set-heading"), MakeConstantArg(c1));
 
-            var createWidgetMatch = System.Text.RegularExpressions.Regex.Match(l, @"^Vz(?<type>\w+)\s+(?<name>\w+)\s*=\s*new\s+Vz\w+\(""(?<widgetName>[^""]+)""\)$");
+            var createWidgetMatch = System.Text.RegularExpressions.Regex.Match(l, @"^Vz(?<type>\w+)\s+(?<varName>\w+)\s*=\s*new\s+Vz\w+\((?<nameArg>.+)\)$");
             if (createWidgetMatch.Success)
             {
-                return new XElement("CreateWidget",
-                    new XAttribute("widgetType", createWidgetMatch.Groups["type"].Value),
-                    new XAttribute("name", createWidgetMatch.Groups["widgetName"].Value),
-                    new XAttribute("style", "create-mfd-widget"));
+                string widgetType = createWidgetMatch.Groups["type"].Value;
+                string varName = createWidgetMatch.Groups["varName"].Value;
+                string nameArg = createWidgetMatch.Groups["nameArg"].Value.Trim();
+                _widgetVarMap[varName] = nameArg;
+                var nameEl = ConvertWidgetNameArgToXml(nameArg);
+                return new XElement("SetCraftProperty",
+                    new XAttribute("property", "Mfd.Create." + widgetType),
+                    new XAttribute("style", "create-mfd-widget"),
+                    nameEl);
             }
 
-            var setWidgetMatch = System.Text.RegularExpressions.Regex.Match(l, @"^(?<widget>\w+)\.(?<property>\w+)\s*=\s*(?<value>.+)$");
+            var setWidgetMatch = System.Text.RegularExpressions.Regex.Match(l,
+                @"^(?<widget>.+)\.(?<property>Size|Color|Opacity|Parent|Position|Rotation|Visible|Anchor|Alignment|Text|AutoSize|AutoScroll|Font|FontSize|FillAmount|FillMethod|Icon|FillColor|TextColor|BackgroundColor|NorthUp|ManualMode|Zoom|Coordinates|Heading|PlanetName|Value|ShowVelocity|ShowGroundTrack|ShowOrbit|OnPointerClick)\s*=\s*(?<value>.+)$");
             if (setWidgetMatch.Success)
             {
                 string property = setWidgetMatch.Groups["property"].Value;
-                string widget = setWidgetMatch.Groups["widget"].Value;
+                string widgetExpr = setWidgetMatch.Groups["widget"].Value.Trim();
                 string value = setWidgetMatch.Groups["value"].Value.Trim();
-                if (property == "Anchor" && value.StartsWith("WidgetAnchor."))
+                var widgetEl = ConvertWidgetNameArgToXml(widgetExpr);
+
+                if (property == "Alignment" && value.StartsWith("Alignment."))
                 {
-                    return new XElement("SetWidgetAnchor",
-                        new XAttribute("anchor", value.Replace("WidgetAnchor.", "")),
-                        CreateVariableReference(widget));
+                    string alignment = value.Replace("Alignment.", "").Trim();
+                    return new XElement("SetCraftProperty",
+                        new XAttribute("property", "Mfd.Label.SetAlignment." + alignment),
+                        new XAttribute("style", "set-mfd-alignment"),
+                        widgetEl);
                 }
 
-                return new XElement("SetWidget",
-                    new XAttribute("property", property),
-                    new XAttribute("style", "set-mfd-widget"),
-                    CreateVariableReference(widget),
-                    ConvertValueToXml(value));
+                if (property == "Anchor" && value.StartsWith("WidgetAnchor."))
+                {
+                    string anchor = value.Replace("WidgetAnchor.", "").Trim();
+                    return new XElement("SetCraftProperty",
+                        new XAttribute("property", "Mfd.Widget.SetAnchor." + anchor),
+                        new XAttribute("style", "set-mfd-widget"),
+                        widgetEl);
+                }
+
+                if (property == "OnPointerClick")
+                {
+                    return new XElement("SetCraftProperty",
+                        new XAttribute("property", "Mfd.Event.SetPointerClick"),
+                        new XAttribute("style", "set-mfd-event"),
+                        widgetEl,
+                        ConvertValueToXml(value),
+                        new XElement("Constant", new XAttribute("text", "")));
+                }
+
+                string mfdProperty;
+                string mfdStyle;
+                if (property == "Text" || property == "AutoSize" || property == "AutoScroll" ||
+                    property == "Font" || property == "FontSize")
+                {
+                    mfdProperty = "Mfd.Label.Set" + property;
+                    mfdStyle = "set-mfd-label";
+                }
+                else if (property == "FillAmount" || property == "FillMethod" || property == "Icon")
+                {
+                    mfdProperty = "Mfd.Sprite.Set" + property;
+                    mfdStyle = "set-mfd-sprite";
+                }
+                else if (property == "FillColor" || property == "TextColor" || property == "BackgroundColor")
+                {
+                    mfdProperty = "Mfd.Gauge.Set" + property;
+                    mfdStyle = "set-mfd-gauge";
+                }
+                else if (property == "Value")
+                {
+                    mfdProperty = "Mfd.Gauge.SetValue";
+                    mfdStyle = "set-mfd-gauge";
+                }
+                else if (property == "NorthUp" || property == "ManualMode" || property == "Zoom" ||
+                         property == "Coordinates" || property == "Heading" || property == "PlanetName")
+                {
+                    mfdProperty = "Mfd.Map." + property;
+                    mfdStyle = "set-mfd-map";
+                }
+                else if (property == "ShowVelocity" || property == "ShowGroundTrack" || property == "ShowOrbit")
+                {
+                    mfdProperty = "Mfd.Navball." + property;
+                    mfdStyle = "set-mfd-navball";
+                }
+                else
+                {
+                    mfdProperty = "Mfd.Set" + property;
+                    mfdStyle = "set-mfd-widget";
+                }
+
+                var mfdEl = new XElement("SetCraftProperty",
+                    new XAttribute("property", mfdProperty),
+                    new XAttribute("style", mfdStyle),
+                    widgetEl);
+                mfdEl.Add(ConvertMfdPropertyValue(value));
+                return mfdEl;
             }
 
-            var subscribeMatch = System.Text.RegularExpressions.Regex.Match(l, @"^(?<widget>\w+)\.Subscribe\(WidgetEventType\.(?<event>\w+),\s*(?<handler>.+?),\s*(?<data>.+?),\s*\(d\)\s*=>\s*\{\s*\}\)$");
+            var subscribeMatch = System.Text.RegularExpressions.Regex.Match(l, @"^(?<widget>.+)\.Subscribe\(WidgetEventType\.(?<event>\w+),\s*(?<handler>.+?),\s*(?<data>.+?),\s*\(d\)\s*=>\s*\{\s*\}\)$");
             if (subscribeMatch.Success)
             {
-                return new XElement("SetWidgetEvent",
-                    new XAttribute("eventType", subscribeMatch.Groups["event"].Value),
-                    CreateVariableReference(subscribeMatch.Groups["widget"].Value),
+                string widgetExpr = subscribeMatch.Groups["widget"].Value.Trim();
+                string eventType = subscribeMatch.Groups["event"].Value;
+                return new XElement("SetCraftProperty",
+                    new XAttribute("property", "Mfd.Event.Set" + eventType),
+                    new XAttribute("style", "set-mfd-event"),
+                    ConvertValueToXml(widgetExpr),
                     ConvertValueToXml(subscribeMatch.Groups["handler"].Value),
                     ConvertValueToXml(subscribeMatch.Groups["data"].Value));
             }
 
-            var pixelMatch = System.Text.RegularExpressions.Regex.Match(l, @"^(?<widget>\w+)\.SetPixel\((?<x>.+?),\s*(?<y>.+?),\s*(?<color>.+)\)$");
+            var pixelMatch = System.Text.RegularExpressions.Regex.Match(l, @"^(?<widget>.+)\.SetPixel\((?<args>.+)\)$");
             if (pixelMatch.Success)
             {
-                return new XElement("SetPixel",
+                string widgetExpr = pixelMatch.Groups["widget"].Value.Trim();
+                var pixelArgs = SplitArgs(pixelMatch.Groups["args"].Value);
+                var pixelEl = new XElement("SetCraftProperty",
+                    new XAttribute("property", "Mfd.Texture.SetPixel"),
                     new XAttribute("style", "set-mfd-texture-setpixel"),
-                    CreateVariableReference(pixelMatch.Groups["widget"].Value),
-                    ConvertValueToXml(pixelMatch.Groups["x"].Value),
-                    ConvertValueToXml(pixelMatch.Groups["y"].Value),
-                    ConvertValueToXml(pixelMatch.Groups["color"].Value));
+                    ConvertValueToXml(widgetExpr));
+                foreach (var pa in pixelArgs)
+                    pixelEl.Add(ConvertValueToXml(pa.Trim()));
+                return pixelEl;
             }
 
-            var pointsMatch = System.Text.RegularExpressions.Regex.Match(l, @"^(?<widget>\w+)\.SetPoints\((?<points>.+)\)$");
+            var pointsMatch = System.Text.RegularExpressions.Regex.Match(l, @"^(?<widget>.+)\.SetPoints\((?<points>.+)\)$");
             if (pointsMatch.Success)
             {
-                return new XElement("SetLinePoints",
+                string widgetExpr = pointsMatch.Groups["widget"].Value.Trim();
+                return new XElement("SetCraftProperty",
+                    new XAttribute("property", "Mfd.Line.SetLinePoints"),
                     new XAttribute("style", "set-mfd-line-points"),
-                    CreateVariableReference(pointsMatch.Groups["widget"].Value),
+                    ConvertValueToXml(widgetExpr),
                     ConvertValueToXml(pointsMatch.Groups["points"].Value));
             }
 
@@ -2407,7 +2534,7 @@ namespace VizzyCode
                 var el = new XElement("SetPartProperty", new XAttribute("property", prop), new XAttribute("style", "set-part"));
                 el.Add(MakeConstantArg(parts.Count > 1 ? parts[1] : "0"));
                 el.Add(MakeConstantArg(parts.Count > 2 ? parts[2] : "true"));
-                return el;
+                return ApplyPendingInstructionMetadata(el);
             }
 
             // List operations
@@ -2518,6 +2645,41 @@ namespace VizzyCode
             if (expr != null)
                 return expr;
 
+            return CreateVariableReference(trimmed);
+        }
+
+        private XElement ConvertWidgetNameArgToXml(string nameArg)
+        {
+            string trimmed = nameArg.Trim();
+            // Widget variable declared via VzXxx var = new VzXxx("name") → emit Constant with widget name
+            if (_widgetVarMap.TryGetValue(trimmed, out string? widgetNameExpr))
+                return ConvertWidgetNameArgToXml(widgetNameExpr);
+            if (trimmed.StartsWith("\"") && trimmed.EndsWith("\""))
+            {
+                string inner = Unescape(trimQuotes(trimmed));
+                if (inner.StartsWith("Vz.", StringComparison.Ordinal))
+                {
+                    var expr = ConvertApiCallToXml(inner);
+                    if (expr != null)
+                        return expr;
+                }
+                return new XElement("Constant", new XAttribute("text", inner));
+            }
+            var directExpr = ConvertApiCallToXml(trimmed);
+            if (directExpr != null)
+                return directExpr;
+            return CreateVariableReference(trimmed);
+        }
+
+        private XElement ConvertMfdPropertyValue(string value)
+        {
+            string trimmed = value.Trim().TrimEnd(';');
+            var expr = ConvertApiCallToXml(trimmed);
+            if (expr != null)
+                return expr;
+            if (trimmed.StartsWith("\"") || trimmed == "true" || trimmed == "false" ||
+                double.TryParse(trimmed, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _))
+                return CreateConstant(trimmed);
             return CreateVariableReference(trimmed);
         }
 
@@ -3194,6 +3356,9 @@ namespace VizzyCode
         private XElement CreateVariableReference(string variableName)
         {
             string name  = variableName.Trim();
+            // "var" is a C# keyword — Juno uses <Constant text="" /> for anonymous variables
+            if (name == "var")
+                return new XElement("Constant", new XAttribute("text", ""));
             bool isLocal = _localVariables.Contains(name);
             bool isList = _listVariables.Contains(name);
             return new XElement("Variable",
@@ -3355,7 +3520,15 @@ namespace VizzyCode
                 {
                     string hint = args[1].Trim().Trim('"');
                     if (hint.Equals("distance", StringComparison.OrdinalIgnoreCase) ||
-                        hint.Equals("time", StringComparison.OrdinalIgnoreCase))
+                        hint.Equals("time", StringComparison.OrdinalIgnoreCase) ||
+                        hint.Equals("velocity", StringComparison.OrdinalIgnoreCase) ||
+                        hint.Equals("mass", StringComparison.OrdinalIgnoreCase) ||
+                        hint.Equals("angle", StringComparison.OrdinalIgnoreCase) ||
+                        hint.Equals("force", StringComparison.OrdinalIgnoreCase) ||
+                        hint.Equals("temperature", StringComparison.OrdinalIgnoreCase) ||
+                        hint.Equals("coordinate", StringComparison.OrdinalIgnoreCase) ||
+                        hint.Equals("date", StringComparison.OrdinalIgnoreCase) ||
+                        hint.Equals("number", StringComparison.OrdinalIgnoreCase))
                         subOp = hint;
                 }
                 var friendlyEl = new XElement("StringOp",
